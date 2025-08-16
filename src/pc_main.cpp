@@ -10,8 +10,11 @@ int main() {
   Serial.begin(115200);
   Serial.println("\nEcoWatt M1 (PC Simulation)");
 
-  Acquisition ac; RingBuffer buf(BUFFER_CAPACITY); Uploader up;
-  ac.begin(); up.begin();
+  Acquisition ac; 
+  RingBuffer buf(BUFFER_CAPACITY); 
+  Uploader up;
+  ac.begin(); 
+  up.begin();
 
   uint32_t lastPoll = millis(), lastUp = millis();
 
@@ -35,7 +38,7 @@ int main() {
       up.upload(batch);
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    delay(1);
   }
 
   return 0; // never reached

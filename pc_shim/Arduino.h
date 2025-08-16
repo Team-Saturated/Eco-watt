@@ -12,12 +12,21 @@
 using std::uint32_t;
 
 // --- timing ---
+// --- timing ---
 inline uint32_t millis() {
   static auto t0 = std::chrono::steady_clock::now();
   return (uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(
            std::chrono::steady_clock::now() - t0).count();
 }
-inline void delay(uint32_t ms) { std::this_thread::sleep_for(std::chrono::milliseconds(ms)); }
+
+#ifdef _WIN32
+  #include <windows.h>
+  inline void delay(uint32_t ms) { ::Sleep(ms); }
+#else
+  inline void delay(uint32_t ms) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+  }
+#endif
 
 // --- math ---
 #ifndef PI
