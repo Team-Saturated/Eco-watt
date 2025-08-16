@@ -4,9 +4,7 @@
 #include "Buffer.h"
 #include "Uploader.h"
 
-// Petri Net mapping (places):
-// P0 Idle, P1 ReadyToPoll, P2 Buffering, P3 UploadWindow, P4 Ack
-// Transitions: t_poll, t_buf, t_tick15, t_send, t_ack
+
 
 Acquisition acquisition;
 RingBuffer  ringBuf(BUFFER_CAPACITY);
@@ -29,10 +27,10 @@ void setup() {
 void loop() {
   const uint32_t now = millis();
 
-  // --- t_poll: periodic acquisition ---
+  // inverter polling
   if (now - lastPollMs >= POLL_INTERVAL_MS) {
     lastPollMs = now;
-    // P1 -> P2 via t_poll/t_buf
+    
     Sample s = acquisition.acquire();
     bool ok = ringBuf.push(s);
     if (!ok) {
@@ -43,13 +41,13 @@ void loop() {
     Serial.print(F(" i=")); Serial.println(s.i, 2);
   }
 
-  // --- t_tick15: periodic upload window ---
+  //15 min upload interval
   if (now - lastUploadMs >= UPLOAD_INTERVAL_MS) {
     lastUploadMs = now;
-    // P3 UploadWindow
+    
     std::vector<Sample> batch;
     ringBuf.drainTo(batch);  // P2 -> (batch) -> P3
     uploader.upload(batch);  // t_send + t_ack (simulated)
-    // P4 Ack -> P0 Idle (back to normal loop)
+    
   }
 }
