@@ -1,53 +1,61 @@
 #include <Arduino.h>
 #include "Config.h"
-#include "Acquisition.h"
-#include "Buffer.h"
-#include "Uploader.h"
+#include "InverterClient.h"
+#include "Poller.h"
 
+#if defined(ESP8266)
+  #include <ESP8266WiFi.h>
+#else
+  #include <WiFi.h>
+#endif
 
+#include "CloudTransport.h"
+#include "Rs485Transport.h"
 
-Acquisition acquisition;
-RingBuffer  ringBuf(BUFFER_CAPACITY);
-Uploader    uploader;
+#if SIMULATE
+CloudTransport* g_transport = nullptr;
+#else
+Rs485Transport* g_transport = nullptr;
+#endif
 
-uint32_t lastPollMs   = 0;
-uint32_t lastUploadMs = 0;
+InverterClient* g_client = nullptr;
+Poller* g_poller = nullptr;
+
+static void wifiConnect() {
+  Serial.printf("WiFi connecting to %s\n", WIFI_SSID);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  int tries = 0;
+  while (WiFi.status() != WL_CONNECTED && tries++ < 60) {
+    delay(500); Serial.print(".");
+  }
+  Serial.println();
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.printf("WiFi OK: %s\n", WiFi.localIP().toString().c_str());
+  } else {
+    Serial.println("WiFi failed");
+  }
+}
 
 void setup() {
   Serial.begin(115200);
-  delay(100);
-  Serial.println();
-  Serial.println(F("EcoWatt M1 Scaffold (Arduino C++)"));
-  acquisition.begin();
-  uploader.begin();
-  lastPollMs = millis();
-  lastUploadMs = millis();
+  delay(200);
+
+  wifiConnect();
+
+#if SIMULATE
+  g_transport = new CloudTransport(String(API_URL), String(AUTH_HEADER), REQ_TIMEOUT_MS);
+#else
+  g_transport = new Rs485Transport(RS485_SERIAL, RS485_BAUD, RS485_DE_RE_PIN, REQ_TIMEOUT_MS);
+#endif
+
+  g_client = new InverterClient(*g_transport);
+  g_poller = new Poller(*g_client, POLL_PERIOD_MS);
+
+  Serial.println("Setup done.");
 }
 
 void loop() {
-  const uint32_t now = millis();
-
-  // inverter polling
-  if (now - lastPollMs >= POLL_INTERVAL_MS) {
-    lastPollMs = now;
-    
-    Sample s = acquisition.acquire();
-    bool ok = ringBuf.push(s);
-    if (!ok) {
-      Serial.println(F("[WARN] Buffer overwrite occurred."));
-    }
-    Serial.print(F("[POLL] t=")); Serial.print(s.t_ms);
-    Serial.print(F(" v=")); Serial.print(s.v, 2);
-    Serial.print(F(" i=")); Serial.println(s.i, 2);
-  }
-
-  //15 min upload interval
-  if (now - lastUploadMs >= UPLOAD_INTERVAL_MS) {
-    lastUploadMs = now;
-    
-    std::vector<Sample> batch;
-    ringBuf.drainTo(batch);  // P2 -> (batch) -> P3
-    uploader.upload(batch);  // t_send + t_ack (simulated)
-    
-  }
+  g_poller->loop(SLAVE_ID, START_ADDR, QTY_REGS);
+  delay(5);
 }
