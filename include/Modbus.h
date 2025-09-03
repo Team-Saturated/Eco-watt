@@ -15,4 +15,10 @@ namespace Modbus {
   
   // Convert byte vector to hexadecimal string
   std::string toHex(const std::vector<uint8_t>& v);
+
+  // Convert hexadecimal string to byte vector
+  // @param hex: C-string of hex chars (e.g. "110300000002C69B")
+  // @param out: vector<uint8_t> to fill
+  // @return true if successful, false on invalid input
+  bool fromHex(const char* hex, std::vector<uint8_t>& out);
 }
