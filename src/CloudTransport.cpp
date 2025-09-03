@@ -32,10 +32,11 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request) {
 #endif
 
   http.setTimeout(_timeout);
-  http.addHeader("Content-Type", "application/json");
+  http.addHeader("accept", "*/*");
   if (_auth.length() > 0) {
     http.addHeader("Authorization", _auth);
   }
+  http.addHeader("Content-Type", "application/json");
 
   // Build JSON payload
   String payload = "{\"frame\":\"" + String(Modbus::toHex(request).c_str()) + "\"}";

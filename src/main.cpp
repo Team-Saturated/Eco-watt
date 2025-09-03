@@ -3,6 +3,7 @@
 #include "../include/InverterClient.h"
 #include "../include/Poller.h"
 
+
 #if defined(ESP8266)
   #include <ESP8266WiFi.h>
 #else
@@ -18,54 +19,34 @@ CloudTransport* g_transport = nullptr;
 Rs485Transport* g_transport = nullptr;
 #endif
 
+#define AUTH_HEADER " NjhhZWIwNDU1ZDdmMzg3MzNiMTQ5YjhmOjY4YWViMDQ1NWQ3ZjM4NzMzYjE0OWI4NQ=="
+
 InverterClient* g_client = nullptr;
 Poller* g_poller = nullptr;
 
 static bool wifiConnect() {
-  Serial.printf("\nConnecting to WiFi: %s\n", WIFI_SSID);
-  
-  // Disconnect if already connected
-  WiFi.disconnect(true);
-  delay(1000);
-  
-  // Set WiFi mode
+  Serial.printf("WiFi connecting to %s\n", WIFI_SSID);
   WiFi.mode(WIFI_STA);
-  
-  // Configure power save mode
-#if !defined(ESP8266)
-  // ESP32 specific
-  WiFi.setSleep(false);  // Disable power saving
-#endif
-  
-  // Start connection
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   
-  // Wait for connection with timeout
   int tries = 0;
-  const int maxTries = 30;  // 30 seconds timeout
-  
-  while (WiFi.status() != WL_CONNECTED && tries < maxTries) {
-    delay(1000);
+  while (WiFi.status() != WL_CONNECTED && tries++ < 60) {
+    delay(500);
     Serial.print(".");
-    tries++;
-    
-    if (tries % 5 == 0) {  // Every 5 seconds
-      Serial.printf("\nAttempt %d/%d - Reconnecting...\n", tries, maxTries);
-      WiFi.disconnect(true);
-      delay(1000);
+    if (tries % 10 == 0) {
+      // Retry connection every 5 seconds
+      WiFi.disconnect();
+      delay(100);
       WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     }
   }
   Serial.println();
   
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("WiFi Connected!\n");
-    Serial.printf("IP Address: %s\n", WiFi.localIP().toString().c_str());
-    Serial.printf("Signal Strength (RSSI): %d dBm\n", WiFi.RSSI());
+    Serial.printf("WiFi OK: %s\n", WiFi.localIP().toString().c_str());
     return true;
   } else {
-    Serial.println("WiFi Connection Failed!");
-    Serial.println("Please check your WiFi credentials and signal strength.");
+    Serial.println("WiFi failed");
     return false;
   }
 }
@@ -110,15 +91,6 @@ void setup() {
 }
 
 void loop() {
-  // Check WiFi connection
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi connection lost! Reconnecting...");
-    if (!wifiConnect()) {
-      delay(5000);  // Wait 5 seconds before retrying
-      return;
-    }
-  }
-
   if (g_poller) {
     try {
       g_poller->loop(SLAVE_ID, START_ADDR, QTY_REGS);
