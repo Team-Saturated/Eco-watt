@@ -19,14 +19,21 @@ namespace Modbus {
 uint16_t crc16(const uint8_t* data, size_t len){ return crc16_modbus(data, len); }
 
 std::vector<uint8_t> buildRead03(uint8_t slave, uint16_t addr, uint16_t qty) {
+  // Input validation
+  if (qty > 125) {  // Maximum number of registers per Modbus spec
+    qty = 125;
+  }
+  
   std::vector<uint8_t> f = {
-    slave, 0x03,
-    (uint8_t)(addr>>8), (uint8_t)(addr&0xFF),
-    (uint8_t)(qty>>8),  (uint8_t)(qty&0xFF)
+    slave, 0x03,  // Function code 0x03 = Read Holding Registers
+    (uint8_t)(addr>>8), (uint8_t)(addr&0xFF),  // Starting address
+    (uint8_t)(qty>>8),  (uint8_t)(qty&0xFF)    // Quantity of registers
   };
+  
+  // Calculate and append CRC
   auto crc = crc16((uint8_t*)f.data(), f.size());
-  f.push_back((uint8_t)(crc & 0xFF));   // LSB
-  f.push_back((uint8_t)(crc >> 8));     // MSB
+  f.push_back((uint8_t)(crc & 0xFF));   // LSB first
+  f.push_back((uint8_t)(crc >> 8));     // MSB second
   return f;
 }
 
