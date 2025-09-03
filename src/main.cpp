@@ -3,6 +3,10 @@
 #include "../include/InverterClient.h"
 #include "../include/Poller.h"
 
+// NEW:
+#include "Acquisition.h"
+#include "Buffer.h"
+#include "Uploader.h"
 
 #if defined(ESP8266)
   #include <ESP8266WiFi.h>
@@ -19,29 +23,34 @@ CloudTransport* g_transport = nullptr;
 Rs485Transport* g_transport = nullptr;
 #endif
 
+// NOTE: if you also pass AUTH via build flags, keep them identical.
 #define AUTH_HEADER " NjhhZWIwNDU1ZDdmMzg3MzNiMTQ5YjhmOjY4YWViMDQ1NWQ3ZjM4NzMzYjE0OWI4NQ=="
 
-InverterClient* g_client = nullptr;
-Poller* g_poller = nullptr;
+InverterClient* g_client  = nullptr;
+Poller*        g_poller  = nullptr;
+
+// NEW: globals used by Poller
+RingBuffer*    g_buffer  = nullptr;
+Acquisition*   g_acq     = nullptr;
+Uploader*      g_uploader= nullptr;
 
 static bool wifiConnect() {
   Serial.printf("WiFi connecting to %s\n", WIFI_SSID);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  
+
   int tries = 0;
   while (WiFi.status() != WL_CONNECTED && tries++ < 60) {
     delay(500);
     Serial.print(".");
     if (tries % 10 == 0) {
-      // Retry connection every 5 seconds
       WiFi.disconnect();
       delay(100);
       WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     }
   }
   Serial.println();
-  
+
   if (WiFi.status() == WL_CONNECTED) {
     Serial.printf("WiFi OK: %s\n", WiFi.localIP().toString().c_str());
     return true;
@@ -55,7 +64,7 @@ void setup() {
   Serial.begin(115200);
   delay(200);
 
-  // Try to connect to WiFi
+  // Wi-Fi (best effort)
   if (!wifiConnect()) {
     Serial.println("Failed to connect to WiFi. Continuing without network...");
   }
@@ -66,23 +75,18 @@ void setup() {
 #else
     g_transport = new Rs485Transport(RS485_SERIAL, RS485_BAUD, RS485_DE_RE_PIN, REQ_TIMEOUT_MS);
 #endif
-
-    if (!g_transport) {
-      Serial.println("Failed to create transport");
-      return;
-    }
+    if (!g_transport) { Serial.println("Failed to create transport"); return; }
 
     g_client = new InverterClient(*g_transport);
-    if (!g_client) {
-      Serial.println("Failed to create inverter client");
-      return;
-    }
+    if (!g_client) { Serial.println("Failed to create inverter client"); return; }
 
     g_poller = new Poller(*g_client, POLL_PERIOD_MS);
-    if (!g_poller) {
-      Serial.println("Failed to create poller");
-      return;
-    }
+    if (!g_poller) { Serial.println("Failed to create poller"); return; }
+
+    // NEW: buffer + acquisition + uploader
+    g_buffer   = new RingBuffer(BUFFER_CAPACITY);
+    g_acq      = new Acquisition(*g_client);
+    g_uploader = new Uploader(String(API_URL), String(AUTH_HEADER));
 
     Serial.println("Setup done successfully.");
   } catch (const std::exception& e) {

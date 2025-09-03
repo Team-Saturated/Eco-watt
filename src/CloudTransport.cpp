@@ -9,7 +9,7 @@
   #include <HTTPClient.h>
 #endif
 
-#include <ArduinoJson.h>  // NEW
+#include <ArduinoJson.h>
 
 // Map register address -> display scale and unit (from your table)
 static void regScaleUnit(uint16_t addr, float& scale, const char*& unit) {
@@ -76,6 +76,9 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request) {
       // Hex -> bytes
       std::vector<uint8_t> rx;
       if (Modbus::fromHex(rxHex.c_str(), rx) && rx.size() >= 5) {
+        // Keep raw bytes in result for higher layers
+        res.bytes = rx;
+
         // Print bytes
         Serial.print("[CloudTransport] Frame bytes: ");
         for (auto b : rx) Serial.printf("%02X ", b);
@@ -115,8 +118,13 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request) {
                 float scale; const char* unit;
                 regScaleUnit(addr, scale, unit);
                 float value = raw / scale;
+
+                // Print
                 Serial.printf("  Reg[%u] Addr=%u Raw=0x%04X -> %.3f %s\n",
                               i, addr, raw, value, unit);
+
+                // NEW: store decoded register in result
+                res.regs.push_back(DecodedReg{addr, raw, value, String(unit)});
               }
             }
           }
