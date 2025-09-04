@@ -14,7 +14,7 @@
 #define RS485_DE_RE_PIN  21            // change to your DE/RE pin
 #define SLAVE_ID         0x11
 #define START_ADDR       0x0000
-#define QTY_REGS         2
+#define QTY_REGS         10
 
 // ---------- Buffering & Upload schedule ----------
 #define UPLOAD_PERIOD_MS   15000       // send buffered data every 15 s
