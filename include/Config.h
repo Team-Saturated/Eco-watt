@@ -30,3 +30,9 @@
 #define UPLOAD_MODE_DECODED  1
 #define UPLOAD_MODE_RAW      2
 #define UPLOAD_MODE          UPLOAD_MODE_DECODED  // default
+
+// Error/backoff policy
+#define BACKOFF_MIN_MS   2000     // first backoff after an error
+#define BACKOFF_STEP_MS  2000     // add per consecutive error
+#define BACKOFF_MAX_MS   30000    // cap backoff
+#define ERR_RESET_AFTER  1        // reset backoff after this many successes

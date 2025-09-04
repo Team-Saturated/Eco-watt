@@ -1,40 +1,42 @@
 #include "Buffer.h"
 
 RingBuffer::RingBuffer(size_t capacity)
-: _cap(capacity), _head(0), _tail(0), _size(0), _dropped(0), _buf()
-{
-  _buf.resize(_cap);  // pre-allocate slots
-}
+: _cap(capacity),
+  _head(0),
+  _tail(0),
+  _size(0),
+  _dropped(0),
+  _buf(capacity) {}
 
 bool RingBuffer::push(const Record& r) {
   bool dropped = false;
+
+  if (_cap == 0) return false;
+
+  // If full, overwrite the oldest (advance tail)
   if (_size == _cap) {
-    // Buffer full: overwrite oldest (advance tail)
     _tail = (_tail + 1) % _cap;
-    _size--;
     _dropped++;
     dropped = true;
+    // size stays at _cap
+  } else {
+    _size++;
   }
-  _buf[_head] = r;                // copy-assign into slot
+
+  _buf[_head] = r;
   _head = (_head + 1) % _cap;
-  _size++;
   return !dropped;
 }
 
 void RingBuffer::drainTo(std::vector<Record>& out) {
-  // Move (or copy) items in FIFO order
-  while (_size > 0) {
-    out.push_back(std::move(_buf[_tail])); // move to minimize copies
-    _buf[_tail] = Record{};                // reset slot
+  while (_size) {
+    out.push_back(_buf[_tail]);
     _tail = (_tail + 1) % _cap;
     _size--;
   }
 }
 
 void RingBuffer::clear() {
-  while (_size > 0) {
-    _buf[_tail] = Record{};
-    _tail = (_tail + 1) % _cap;
-    _size--;
-  }
+  _head = _tail = _size = 0;
+  // leave _dropped as-is for introspection
 }

@@ -1,7 +1,18 @@
 #pragma once
 #include <Arduino.h>
 #include <vector>
-#include <string>
+
+// ---- Error classification for actionable handling ----
+enum class ErrType : uint8_t {
+  NONE = 0,
+  HTTP,
+  JSON,
+  CRC,
+  TIMEOUT,
+  NO_DATA,
+  MODBUS_EXC,   // func|0x80 with exception code in exc_code
+  OTHER
+};
 
 // ---- Shared decoded register type (single source of truth) ----
 struct DecodedReg {
@@ -14,11 +25,21 @@ struct DecodedReg {
 // ---- Transport result used by Cloud/RS485 transports ----
 struct TransportResult {
   bool ok = false;
-  int  status = 0;               // HTTP code or 0 for RS485, negative for lib error
-  String error;                  // error text if !ok
-  String body;                   // CloudTransport: response body (JSON)
-  std::vector<uint8_t> bytes;    // Rs485Transport: raw bytes read
-  std::vector<DecodedReg> regs;  // optional: decoded registers (filled by transport or higher layer)
+
+  // Status + classification
+  int     status = 0;         // HTTP code (cloud) or 0 for RS485; negative for lib error
+  ErrType type  = ErrType::NONE;
+
+  // Optional details
+  String  error;              // human-readable error if !ok
+  String  body;               // CloudTransport: raw response (e.g., JSON)
+
+  // Data
+  std::vector<uint8_t>   bytes;   // raw response bytes (Modbus RTU/TCP payload including CRC)
+  std::vector<DecodedReg> regs;   // optional: decoded registers (filled by transport or higher layer)
+
+  // Modbus exception info (valid when type==MODBUS_EXC)
+  int exc_code = -1;              // 0x01..0x0B, -1 if N/A
 };
 
 // ---- Transport interface (base) ----
