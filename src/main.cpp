@@ -1,53 +1,109 @@
 #include <Arduino.h>
-#include "Config.h"
+#include "../include/Config.h"
+#include "../include/InverterClient.h"
+#include "../include/Poller.h"
+
+// NEW:
 #include "Acquisition.h"
 #include "Buffer.h"
 #include "Uploader.h"
 
+#if defined(ESP8266)
+  #include <ESP8266WiFi.h>
+#else
+  #include <WiFi.h>
+#endif
 
+#include "CloudTransport.h"
+#include "Rs485Transport.h"
 
-Acquisition acquisition;
-RingBuffer  ringBuf(BUFFER_CAPACITY);
-Uploader    uploader;
+#if SIMULATE
+CloudTransport* g_transport = nullptr;
+#else
+Rs485Transport* g_transport = nullptr;
+#endif
 
-uint32_t lastPollMs   = 0;
-uint32_t lastUploadMs = 0;
+// NOTE: if you also pass AUTH via build flags, keep them identical.
+#define AUTH_HEADER " NjhhZWIwNDU1ZDdmMzg3MzNiMTQ5YjhmOjY4YWViMDQ1NWQ3ZjM4NzMzYjE0OWI4NQ=="
+
+InverterClient* g_client  = nullptr;
+Poller*        g_poller  = nullptr;
+
+// NEW: globals used by Poller
+RingBuffer*    g_buffer  = nullptr;
+Acquisition*   g_acq     = nullptr;
+Uploader*      g_uploader= nullptr;
+
+static bool wifiConnect() {
+  Serial.printf("WiFi connecting to %s\n", WIFI_SSID);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  int tries = 0;
+  while (WiFi.status() != WL_CONNECTED && tries++ < 60) {
+    delay(500);
+    Serial.print(".");
+    if (tries % 10 == 0) {
+      WiFi.disconnect();
+      delay(100);
+      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    }
+  }
+  Serial.println();
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.printf("WiFi OK: %s\n", WiFi.localIP().toString().c_str());
+    return true;
+  } else {
+    Serial.println("WiFi failed");
+    return false;
+  }
+}
 
 void setup() {
   Serial.begin(115200);
-  delay(100);
-  Serial.println();
-  Serial.println(F("EcoWatt M1 Scaffold (Arduino C++)"));
-  acquisition.begin();
-  uploader.begin();
-  lastPollMs = millis();
-  lastUploadMs = millis();
+  delay(200);
+
+  // Wi-Fi (best effort)
+  if (!wifiConnect()) {
+    Serial.println("Failed to connect to WiFi. Continuing without network...");
+  }
+
+  try {
+#if SIMULATE
+    g_transport = new CloudTransport(String(API_URL), String(AUTH_HEADER), REQ_TIMEOUT_MS);
+#else
+    g_transport = new Rs485Transport(RS485_SERIAL, RS485_BAUD, RS485_DE_RE_PIN, REQ_TIMEOUT_MS);
+#endif
+    if (!g_transport) { Serial.println("Failed to create transport"); return; }
+
+    g_client = new InverterClient(*g_transport);
+    if (!g_client) { Serial.println("Failed to create inverter client"); return; }
+
+    g_poller = new Poller(*g_client, POLL_PERIOD_MS);
+    if (!g_poller) { Serial.println("Failed to create poller"); return; }
+
+    // NEW: buffer + acquisition + uploader
+    g_buffer   = new RingBuffer(BUFFER_CAPACITY);
+    g_acq      = new Acquisition(*g_client);
+    g_uploader = new Uploader(String(API_URL), String(AUTH_HEADER));
+
+    Serial.println("Setup done successfully.");
+  } catch (const std::exception& e) {
+    Serial.printf("Setup failed with error: %s\n", e.what());
+  }
 }
 
 void loop() {
-  const uint32_t now = millis();
-
-  // inverter polling
-  if (now - lastPollMs >= POLL_INTERVAL_MS) {
-    lastPollMs = now;
-    
-    Sample s = acquisition.acquire();
-    bool ok = ringBuf.push(s);
-    if (!ok) {
-      Serial.println(F("[WARN] Buffer overwrite occurred."));
+  if (g_poller) {
+    try {
+      g_poller->loop(SLAVE_ID, START_ADDR, QTY_REGS);
+    } catch (const std::exception& e) {
+      Serial.printf("Error in main loop: %s\n", e.what());
     }
-    Serial.print(F("[POLL] t=")); Serial.print(s.t_ms);
-    Serial.print(F(" v=")); Serial.print(s.v, 2);
-    Serial.print(F(" i=")); Serial.println(s.i, 2);
+  } else {
+    Serial.println("Poller not initialized. Retrying setup...");
+    setup();
   }
-
-  //15 min upload interval
-  if (now - lastUploadMs >= UPLOAD_INTERVAL_MS) {
-    lastUploadMs = now;
-    
-    std::vector<Sample> batch;
-    ringBuf.drainTo(batch);  // P2 -> (batch) -> P3
-    uploader.upload(batch);  // t_send + t_ack (simulated)
-    
-  }
+  delay(5);
 }
