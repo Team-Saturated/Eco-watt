@@ -8,14 +8,63 @@
 #include <iostream>
 #include <cmath>
 #include <ios>
+#include <string>
+#include <sstream>
+#include <cstdarg>
 
 using std::uint32_t;
 
-// --- timing ---
+// --- String class for Arduino compatibility ---
+class String {
+public:
+    String() = default;
+    String(const char* str) : _str(str ? str : "") {}
+    String(const std::string& str) : _str(str) {}
+    String(int val) { 
+        std::ostringstream ss; 
+        ss << val; 
+        _str = ss.str(); 
+    }
+    String(float val) { 
+        std::ostringstream ss; 
+        ss << val; 
+        _str = ss.str(); 
+    }
+    
+    const char* c_str() const { return _str.c_str(); }
+    size_t length() const { return _str.length(); }
+    bool isEmpty() const { return _str.empty(); }
+    
+    String operator+(const String& other) const {
+        return String(_str + other._str);
+    }
+    
+    String& operator+=(const String& other) {
+        _str += other._str;
+        return *this;
+    }
+    
+    String& operator+=(const char* str) {
+        _str += str;
+        return *this;
+    }
+    
+    operator std::string() const { return _str; }
+    
+private:
+    std::string _str;
+};
+
 // --- timing ---
 inline uint32_t millis() {
   static auto t0 = std::chrono::steady_clock::now();
   return (uint32_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+           std::chrono::steady_clock::now() - t0).count();
+}
+
+inline uint32_t micros() {
+  static auto t0 = std::chrono::steady_clock::now();
+  return (uint32_t)std::chrono::duration_cast<std::chrono::microseconds>(
            std::chrono::steady_clock::now() - t0).count();
 }
 
@@ -47,7 +96,7 @@ static ESPClass ESP;
 
 // --- Serial mock ---
 struct SerialClass {
-  void begin(unsigned long) {}
+  void begin(unsigned long) { std::cout << "[Serial] Started at baud rate\n"; }
   void println() { std::cout << std::endl; }
 
   template<typename T>
@@ -55,6 +104,19 @@ struct SerialClass {
 
   template<typename T>
   void println(const T& v) { std::cout << v << std::endl; }
+
+  void print(const String& s) { std::cout << s.c_str(); }
+  void println(const String& s) { std::cout << s.c_str() << std::endl; }
+
+  // Printf style
+  void printf(const char* format, ...) {
+    char buffer[1024];
+    std::va_list args;
+    va_start(args, format);
+    vsnprintf(buffer, sizeof(buffer), format, args);
+    va_end(args);
+    std::cout << buffer;
+  }
 
   // Arduino-style float/double with precision
   void print(double v, int precision) {

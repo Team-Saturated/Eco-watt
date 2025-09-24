@@ -1,6 +1,11 @@
 #include "Uploader.h"
-#include <HTTPClient.h>
+#if defined(ESP8266)
+  #include <ESP8266HTTPClient.h>
+#else
+  #include <HTTPClient.h>
+#endif
 #include <ArduinoJson.h>
+#include "Compression.h" // Added for compression
 
 #ifndef API_BULK_URL
 // Optional: define in platformio.ini as -DAPI_BULK_URL="\"http://<host>/api/inverter/bulk\""
@@ -11,17 +16,74 @@ Uploader::Uploader(const String& apiUrl, const String& authHeader)
 : _apiUrl(apiUrl), _auth(authHeader) {}
 
 bool Uploader::uploadBatch(std::vector<Record>& batch) {
+
   if (batch.empty()) return true;
 
-#if (UPLOAD_MODE == UPLOAD_MODE_DECODED)
-  bool ok = uploadDecodedBatch(batch);
-  if (!ok) {
-    // Fallback to RAW per-item if bulk isn’t supported
-    ok = uploadRawFrames(batch);
+  // --- Compress batch before upload ---
+  std::vector<uint8_t> compressed = Compression::compressDelta(batch);
+
+  // For benchmarking, you can compare compressed.size() vs. batch.size()*sizeof(Record)
+  Serial.printf("[UPLOAD] Compressed batch size: %u bytes\n", (unsigned)compressed.size());
+
+  // Upload compressed data as a binary payload (for demo, send as base64 string)
+  String payload;
+  for (uint8_t b : compressed) {
+    char buf[3];
+    snprintf(buf, sizeof(buf), "%02X", b);
+    payload += buf;
   }
+
+  HTTPClient http;
+#if defined(ESP8266)
+  WiFiClient client;
+  if (!http.begin(client, _apiUrl)) return false;
 #else
-  bool ok = uploadRawFrames(batch);
+  if (!http.begin(_apiUrl)) return false;
 #endif
+  http.addHeader("accept", "*/*");
+  http.addHeader("Content-Type", "application/octet-stream");
+  if (_auth.length()) http.addHeader("Authorization", _auth);
+
+  int code = http.POST(payload);
+  _last_http = code;
+  bool ok = (code >= 200 && code < 300);
+
+  Serial.printf("[UPLOAD] HTTP Response Code: %d\n", code);
+  Serial.printf("[UPLOAD] Payload Sent: %u bytes\n", (unsigned)payload.length());
+
+  // --- Handle server feedback (ACK/config/commands) ---
+  String response;
+  if (ok) {
+    response = http.getString();
+    Serial.println("=== SERVER RESPONSE ===");
+    if (response.length()) {
+      Serial.printf("[UPLOAD] Raw Response: %s\n", response.c_str());
+      StaticJsonDocument<256> doc;
+      DeserializationError jerr = deserializeJson(doc, response);
+      if (!jerr) {
+        Serial.printf("[UPLOAD] Server ACK: %s\n", doc["status"].as<const char*>());
+        Serial.printf("[UPLOAD] Server Received: %d bytes\n", doc["received_bytes"].as<int>());
+        if (doc.containsKey("config")) {
+          Serial.printf("[UPLOAD] New Config - upload_interval: %d ms\n", doc["config"]["upload_interval"].as<int>());
+        }
+        if (doc.containsKey("commands")) {
+          Serial.print("[UPLOAD] Server Commands: ");
+          for (JsonVariant v : doc["commands"].as<JsonArray>()) {
+            Serial.printf("%s ", v.as<const char*>());
+          }
+          Serial.println();
+        }
+      } else {
+        Serial.println("[UPLOAD] Failed to parse JSON response");
+      }
+    } else {
+      Serial.println("[UPLOAD] Empty response from server");
+    }
+    Serial.println("=====================");
+  } else {
+    Serial.printf("[UPLOAD] HTTP Error: %d\n", code);
+  }
+  http.end();
 
   if (ok) { _uploads_ok++; batch.clear(); }
   else    { _uploads_err++; }
