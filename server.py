@@ -12,6 +12,7 @@ stats = {
     "last_original_bytes": 0,
     "last_compressed_bytes": 0,
     "last_ratio": 0.0,
+    "last_space_saved": 0.0,
     "last_raw_payload": "",
     "last_decompressed_data": []
 }
@@ -75,7 +76,7 @@ def index():
     <p><b>Original payload size (est):</b> {stats['last_original_bytes']} bytes</p>
     <p><b>Compressed payload size:</b> {stats['last_compressed_bytes']} bytes</p>
     <p><b>Compression ratio:</b> {stats['last_ratio']:.2f}:1</p>
-    <p><b>Space saved:</b> {((1 - stats['last_ratio']) * 100):.1f}%</p>
+    <p><b>Space saved:</b> {stats.get('last_space_saved', 0):.1f}%</p>
     
     <h3>📦 Raw Payload (Hex)</h3>
     <p style="word-break: break-all; background: white; padding: 5px;">{stats['last_raw_payload'][:200]}{'...' if len(stats['last_raw_payload']) > 200 else ''}</p>
@@ -163,6 +164,7 @@ def upload_data():
         stats["last_original_bytes"] = original_bytes_est
         stats["last_compressed_bytes"] = compressed_bytes_len
         stats["last_ratio"] = ratio
+        stats["last_space_saved"] = space_saved
         stats["last_raw_payload"] = payload_hex
         stats["last_decompressed_data"] = records
         stats["last_upload_time"] = time.strftime('%Y-%m-%d %H:%M:%S')
