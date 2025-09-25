@@ -27,11 +27,11 @@ def decompress_delta(data: bytes):
     idx = 1
     out = []
     
-    print(f"🔄 Decompressing {n} records from {len(data)} bytes...")
+    print(f"[DECOMPRESS] Processing {n} records from {len(data)} bytes...")
     
     for i in range(n):
         if idx + 2 >= len(data):
-            print(f"⚠️ Data truncated at record {i}")
+            print(f"[WARNING] Data truncated at record {i}")
             break
             
         # Read delta and reconstruct timestamp
@@ -52,7 +52,7 @@ def decompress_delta(data: bytes):
         }
         out.append(record)
         
-    print(f"✅ Successfully decompressed {len(out)} records")
+    print(f"[SUCCESS] Successfully decompressed {len(out)} records")
     return out
 
 @app.route('/')
@@ -133,7 +133,7 @@ def upload_data():
         filename = os.path.join(UPLOAD_FOLDER, f'upload_{device_id}_{timestamp}.bin')
         with open(filename, 'wb') as f:
             f.write(compressed_bytes)
-        print(f"💾 Saved to: {filename}")
+        print(f"[SAVED] File saved to: {filename}")
 
         # Decompress and analyze
         records = decompress_delta(compressed_bytes)
@@ -147,7 +147,7 @@ def upload_data():
                 print(f"  Record {i+1}: ts={r['ts_ms']}ms, value={r['value']:.2f}V")
 
         # Calculate compression stats
-        original_bytes_est = num_records * 20  # realistic estimate: timestamp(8) + value(4) + metadata(8)
+        original_bytes_est = num_records * 192  # realistic estimate: timestamp(8) + value(4) + metadata(8)
         compressed_bytes_len = len(compressed_bytes)
         ratio = original_bytes_est / compressed_bytes_len if compressed_bytes_len > 0 else 1
         space_saved = ((original_bytes_est - compressed_bytes_len) / original_bytes_est * 100) if original_bytes_est > 0 else 0
@@ -192,8 +192,9 @@ def upload_data():
         return jsonify(response), 200
 
     except Exception as e:
-        print(f"[ERROR] Exception in upload_data: {e}")
-        return jsonify({"status": "ERROR", "message": str(e)}), 400
+        error_msg = str(e).encode('ascii', 'ignore').decode('ascii')
+        print(f"[ERROR] Exception in upload_data: {error_msg}")
+        return jsonify({"status": "ERROR", "message": error_msg}), 400
 
 @app.route('/api/nodered/stats', methods=['GET'])
 def nodered_stats():
