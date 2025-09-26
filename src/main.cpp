@@ -7,16 +7,12 @@
 #include "Acquisition.h"
 #include "Buffer.h"
 #include "Uploader.h"
-#include "Compression.h" // Added for compression
-#include "Packetizer.h" // Added for packetizer
-#include <FS.h> // For file writing (ESP32/ESP8266)
+#include "Compression.h" 
+#include "Packetizer.h" 
+#include <FS.h> // For SPIFFS
 
-#if defined(ESP8266)
-  #include <ESP8266WiFi.h>
-#else
-  #include <WiFi.h>
-#endif
 
+#include "WiFi_conn.h"
 #include "CloudTransport.h"
 #include "Rs485Transport.h"
 
@@ -28,59 +24,35 @@ Rs485Transport* g_transport = nullptr;
 
 InverterClient* g_client  = nullptr;
 Poller*        g_poller  = nullptr;
-
-// NEW: globals used by Poller
 RingBuffer*    g_buffer  = nullptr;
 Acquisition*   g_acq     = nullptr;
 Uploader*      g_uploader= nullptr;
 
-static bool wifiConnect() {
-  Serial.printf("WiFi connecting to %s\n", WIFI_SSID);
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-  int tries = 0;
-  while (WiFi.status() != WL_CONNECTED && tries++ < 60) {
-    delay(500);
-    Serial.print(".");
-    if (tries % 10 == 0) {
-      WiFi.disconnect();
-      delay(100);
-      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    }
-  }
-  Serial.println();
-
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("WiFi OK: %s\n", WiFi.localIP().toString().c_str());
-    return true;
-  } else {
-    Serial.println("WiFi failed");
-    return false;
-  }
-}
 
 void setup() {
+
   Serial.begin(115200);
   delay(200);
 
-  // Wi-Fi (best effort)
+  
   if (!wifiConnect()) {
-    Serial.println("Failed to connect to WiFi. Continuing without network...");
+    Serial.println("Failed to connect to WiFi. Continuing without network...");//need a call back function 
   }
 
   try {
-#if SIMULATE
-    g_transport = new CloudTransport(String(API_URL), String(AUTH_HEADER), REQ_TIMEOUT_MS);
-#else
-    g_transport = new Rs485Transport(RS485_SERIAL, RS485_BAUD, RS485_DE_RE_PIN, REQ_TIMEOUT_MS);
-#endif
-    if (!g_transport) { Serial.println("Failed to create transport"); return; }
+
+    #if SIMULATE
+        g_transport = new CloudTransport(String(API_URL), String(AUTH_HEADER), REQ_TIMEOUT_MS);
+    #else
+        g_transport = new Rs485Transport(RS485_SERIAL, RS485_BAUD, RS485_DE_RE_PIN, REQ_TIMEOUT_MS);
+    #endif
+        if (!g_transport) { Serial.println("Failed to create transport"); return; }
 
     g_client = new InverterClient(*g_transport);
     if (!g_client) { Serial.println("Failed to create inverter client"); return; }
 
-    // NEW: buffer + acquisition + uploader - create buffer first
+    
     g_buffer   = new RingBuffer(BUFFER_CAPACITY);
     g_acq      = new Acquisition(*g_client);
     g_uploader = new Uploader(String(API_UPLOAD_URL), String(AUTH_HEADER));
@@ -90,24 +62,23 @@ void setup() {
 
     Serial.println("Compression enabled: using delta encoding for uploads.");
     Serial.println("Setup done successfully.");
+    
   } catch (const std::exception& e) {
     Serial.printf("Setup failed with error: %s\n", e.what());
   }
 }
 
 void loop() {
+
+
   static uint32_t lastUpload = millis();
-  static bool benchmarked = false;
-  if (g_poller) {
-    try {
-      g_poller->loop(SLAVE_ID, START_ADDR, QTY_REGS);
-    } catch (const std::exception& e) {
-      Serial.printf("Error in main loop: %s\n", e.what());
-    }
-  } else {
-    Serial.println("Poller not initialized. Retrying setup...");
-    setup();
+  
+  try {
+    g_poller->loop(SLAVE_ID, START_ADDR, QTY_REGS);
+  } catch (const std::exception& e) {
+    Serial.printf("Error in main loop: %s\n", e.what());
   }
+  
 
   // Periodic upload every 15 seconds for demo (UPLOAD_PERIOD_MS)
   uint32_t now = millis();
@@ -116,7 +87,7 @@ void loop() {
     std::vector<Record> batch;
     g_buffer->drainTo(batch);
     
-    // Only upload if we have real data from the inverter
+    // if data exists
     if (!batch.empty()) {
       Serial.printf("[REAL DATA] Uploading %u actual inverter records\n", (unsigned)batch.size());
       
@@ -125,28 +96,28 @@ void loop() {
       Serial.printf("Compression Method Used: Delta Encoding\n");
       Serial.printf("Number of Real Inverter Samples: %u\n", (unsigned)batch.size());
     
-    uint32_t original_size = batch.size() * sizeof(Record);
-    Serial.printf("Original Payload Size: %u bytes\n", original_size);
-    
-    // Measure compression time
-    uint32_t compress_start = micros();
-    std::vector<uint8_t> compressed = Packetizer::finalizeBlock(batch);
-    uint32_t compress_time = micros() - compress_start;
-    
-    Serial.printf("Compressed Payload Size: %u bytes\n", (unsigned)compressed.size());
-    float compression_ratio = (float)original_size / (float)compressed.size();
-    Serial.printf("Compression Ratio: %.2f:1 (%.1f%% reduction)\n", 
-                  compression_ratio, 
-                  (1.0f - (float)compressed.size() / (float)original_size) * 100.0f);
-    Serial.printf("CPU Time: %u microseconds\n", compress_time);
-    
-    // Lossless Recovery Verification
-    std::vector<Record> decompressed = Compression::decompressDelta(compressed);
-    bool lossless = (decompressed.size() == batch.size());
-    Serial.printf("Lossless Recovery Verification: %s\n", lossless ? "PASSED" : "FAILED");
-    
-    // --- Packetizer: encrypt, chunk ---
-    std::vector<uint8_t> encrypted = Packetizer::encryptAndMac(compressed);
+      uint32_t original_size = batch.size() * sizeof(Record);
+      Serial.printf("Original Payload Size: %u bytes\n", original_size);
+      
+      // Measure compression time
+      uint32_t compress_start = micros();
+      std::vector<uint8_t> compressed = Packetizer::finalizeBlock(batch);
+      uint32_t compress_time = micros() - compress_start;
+      
+      Serial.printf("Compressed Payload Size: %u bytes\n", (unsigned)compressed.size());
+      float compression_ratio = (float)original_size / (float)compressed.size();
+      Serial.printf("Compression Ratio: %.2f:1 (%.1f%% reduction)\n", 
+                    compression_ratio, 
+                    (1.0f - (float)compressed.size() / (float)original_size) * 100.0f);
+      Serial.printf("CPU Time: %u microseconds\n", compress_time);
+      
+      // Lossless Recovery Verification
+      std::vector<Record> decompressed = Compression::decompressDelta(compressed);
+      bool lossless = (decompressed.size() == batch.size());
+      Serial.printf("Lossless Recovery Verification: %s\n", lossless ? "PASSED" : "FAILED");
+      
+      // --- Packetizer: encrypt, chunk ---
+      std::vector<uint8_t> encrypted = Packetizer::encryptAndMac(compressed);
       auto chunks = Packetizer::chunkData(encrypted, 32);
       
       Serial.printf("Final Upload Payload Size: %u bytes (with encryption/MAC)\n", (unsigned)encrypted.size());

@@ -19,7 +19,7 @@ std::vector<uint8_t> Compression::compressDelta(const std::vector<Record>& recor
         // Create a separate compressed record for each register in this Record
         for (const auto& reg : r.regs) {
             uint64_t delta = r.ts_ms - prev_ts;
-            prev_ts = r.ts_ms;
+            //prev_ts = r.ts_ms;
             
             // Store delta (1 byte)
             out.push_back((uint8_t)delta);
