@@ -1,9 +1,41 @@
 from flask import Flask, request, jsonify
-import os, binascii, time
+import os, binascii, time, json
+import paho.mqtt.client as mqtt
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# MQTT Configuration
+MQTT_BROKER = "broker.emqx.io"  # Public MQTT broker
+MQTT_PORT = 1883
+MQTT_TOPIC = "vdl/replace"  # Topic as requested
+MQTT_CLIENT_ID = "ecowatt_server"
+
+# Initialize MQTT client
+mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id=MQTT_CLIENT_ID)
+
+def on_mqtt_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print(f"✅ Connected to MQTT broker at {MQTT_BROKER}:{MQTT_PORT}")
+    else:
+        print(f"❌ Failed to connect to MQTT broker. Return code {rc}")
+
+def on_mqtt_publish(client, userdata, mid):
+    print(f"📡 MQTT message published successfully (mid: {mid})")
+
+# Set MQTT callbacks
+mqtt_client.on_connect = on_mqtt_connect
+mqtt_client.on_publish = on_mqtt_publish
+
+# Connect to MQTT broker (with error handling)
+try:
+    mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    mqtt_client.loop_start()  # Start the network loop in a separate thread
+    print(f"🔗 Attempting to connect to MQTT broker at {MQTT_BROKER}:{MQTT_PORT}")
+except Exception as e:
+    print(f"⚠️ MQTT connection failed: {e}. Server will continue without MQTT.")
+    mqtt_client = None
 
 # --- Global state for demo dashboard ---
 stats = {
@@ -16,6 +48,72 @@ stats = {
     "last_raw_payload": "",
     "last_decompressed_data": []
 }
+
+def group_records_to_json(records):
+    """Group inverter records into data1, data2, etc. format with just register names and values"""
+    if not records:
+        return {}
+    
+    # Register names in the order we expect them (based on Acquisition.cpp)
+    register_names = ["Vac1", "Iac1", "Fac1", "Vpv1", "Vpv2", "Ipv1", "Ipv2", "Temp", "Export", "Power"]
+    
+    grouped_data = {}
+    group_count = 0
+    
+    # Group records by sets of 10 (one complete reading session)
+    for i in range(0, len(records), 10):
+        group_count += 1
+        group_name = f"data{group_count}"
+        group_data = {}
+        
+        # Process up to 10 records in this group
+        for j in range(10):
+            if i + j < len(records):
+                record = records[i + j]
+                register_name = record.get('register', f'Unknown_{j}')
+                
+                # Use "Output power" instead of "Power" for the last register
+                if register_name == "Power":
+                    register_name = "Output power"
+                
+                # Just store the value (rounded to 1 decimal place for cleaner JSON)
+                group_data[register_name] = round(record.get('value', 0), 1)
+            else:
+                # Fill missing registers with 0
+                expected_register = register_names[j] if j < len(register_names) else f'Unknown_{j}'
+                if expected_register == "Power":
+                    expected_register = "Output power"
+                
+                group_data[expected_register] = 0
+        
+        grouped_data[group_name] = group_data
+    
+    return grouped_data
+
+def publish_to_mqtt(grouped_data):
+    """Publish the grouped JSON data to MQTT broker"""
+    if mqtt_client is None:
+        print("⚠️ MQTT client not available. Skipping MQTT publish.")
+        return False
+    
+    try:
+        # Send just the grouped data (clean JSON format)
+        json_payload = json.dumps(grouped_data, indent=2)
+        
+        # Publish to MQTT
+        result = mqtt_client.publish(MQTT_TOPIC, json_payload, qos=1)
+        
+        if result.rc == mqtt.MQTT_ERR_SUCCESS:
+            print(f"📡 Successfully published {len(grouped_data)} data groups to MQTT topic: {MQTT_TOPIC}")
+            print(f"📊 Published data preview: {list(grouped_data.keys())}")
+            return True
+        else:
+            print(f"❌ MQTT publish failed with return code: {result.rc}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error publishing to MQTT: {e}")
+        return False
 
 def decompress_delta(data: bytes):
     """Decompress delta-encoded data matching ESP32 Compression.cpp algorithm"""
@@ -267,6 +365,19 @@ def upload_data():
         print(f"[DEBUG] Stored {len(records)} records in stats['last_decompressed_data']")
         print(f"[DEBUG] Total stats uploads: {stats['uploads']}")
         print(f"[DEBUG] Stats data length verification: {len(stats['last_decompressed_data'])}")
+        
+        # Create grouped JSON format and publish to MQTT
+        print(f"\n🔄 Creating grouped JSON format for MQTT...")
+        grouped_json = group_records_to_json(records)
+        print(f"📋 Created {len(grouped_json)} data groups: {list(grouped_json.keys())}")
+        
+        # Publish to MQTT
+        mqtt_success = publish_to_mqtt(grouped_json)
+        if mqtt_success:
+            print(f"✅ MQTT publish successful")
+        else:
+            print(f"⚠️ MQTT publish failed or skipped")
+        print(f"================================")
 
         # Respond with detailed JSON feedback
         response = {
