@@ -15,12 +15,12 @@ mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id=MQTT_CLIEN
 
 def on_mqtt_connect(client, userdata, flags, rc):
     if rc == 0:
-        print(f"✅ Connected to MQTT broker at {MQTT_BROKER}:{MQTT_PORT}")
+        print(f" Connected to MQTT broker at {MQTT_BROKER}:{MQTT_PORT}")
     else:
-        print(f"❌ Failed to connect to MQTT broker. Return code {rc}")
+        print(f" Failed to connect to MQTT broker. Return code {rc}")
 
 def on_mqtt_publish(client, userdata, mid):
-    print(f"📡 MQTT message published successfully (mid: {mid})")
+    print(f" MQTT message published successfully (mid: {mid})")
 
 # Set MQTT callbacks
 mqtt_client.on_connect = on_mqtt_connect
@@ -30,9 +30,9 @@ mqtt_client.on_publish = on_mqtt_publish
 try:
     mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
     mqtt_client.loop_start()  # Start the network loop in a separate thread
-    print(f"🔗 Attempting to connect to MQTT broker at {MQTT_BROKER}:{MQTT_PORT}")
+    print(f" Attempting to connect to MQTT broker at {MQTT_BROKER}:{MQTT_PORT}")
 except Exception as e:
-    print(f"⚠️ MQTT connection failed: {e}. Server will continue without MQTT.")
+    print(f" MQTT connection failed: {e}. Server will continue without MQTT.")
     mqtt_client = None
 
 # --- Global state for demo dashboard ---
@@ -117,15 +117,15 @@ def publish_to_mqtt(grouped_data):
         result = mqtt_client.publish(MQTT_TOPIC, json_payload, qos=1)
         
         if result.rc == mqtt.MQTT_ERR_SUCCESS:
-            print(f"📡 Successfully published {len(grouped_data)} data groups + compression stats to MQTT topic: {MQTT_TOPIC}")
-            print(f"📊 Published data preview: {list(grouped_data.keys())} + compression_stats")
+            print(f" Successfully published {len(grouped_data)} data groups + compression stats to MQTT topic: {MQTT_TOPIC}")
+            print(f" Published data preview: {list(grouped_data.keys())} + compression_stats")
             return True
         else:
-            print(f"❌ MQTT publish failed with return code: {result.rc}")
+            print(f" MQTT publish failed with return code: {result.rc}")
             return False
             
     except Exception as e:
-        print(f"❌ Error publishing to MQTT: {e}")
+        print(f" Error publishing to MQTT: {e}")
         return False
 
 def decompress_delta(data: bytes):
@@ -196,7 +196,7 @@ def index():
     if stats['last_decompressed_data']:
         # Show ALL records without truncation
         total_records = len(stats['last_decompressed_data'])
-        decompressed_preview = f"<p><strong>📊 Showing ALL {total_records} records (COMPLETE DATA - No truncation applied):</strong></p>"
+        decompressed_preview = f"<p><strong> Showing ALL {total_records} records (COMPLETE DATA - No truncation applied):</strong></p>"
         decompressed_preview += f"<p style='color: #666;'><em>Debug info: Upload #{stats.get('uploads', 0)} received at {stats.get('last_upload_time', 'Never')}</em></p>"
         decompressed_preview += "<br>".join([
             f"Record {i+1}: {r['register']} = {r['value']:.3f} {r['unit']} (Raw: {r.get('raw_value', 'N/A')}) - {r.get('description', '')}" 
@@ -213,7 +213,7 @@ def index():
     
     inverter_status = ""
     if latest_values:
-        inverter_status = "<h3>🔋 Current Inverter Status (Latest Values)</h3>"
+        inverter_status = "<h3> Current Inverter Status (Latest Values)</h3>"
         inverter_status += "<div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; margin: 10px 0;'>"
         
         # Organize registers by category
@@ -282,7 +282,7 @@ def index():
     {stats['last_raw_payload'][:400]}{'...' if len(stats['last_raw_payload']) > 400 else ''}
     </div>
     
-    <h3>📋 All Decompressed Inverter Records</h3>
+    <h3> All Decompressed Inverter Records</h3>
     <div style="background: #fff; padding: 10px; margin: 10px 0; border: 1px solid #ccc; max-height: 600px; overflow-y: auto;">
     {decompressed_preview if decompressed_preview else "No inverter data received yet"}
     </div>

@@ -60,6 +60,25 @@ static bool wifiConnect() {
   }
 }
 
+void ensureWiFiConnected() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("[WiFi] Disconnected. Attempting reconnect...");
+    WiFi.disconnect();
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+    unsigned long startAttemptTime = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 5000) {
+      delay(500);
+      Serial.print(".");
+    }
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.printf("\n[WiFi] Reconnected! IP: %s\n", WiFi.localIP().toString().c_str());
+    } else {
+      Serial.println("\n[WiFi] Reconnect attempt failed.");
+    }
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   delay(200);
@@ -96,6 +115,9 @@ void setup() {
 }
 
 void loop() {
+
+  ensureWiFiConnected();
+
   static uint32_t lastUpload = millis();
   static bool benchmarked = false;
   if (g_poller) {
@@ -154,14 +176,36 @@ void loop() {
       Serial.println("=====================================");
 
       Serial.printf("[MAIN] Uploading %u REAL inverter records (compressed)\n", (unsigned)batch.size());
-      // For demonstration, upload the encrypted block (could be chunked)
-      // In real use, send each chunk and handle retries/acks
-      bool ok = g_uploader->uploadBatch(batch); // Still uses original batch for now
-      if (!ok) {
-        Serial.println("[MAIN] Upload failed");
-      } else {
-        Serial.println("[MAIN] Real inverter data uploaded successfully!");
+      
+      /// -------------------------------
+      /// RETRY LOGIC FOR UPLOAD
+      /// -------------------------------
+
+      const int MAX_RETRIES = 3;
+      bool uploadSuccess = false;
+      int retryDelay = 2000; // start with 2 sec
+
+      for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        Serial.printf("[UPLOAD] Attempt %d of %d...\n", attempt, MAX_RETRIES);
+        if (g_uploader->uploadBatch(batch)) {
+          Serial.println("[UPLOAD] ✅ Upload successful!");
+          uploadSuccess = true;
+          break;
+        } else {
+          Serial.println("[UPLOAD] ❌ Upload failed");
+          if (attempt < MAX_RETRIES) {
+            Serial.printf("[UPLOAD] Retrying in %d ms...\n", retryDelay);
+            delay(retryDelay);
+            retryDelay *= 2; // exponential backoff
+          }
+        }
       }
+
+      if (!uploadSuccess) {
+        Serial.println("[UPLOAD] ⚠️ All retries failed");
+      }
+      /// -------------------------------
+
     } else {
       Serial.println("[MAIN] No real inverter data available yet - waiting for next cycle...");
     }
