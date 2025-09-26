@@ -85,7 +85,8 @@ def index():
     if stats['last_decompressed_data']:
         # Show ALL records without truncation
         total_records = len(stats['last_decompressed_data'])
-        decompressed_preview = f"<p><strong>📊 Showing ALL {total_records} records (no truncation):</strong></p>"
+        decompressed_preview = f"<p><strong>📊 Showing ALL {total_records} records (COMPLETE DATA - No truncation applied):</strong></p>"
+        decompressed_preview += f"<p style='color: #666;'><em>Debug info: Upload #{stats.get('uploads', 0)} received at {stats.get('last_upload_time', 'Never')}</em></p>"
         decompressed_preview += "<br>".join([
             f"Record {i+1}: {r['register']} = {r['value']:.3f} {r['unit']} (Raw: {r.get('raw_value', 'N/A')}) - {r.get('description', '')}" 
             for i, r in enumerate(stats['last_decompressed_data'])
@@ -258,9 +259,14 @@ def upload_data():
         stats["last_ratio"] = ratio
         stats["last_space_saved"] = space_saved
         stats["last_raw_payload"] = payload_hex
-        stats["last_decompressed_data"] = records
+        stats["last_decompressed_data"] = records  # Store ALL records without any limitation
         stats["last_upload_time"] = time.strftime('%Y-%m-%d %H:%M:%S')
         stats["device_id"] = json_data.get('device_id', 'Unknown') if request.content_type == 'application/json' else 'ESP32_DIRECT'
+        
+        # Debug: Log actual data storage
+        print(f"[DEBUG] Stored {len(records)} records in stats['last_decompressed_data']")
+        print(f"[DEBUG] Total stats uploads: {stats['uploads']}")
+        print(f"[DEBUG] Stats data length verification: {len(stats['last_decompressed_data'])}")
 
         # Respond with detailed JSON feedback
         response = {
@@ -310,7 +316,8 @@ def nodered_solar_data():
     solar_data = []
     records = stats.get("last_decompressed_data", [])
     
-    for i, record in enumerate(records[:20]):  # Last 20 records
+    # Show ALL records without any limitation
+    for i, record in enumerate(records):
         solar_data.append({
             "timestamp": record.get("ts_ms", 0),
             "register": record.get("register", "Unknown"),
