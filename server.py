@@ -3,8 +3,6 @@ import os, binascii, time, json
 import paho.mqtt.client as mqtt
 
 app = Flask(__name__)
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # MQTT Configuration
 MQTT_BROKER = "broker.emqx.io"  # Public MQTT broker
@@ -97,15 +95,30 @@ def publish_to_mqtt(grouped_data):
         return False
     
     try:
-        # Send just the grouped data (clean JSON format)
-        json_payload = json.dumps(grouped_data, indent=2)
+        # Create payload with grouped data and compression statistics
+        mqtt_payload = {
+            "compression_stats": {
+                "original_bytes": stats.get("last_original_bytes", 0),
+                "compressed_bytes": stats.get("last_compressed_bytes", 0),
+                "compression_ratio": round(stats.get("last_ratio", 0), 2),
+                "space_saved_percent": round(stats.get("last_space_saved", 0), 1),
+                "total_records": stats.get("last_num_records", 0),
+                "upload_count": stats.get("uploads", 0)
+            }
+        }
+        
+        # Add the grouped data to the payload
+        mqtt_payload.update(grouped_data)
+        
+        # Convert to JSON string
+        json_payload = json.dumps(mqtt_payload, indent=2)
         
         # Publish to MQTT
         result = mqtt_client.publish(MQTT_TOPIC, json_payload, qos=1)
         
         if result.rc == mqtt.MQTT_ERR_SUCCESS:
-            print(f"📡 Successfully published {len(grouped_data)} data groups to MQTT topic: {MQTT_TOPIC}")
-            print(f"📊 Published data preview: {list(grouped_data.keys())}")
+            print(f"📡 Successfully published {len(grouped_data)} data groups + compression stats to MQTT topic: {MQTT_TOPIC}")
+            print(f"📊 Published data preview: {list(grouped_data.keys())} + compression_stats")
             return True
         else:
             print(f"❌ MQTT publish failed with return code: {result.rc}")
@@ -318,13 +331,6 @@ def upload_data():
             print(f"[ERROR] Invalid hex data: {e}")
             return jsonify({"status": "ERROR", "message": "Invalid hex data"}), 400
 
-        # Save raw compressed block
-        timestamp = int(time.time())
-        filename = os.path.join(UPLOAD_FOLDER, f'upload_{device_id}_{timestamp}.bin')
-        with open(filename, 'wb') as f:
-            f.write(compressed_bytes)
-        print(f"[SAVED] File saved to: {filename}")
-
         # Decompress and analyze
         records = decompress_delta(compressed_bytes)
         num_records = len(records)
@@ -350,6 +356,7 @@ def upload_data():
         print(f"  Space saved: {space_saved:.1f}%")
 
         # Update global stats
+        timestamp = int(time.time())  # Define timestamp for response
         stats["uploads"] += 1
         stats["last_num_records"] = num_records
         stats["last_original_bytes"] = original_bytes_est
