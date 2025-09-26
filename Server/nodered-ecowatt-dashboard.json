@@ -1,0 +1,1687 @@
+[
+    {
+        "id": "a61f5462f5db61a1",
+        "type": "tab",
+        "label": "EcoWatt Solar Dashboard",
+        "disabled": true,
+        "info": "Real-time monitoring dashboard for EcoWatt solar inverter compression system"
+    },
+    {
+        "id": "52659386e15446f9",
+        "type": "tab",
+        "label": "EcoWatt Solar Dashboard",
+        "disabled": false,
+        "info": "Real-time monitoring dashboard for EcoWatt solar inverter compression system"
+    },
+    {
+        "id": "e794870d45f595e7",
+        "type": "mqtt-broker",
+        "name": "Mosquitto Server",
+        "broker": "https://test.mosquitto.org/",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "813da33c31ed533f",
+        "type": "ui_base",
+        "theme": {
+            "name": "theme-custom",
+            "lightTheme": {
+                "default": "#0094CE",
+                "baseColor": "#0094CE",
+                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+                "edited": true,
+                "reset": false
+            },
+            "darkTheme": {
+                "default": "#097479",
+                "baseColor": "#94a4d6",
+                "baseFont": "Verdana,Verdana,Geneva,sans-serif",
+                "edited": true,
+                "reset": false
+            },
+            "customTheme": {
+                "name": "Medibox Default",
+                "default": "#4B7930",
+                "baseColor": "#036572",
+                "baseFont": "Verdana,Verdana,Geneva,sans-serif",
+                "reset": false
+            },
+            "themeState": {
+                "base-color": {
+                    "default": "#720303",
+                    "value": "#036572",
+                    "edited": true
+                },
+                "page-titlebar-backgroundColor": {
+                    "value": "#036572",
+                    "edited": false
+                },
+                "page-backgroundColor": {
+                    "value": "#111111",
+                    "edited": false
+                },
+                "page-sidebar-backgroundColor": {
+                    "value": "#333333",
+                    "edited": false
+                },
+                "group-textColor": {
+                    "value": "#05a7bd",
+                    "edited": false
+                },
+                "group-borderColor": {
+                    "value": "#555555",
+                    "edited": false
+                },
+                "group-backgroundColor": {
+                    "value": "#333333",
+                    "edited": false
+                },
+                "widget-textColor": {
+                    "value": "#eeeeee",
+                    "edited": false
+                },
+                "widget-backgroundColor": {
+                    "value": "#036572",
+                    "edited": false
+                },
+                "widget-borderColor": {
+                    "value": "#333333",
+                    "edited": false
+                },
+                "base-font": {
+                    "value": "Verdana,Verdana,Geneva,sans-serif"
+                }
+            },
+            "angularTheme": {
+                "primary": "indigo",
+                "accents": "blue",
+                "warn": "red",
+                "background": "grey",
+                "palette": "light"
+            }
+        },
+        "site": {
+            "name": "EcoWatt",
+            "hideToolbar": "false",
+            "allowSwipe": "false",
+            "lockMenu": "false",
+            "allowTempTheme": "true",
+            "dateFormat": "YYYY/MM/DD",
+            "sizes": {
+                "sx": 52,
+                "sy": 52,
+                "gx": 12,
+                "gy": 6,
+                "cx": 6,
+                "cy": 6,
+                "px": 4,
+                "py": 4
+            }
+        }
+    },
+    {
+        "id": "d4ac752d0c0c9669",
+        "type": "ui_group",
+        "name": "Maximum Light Intensity",
+        "tab": "",
+        "order": 4,
+        "disp": true,
+        "width": "8",
+        "collapse": true,
+        "className": ""
+    },
+    {
+        "id": "59cb6c35f86cce23",
+        "type": "ui_group",
+        "name": "Light Control Settings",
+        "tab": "",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "2e76f813d5b7439c",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "http://broker.emqx.io/",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "ae9213057c85cd36",
+        "type": "ui_group",
+        "name": "Light Intensity",
+        "tab": "",
+        "order": 2,
+        "disp": true,
+        "width": "8",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "33f5df8461b87b2c",
+        "type": "ui_group",
+        "name": "ALARM Switch",
+        "tab": "",
+        "order": 5,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "b048b3ab6456ecc3",
+        "type": "ui_group",
+        "name": "Shade Controller",
+        "tab": "",
+        "order": 6,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "c4ee2f8a96497598",
+        "type": "ui_group",
+        "name": "Temperature",
+        "tab": "",
+        "order": 1,
+        "disp": true,
+        "width": "8",
+        "collapse": true,
+        "className": ""
+    },
+    {
+        "id": "7f0787a91660d1d2",
+        "type": "ui_group",
+        "name": "Schedule",
+        "tab": "",
+        "order": 3,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "2088a08cf9a5cdfd",
+        "type": "ui_group",
+        "name": "Group 1",
+        "tab": "",
+        "order": 1,
+        "disp": true,
+        "width": 6
+    },
+    {
+        "id": "51433ac8216aaf75",
+        "type": "ui_group",
+        "name": "City Name",
+        "tab": "",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "908fb3f907cd0fbc",
+        "type": "ui_group",
+        "name": "Pressure & Humidity",
+        "tab": "",
+        "order": 4,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "8b483788b332fa3b",
+        "type": "ui_group",
+        "name": "Weather Description",
+        "tab": "",
+        "order": 2,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "d3f110f37aee6adf",
+        "type": "ui_group",
+        "name": "Wind",
+        "tab": "",
+        "order": 5,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "mqtt-broker",
+        "type": "mqtt-broker",
+        "name": "MQTT Broker",
+        "broker": "http://broker.emqx.io/",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "94efbcc30ca043e8",
+        "type": "ui_group",
+        "name": "Group 2",
+        "tab": "",
+        "order": 2,
+        "disp": true,
+        "width": 6
+    },
+    {
+        "id": "66540405d161740f",
+        "type": "ui_group",
+        "name": "Group 3",
+        "tab": "",
+        "order": 3,
+        "disp": true,
+        "width": 6
+    },
+    {
+        "id": "f92b8582bc6c1518",
+        "type": "mqtt-broker",
+        "name": "MQTT Broker",
+        "broker": "mqtt://your-mqtt-broker-address",
+        "port": "1883",
+        "clientid": "",
+        "usetls": false,
+        "compatmode": true,
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": ""
+    },
+    {
+        "id": "mqtt_broker",
+        "type": "mqtt-broker",
+        "name": "My MQTT Broker",
+        "broker": "broker.hivemq.com",
+        "port": "1883",
+        "clientid": "noderedClient",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "e6ccfcee52b18235",
+        "type": "ui_group",
+        "name": "Direction Data",
+        "tab": "",
+        "order": 5,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "5f4c4b5433c1aabe",
+        "type": "ui_group",
+        "name": "Vibration Data",
+        "tab": "",
+        "order": 4,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "f556eeb2f9743fd2",
+        "type": "ui_group",
+        "name": "Acceleration Data",
+        "tab": "",
+        "order": 3,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "b998b3601f6fc2f6",
+        "type": "ui_group",
+        "name": "Direction Data",
+        "tab": "",
+        "order": 5,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "da5e0679941981f6",
+        "type": "ui_group",
+        "name": "Vibration Data",
+        "tab": "",
+        "order": 4,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "ab3ffed55a9fb553",
+        "type": "ui_group",
+        "name": "Acceleration Data",
+        "tab": "",
+        "order": 3,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "38b764d04b251e6d",
+        "type": "ui_group",
+        "name": "Direction Data",
+        "tab": "",
+        "order": 5,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "cbad191a2ad72edf",
+        "type": "ui_group",
+        "name": "Vibration Data",
+        "tab": "",
+        "order": 4,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "bd14476e9e3e06bf",
+        "type": "ui_group",
+        "name": "Acceleration Data",
+        "tab": "",
+        "order": 3,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "02434c72939ba479",
+        "type": "ui_group",
+        "name": "Direction Data",
+        "tab": "",
+        "order": 5,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "2e9022b53b7ea751",
+        "type": "ui_group",
+        "name": "Vibration Data",
+        "tab": "",
+        "order": 4,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "a1f8143995f3b049",
+        "type": "ui_group",
+        "name": "Acceleration Data",
+        "tab": "",
+        "order": 3,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "6889c5f4315daa31",
+        "type": "ui_group",
+        "name": "Acceleration Data",
+        "tab": "",
+        "order": 1,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "179d97de49191def",
+        "type": "ui_group",
+        "name": "Vibration Data",
+        "tab": "",
+        "order": 2,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "e7cec04880ec435e",
+        "type": "ui_group",
+        "name": "Direction Data",
+        "tab": "",
+        "order": 3,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "04bc5c5e3bcdef23",
+        "type": "ui-spacer",
+        "group": "",
+        "name": "Direction",
+        "tooltip": "",
+        "order": 4,
+        "width": "",
+        "height": "",
+        "className": ""
+    },
+    {
+        "id": "2495a0e2cd5e9bd5",
+        "type": "ui-spacer",
+        "group": "",
+        "name": "Direction",
+        "tooltip": "",
+        "order": 9,
+        "width": "",
+        "height": "",
+        "className": ""
+    },
+    {
+        "id": "55948a700e5d58c2",
+        "type": "mqtt-broker",
+        "name": "MQTT Broker",
+        "broker": "broker.hivemq.com",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "95b0675a44f3d19c",
+        "type": "ui_group",
+        "name": "Temperature ",
+        "tab": "",
+        "order": 3,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "dashboard-group",
+        "type": "ui_group",
+        "name": "Accelerometer",
+        "tab": "",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "ca91d9d64578e7c1",
+        "type": "ui_group",
+        "name": "Accelerometer",
+        "tab": "",
+        "order": 1,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "dddc86f014778aaf",
+        "type": "ui-page",
+        "name": "Dashboard",
+        "ui": "",
+        "path": "/page1",
+        "icon": "home",
+        "layout": "grid",
+        "theme": "",
+        "breakpoints": [
+            {
+                "name": "Default",
+                "px": "0",
+                "cols": "3"
+            },
+            {
+                "name": "Tablet",
+                "px": "576",
+                "cols": "6"
+            },
+            {
+                "name": "Small Desktop",
+                "px": "768",
+                "cols": "9"
+            },
+            {
+                "name": "Desktop",
+                "px": "1024",
+                "cols": "12"
+            }
+        ],
+        "order": 1,
+        "className": "",
+        "visible": true,
+        "disabled": false
+    },
+    {
+        "id": "eee8fa198e491237",
+        "type": "ui-group",
+        "name": "Date",
+        "page": "dddc86f014778aaf",
+        "width": 12,
+        "height": "1",
+        "order": 1,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "c78299aac12f083c",
+        "type": "ui-group",
+        "name": "Acceleration - X Direction",
+        "page": "dddc86f014778aaf",
+        "width": 12,
+        "height": "1",
+        "order": 2,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "dashboard_group",
+        "type": "ui_group",
+        "name": "Sensor Data",
+        "tab": "",
+        "order": 1,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "stats_group",
+        "type": "ui_group",
+        "name": "Statistics",
+        "tab": "",
+        "order": 2,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "deviceInfo",
+        "type": "ui_group",
+        "name": "Device Information",
+        "tab": "",
+        "order": 2,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "compressionStats",
+        "type": "ui_group",
+        "name": "Compression Statistics",
+        "tab": "",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "solarData",
+        "type": "ui_group",
+        "name": "Solar Inverter Data",
+        "tab": "",
+        "order": 3,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "analytics",
+        "type": "ui_group",
+        "name": "Performance Analytics",
+        "tab": "",
+        "order": 4,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "ui_base",
+        "type": "ui_base",
+        "theme": {
+            "name": "theme-light",
+            "lightTheme": {
+                "default": "#0094CE",
+                "baseColor": "#0094CE",
+                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+                "edited": true,
+                "reset": false
+            },
+            "darkTheme": {
+                "default": "#097479",
+                "baseColor": "#097479",
+                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+                "edited": false
+            },
+            "customTheme": {
+                "name": "Untitled Theme 1",
+                "default": "#4B7930",
+                "baseColor": "#4B7930",
+                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
+            },
+            "themeState": {
+                "base-color": {
+                    "default": "#0094CE",
+                    "value": "#0094CE",
+                    "edited": false
+                },
+                "page-titlebar-backgroundColor": {
+                    "value": "#0094CE",
+                    "edited": false
+                },
+                "page-backgroundColor": {
+                    "value": "#fafafa",
+                    "edited": false
+                },
+                "page-sidebar-backgroundColor": {
+                    "value": "#ffffff",
+                    "edited": false
+                },
+                "group-textColor": {
+                    "value": "#1bbfff",
+                    "edited": false
+                },
+                "group-borderColor": {
+                    "value": "#ffffff",
+                    "edited": false
+                },
+                "group-backgroundColor": {
+                    "value": "#ffffff",
+                    "edited": false
+                },
+                "widget-textColor": {
+                    "value": "#111111",
+                    "edited": false
+                },
+                "widget-backgroundColor": {
+                    "value": "#0094ce",
+                    "edited": false
+                },
+                "widget-borderColor": {
+                    "value": "#ffffff",
+                    "edited": false
+                },
+                "base-font": {
+                    "value": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
+                }
+            },
+            "angularTheme": {
+                "primary": "indigo",
+                "accents": "blue",
+                "warn": "red",
+                "background": "grey"
+            }
+        },
+        "site": {
+            "name": "EcoWatt Solar Dashboard",
+            "hideToolbar": "false",
+            "allowSwipe": "false",
+            "lockMenu": "false",
+            "allowTempTheme": "true",
+            "dateFormat": "DD/MM/YYYY",
+            "sizes": {
+                "sx": 48,
+                "sy": 48,
+                "gx": 6,
+                "gy": 6,
+                "cx": 6,
+                "cy": 6,
+                "px": 0,
+                "py": 0
+            }
+        }
+    },
+    {
+        "id": "main-tab",
+        "type": "ui_tab",
+        "name": "EcoWatt Dashboard",
+        "icon": "dashboard",
+        "order": 1,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "stats-group",
+        "type": "ui_group",
+        "name": "Compression Stats",
+        "tab": "main-tab",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "solar-group",
+        "type": "ui_group",
+        "name": "Solar Data",
+        "tab": "main-tab",
+        "order": 2,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "history-group",
+        "type": "ui_group",
+        "name": "Compression History",
+        "tab": "main-tab",
+        "order": 3,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "tab-dashboard",
+        "type": "ui_tab",
+        "name": "EcoWatt Dashboard",
+        "icon": "dashboard",
+        "order": 1
+    },
+    {
+        "id": "group-stats",
+        "type": "ui_group",
+        "name": "Compression Stats",
+        "tab": "tab-dashboard",
+        "order": 1,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "group-solar",
+        "type": "ui_group",
+        "name": "Solar Data",
+        "tab": "tab-dashboard",
+        "order": 2,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "group-history",
+        "type": "ui_group",
+        "name": "Compression History",
+        "tab": "tab-dashboard",
+        "order": 3,
+        "disp": true,
+        "width": "12",
+        "collapse": false
+    },
+    {
+        "id": "ae98d7c5f8766e73",
+        "type": "ui_tab",
+        "name": "EcoWatt Dashboard",
+        "icon": "dashboard",
+        "order": 1,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "tab-ui",
+        "type": "ui_tab",
+        "name": "EcoWatt Dashboard",
+        "icon": "dashboard",
+        "order": 1,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "20a17114b6432806",
+        "type": "http request",
+        "z": "a61f5462f5db61a1",
+        "name": "Get Compression Stats",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://localhost:5000/api/nodered/stats",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 220,
+        "y": 100,
+        "wires": [
+            [
+                "6d34605dfb5f7baf",
+                "df6580df8182c0ee"
+            ]
+        ]
+    },
+    {
+        "id": "44be65ed8ed16f92",
+        "type": "http request",
+        "z": "a61f5462f5db61a1",
+        "name": "Get Solar Data",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://localhost:5000/api/nodered/solar-data",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "x": 220,
+        "y": 200,
+        "wires": [
+            [
+                "7af2af6681dd3485",
+                "cd596cf9bcbb551e"
+            ]
+        ]
+    },
+    {
+        "id": "5692081f152fd021",
+        "type": "http request",
+        "z": "a61f5462f5db61a1",
+        "name": "Get Compression History",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://localhost:5000/api/nodered/compression-history",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "x": 220,
+        "y": 300,
+        "wires": [
+            [
+                "0cdb48cbc6a67415",
+                "0ddc95bee678a010"
+            ]
+        ]
+    },
+    {
+        "id": "d38cb2583969294a",
+        "type": "inject",
+        "z": "a61f5462f5db61a1",
+        "name": "Every 15 seconds",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "15",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1",
+        "topic": "stats",
+        "payload": "",
+        "payloadType": "date",
+        "x": 50,
+        "y": 100,
+        "wires": [
+            [
+                "20a17114b6432806",
+                "44be65ed8ed16f92",
+                "5692081f152fd021"
+            ]
+        ]
+    },
+    {
+        "id": "6d34605dfb5f7baf",
+        "type": "function",
+        "z": "a61f5462f5db61a1",
+        "name": "Parse Stats",
+        "func": "// Parse compression statistics from Flask server\nconst stats = msg.payload;\n\nmsg.payload = {\n  timestamp: new Date(stats.timestamp).toLocaleString(),\n  device_id: stats.device_id || 'Unknown',\n  total_uploads: stats.total_uploads || 0,\n  records: stats.records || 0,\n  original_bytes: stats.original_bytes || 0,\n  compressed_bytes: stats.compressed_bytes || 0,\n  compression_ratio: stats.compression_ratio ? stats.compression_ratio.toFixed(1) + ':1' : '0:1',\n  space_saved: stats.space_saved ? stats.space_saved.toFixed(1) + '%' : '0%',\n  upload_time: stats.upload_time || 'Never'\n};\n\nmsg.topic = 'compression_stats';\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 100,
+        "wires": [
+            [
+                "ccc206f4f7398794",
+                "471963a78263653a"
+            ]
+        ]
+    },
+    {
+        "id": "7af2af6681dd3485",
+        "type": "function",
+        "z": "a61f5462f5db61a1",
+        "name": "Parse Solar Data",
+        "func": "// Parse solar inverter data from Flask server\nconst solarData = msg.payload;\n\nif (solarData.data && solarData.data.length > 0) {\n  const voltageData = solarData.data.map(record => ({ x: new Date(record.timestamp), y: record.voltage }));\n  const latestVoltage = solarData.data[solarData.data.length - 1].voltage;\n\n  msg.payload = {\n    voltage_data: voltageData,\n    latest_voltage: latestVoltage,\n    record_count: solarData.count,\n    last_update: solarData.last_update,\n    device: solarData.data[0].device || 'ESP32'\n  };\n} else {\n  msg.payload = { voltage_data: [], latest_voltage: 0, record_count: 0, last_update: 'No data', device: 'ESP32' };\n}\n\nmsg.topic = 'solar_data';\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 200,
+        "wires": [
+            [
+                "c8ddb9ad86241117",
+                "3e817961ecd74fed"
+            ]
+        ]
+    },
+    {
+        "id": "0cdb48cbc6a67415",
+        "type": "function",
+        "z": "a61f5462f5db61a1",
+        "name": "Parse History",
+        "func": "// Parse compression history from Flask server\nconst historyData = msg.payload;\n\nif (historyData.history && historyData.history.length > 0) {\n  const compressionChart = historyData.history.map(record => ({ x: new Date(record.timestamp), y: record.compression_ratio }));\n  const bytesChart = historyData.history.map(record => ({ x: new Date(record.timestamp), original: record.original_bytes, compressed: record.compressed_bytes }));\n\n  msg.payload = { compression_chart: compressionChart, bytes_chart: bytesChart, total_uploads: historyData.total_uploads, avg_compression: historyData.avg_compression ? historyData.avg_compression.toFixed(1) + ':1' : '0:1' };\n} else {\n  msg.payload = { compression_chart: [], bytes_chart: [], total_uploads: 0, avg_compression: '0:1' };\n}\n\nmsg.topic = 'compression_history';\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 300,
+        "wires": [
+            [
+                "17a28e755d286616",
+                "6414c5e0747f146d"
+            ]
+        ]
+    },
+    {
+        "id": "ccc206f4f7398794",
+        "type": "ui_template",
+        "z": "a61f5462f5db61a1",
+        "group": "stats-group",
+        "name": "Compression Statistics",
+        "order": 1,
+        "width": "6",
+        "height": "4",
+        "format": "<div style=\"padding: 10px; font-family: monospace;\">\n  <h3>📊 EcoWatt Compression Stats</h3>\n  <table style=\"width: 100%; border-collapse: collapse;\">\n    <tr><td><b>Device ID:</b></td><td>{{msg.payload.device_id}}</td></tr>\n    <tr><td><b>Total Uploads:</b></td><td>{{msg.payload.total_uploads}}</td></tr>\n    <tr><td><b>Records:</b></td><td>{{msg.payload.records}}</td></tr>\n    <tr><td><b>Original Size:</b></td><td>{{msg.payload.original_bytes}} bytes</td></tr>\n    <tr><td><b>Compressed Size:</b></td><td>{{msg.payload.compressed_bytes}} bytes</td></tr>\n    <tr><td><b>Compression Ratio:</b></td><td style=\"color: green; font-weight: bold;\">{{msg.payload.compression_ratio}}</td></tr>\n    <tr><td><b>Space Saved:</b></td><td style=\"color: blue; font-weight: bold;\">{{msg.payload.space_saved}}</td></tr>\n    <tr><td><b>Last Upload:</b></td><td>{{msg.payload.upload_time}}</td></tr>\n  </table>\n</div>",
+        "storeOutMessages": false,
+        "fwdInMessages": true,
+        "resendOnRefresh": false,
+        "templateScope": "local",
+        "x": 650,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "471963a78263653a",
+        "type": "ui_gauge",
+        "z": "a61f5462f5db61a1",
+        "name": "Compression Ratio",
+        "group": "stats-group",
+        "order": 2,
+        "width": "6",
+        "height": "3",
+        "gtype": "gage",
+        "title": "Compression Ratio",
+        "label": ":1",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "100",
+        "colors": [
+            "#ca3838",
+            "#e6e600",
+            "#00b500"
+        ],
+        "seg1": "20",
+        "seg2": "50",
+        "x": 650,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "c8ddb9ad86241117",
+        "type": "ui_chart",
+        "z": "a61f5462f5db61a1",
+        "name": "Solar Voltage",
+        "group": "solar-group",
+        "order": 1,
+        "width": "12",
+        "height": "6",
+        "label": "Solar Inverter Voltage (V)",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "No data received",
+        "dot": false,
+        "ymin": "200",
+        "ymax": "250",
+        "removeOlder": "20",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "1",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e"
+        ],
+        "outputs": 1,
+        "x": 650,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "3e817961ecd74fed",
+        "type": "ui_gauge",
+        "z": "a61f5462f5db61a1",
+        "name": "Current Voltage",
+        "group": "solar-group",
+        "order": 2,
+        "width": "6",
+        "height": "3",
+        "gtype": "gage",
+        "title": "Current Voltage",
+        "label": "V",
+        "format": "{{value}}",
+        "min": "200",
+        "max": "250",
+        "colors": [
+            "#ca3838",
+            "#e6e600",
+            "#00b500"
+        ],
+        "seg1": "210",
+        "seg2": "230",
+        "x": 650,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "17a28e755d286616",
+        "type": "ui_chart",
+        "z": "a61f5462f5db61a1",
+        "name": "Compression History",
+        "group": "history-group",
+        "order": 1,
+        "width": "12",
+        "height": "5",
+        "label": "Compression Ratio Over Time",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "No history data",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "100",
+        "removeOlder": "50",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "1",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#ff7f0e",
+            "#2ca02c",
+            "#d62728"
+        ],
+        "outputs": 1,
+        "x": 650,
+        "y": 280,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "6414c5e0747f146d",
+        "type": "ui_chart",
+        "z": "a61f5462f5db61a1",
+        "name": "Bytes Comparison",
+        "group": "history-group",
+        "order": 2,
+        "width": "12",
+        "height": "5",
+        "label": "Original vs Compressed Bytes",
+        "chartType": "bar",
+        "legend": "true",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "No bytes data",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "",
+        "removeOlder": "10",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "1",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#ff7f0e",
+            "#2ca02c"
+        ],
+        "outputs": 1,
+        "x": 650,
+        "y": 320,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "df6580df8182c0ee",
+        "type": "debug",
+        "z": "a61f5462f5db61a1",
+        "name": "Debug Stats",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 420,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "cd596cf9bcbb551e",
+        "type": "debug",
+        "z": "a61f5462f5db61a1",
+        "name": "Debug Solar",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 420,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "0ddc95bee678a010",
+        "type": "debug",
+        "z": "a61f5462f5db61a1",
+        "name": "Debug History",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 420,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "9c82f66978d940b0",
+        "type": "inject",
+        "z": "a61f5462f5db61a1",
+        "name": "Manual Refresh",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "manual",
+        "payload": "",
+        "payloadType": "date",
+        "x": 50,
+        "y": 40,
+        "wires": [
+            [
+                "20a17114b6432806",
+                "44be65ed8ed16f92",
+                "5692081f152fd021"
+            ]
+        ]
+    },
+    {
+        "id": "228f79557d084b48",
+        "type": "http request",
+        "z": "52659386e15446f9",
+        "name": "Get Compression Stats",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://localhost:5000/api/nodered/stats",
+        "x": 220,
+        "y": 100,
+        "wires": [
+            [
+                "5f1369ed9fc9c2b6"
+            ]
+        ]
+    },
+    {
+        "id": "97dae334c83b5a22",
+        "type": "http request",
+        "z": "52659386e15446f9",
+        "name": "Get Solar Data",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://localhost:5000/api/nodered/solar-data",
+        "x": 220,
+        "y": 200,
+        "wires": [
+            [
+                "feab598ea058f0e8"
+            ]
+        ]
+    },
+    {
+        "id": "c9107e952bbc638a",
+        "type": "http request",
+        "z": "52659386e15446f9",
+        "name": "Get Compression History",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://localhost:5000/api/nodered/compression-history",
+        "x": 220,
+        "y": 300,
+        "wires": [
+            [
+                "ab8703a46b912ee4"
+            ]
+        ]
+    },
+    {
+        "id": "02c2a896527017ff",
+        "type": "inject",
+        "z": "52659386e15446f9",
+        "name": "Every 15 seconds",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "15",
+        "once": true,
+        "onceDelay": "1",
+        "topic": "stats",
+        "payload": "",
+        "payloadType": "date",
+        "x": 50,
+        "y": 100,
+        "wires": [
+            [
+                "228f79557d084b48",
+                "97dae334c83b5a22",
+                "c9107e952bbc638a"
+            ]
+        ]
+    },
+    {
+        "id": "5f1369ed9fc9c2b6",
+        "type": "function",
+        "z": "52659386e15446f9",
+        "name": "Parse Stats",
+        "func": "// Parse compression statistics for UI\nconst stats = msg.payload || {};\n\nmsg.payload = {\n  timestamp: stats.timestamp ? new Date(stats.timestamp).toLocaleString() : 'N/A',\n  device_id: stats.device_id || 'Unknown',\n  total_uploads: stats.total_uploads || 0,\n  records: stats.records || 0,\n  original_bytes: stats.original_bytes || 0,\n  compressed_bytes: stats.compressed_bytes || 0,\n  compression_ratio: stats.compression_ratio ? Number(stats.compression_ratio.toFixed(2)) : 0,\n  space_saved: stats.space_saved || 0,\n  upload_time: stats.upload_time || 'Never'\n};\n\n// For gauge, send numeric ratio separately\nnode.send([{ ...msg, topic: 'stats' }, { payload: stats.compression_ratio ? Number(stats.compression_ratio.toFixed(2)) : 0 }]);\nreturn null;\n",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 100,
+        "wires": [
+            [
+                "147aa105f8a18724"
+            ],
+            [
+                "6fcccd8f56920539"
+            ]
+        ]
+    },
+    {
+        "id": "feab598ea058f0e8",
+        "type": "function",
+        "z": "52659386e15446f9",
+        "name": "Parse Solar Data",
+        "func": "// Parse solar inverter data for chart and gauge\nconst solarData = msg.payload || {};\n\nif (solarData.data && solarData.data.length > 0) {\n  const voltageData = solarData.data.map(r => ({ x: new Date(r.timestamp), y: r.voltage }));\n  const latestVoltage = solarData.data[solarData.data.length - 1].voltage;\n\n  node.send([{ payload: [{ series: [\"Voltage\"], data: [voltageData], labels: [] }] }, { payload: latestVoltage }]);\n} else {\n  node.send([{ payload: [] }, { payload: 0 }]);\n}\nreturn null;",
+        "outputs": 2,
+        "x": 420,
+        "y": 200,
+        "wires": [
+            [
+                "cb96935387c17370"
+            ],
+            [
+                "67579d32a9aeb0ac"
+            ]
+        ]
+    },
+    {
+        "id": "ab8703a46b912ee4",
+        "type": "function",
+        "z": "52659386e15446f9",
+        "name": "Parse History",
+        "func": "// Parse compression history into chart-friendly format\nconst historyData = msg.payload || {};\n\nif (historyData.history && historyData.history.length > 0) {\n  const compressionPoints = historyData.history.map(r => ({ x: new Date(r.timestamp), y: r.compression_ratio }));\n  const bytePoints = historyData.history.map(r => ({ x: new Date(r.timestamp), y: r.original_bytes }));\n  const compressedPoints = historyData.history.map(r => ({ x: new Date(r.timestamp), y: r.compressed_bytes }));\n\n  node.send([\n    { payload: [{ series: [\"Ratio\"], data: [compressionPoints], labels: [] }] },\n    { payload: [{ series: [\"Original\", \"Compressed\"], data: [bytePoints, compressedPoints], labels: [] }] }\n  ]);\n} else {\n  node.send([{ payload: [] }, { payload: [] }]);\n}\nreturn null;",
+        "outputs": 2,
+        "x": 420,
+        "y": 300,
+        "wires": [
+            [
+                "85370e040ed3e37f"
+            ],
+            [
+                "dd41ddd39d89c2ce"
+            ]
+        ]
+    },
+    {
+        "id": "147aa105f8a18724",
+        "type": "ui_template",
+        "z": "52659386e15446f9",
+        "group": "stats-group",
+        "name": "Compression Statistics",
+        "order": 1,
+        "width": "6",
+        "height": "4",
+        "format": "<div style=\"padding: 10px; font-family: monospace;\">\n  <h3>📊 EcoWatt Compression Stats</h3>\n  <table style=\"width: 100%; border-collapse: collapse;\">\n    <tr><td><b>Device ID:</b></td><td>{{msg.payload.device_id}}</td></tr>\n    <tr><td><b>Total Uploads:</b></td><td>{{msg.payload.total_uploads}}</td></tr>\n    <tr><td><b>Records:</b></td><td>{{msg.payload.records}}</td></tr>\n    <tr><td><b>Original Size:</b></td><td>{{msg.payload.original_bytes}} bytes</td></tr>\n    <tr><td><b>Compressed Size:</b></td><td>{{msg.payload.compressed_bytes}} bytes</td></tr>\n    <tr><td><b>Compression Ratio:</b></td><td style=\"color: green; font-weight: bold;\">{{msg.payload.compression_ratio}}:1</td></tr>\n    <tr><td><b>Space Saved:</b></td><td style=\"color: blue; font-weight: bold;\">{{msg.payload.space_saved}}%</td></tr>\n    <tr><td><b>Last Upload:</b></td><td>{{msg.payload.upload_time}}</td></tr>\n  </table>\n</div>",
+        "x": 650,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "6fcccd8f56920539",
+        "type": "ui_gauge",
+        "z": "52659386e15446f9",
+        "name": "Compression Ratio",
+        "group": "stats-group",
+        "order": 2,
+        "width": "6",
+        "height": "3",
+        "gtype": "gage",
+        "title": "Compression Ratio",
+        "label": ":1",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "100",
+        "colors": [
+            "#ca3838",
+            "#e6e600",
+            "#00b500"
+        ],
+        "seg1": "20",
+        "seg2": "50",
+        "diff": false,
+        "className": "",
+        "x": 650,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "cb96935387c17370",
+        "type": "ui_chart",
+        "z": "52659386e15446f9",
+        "name": "Solar Voltage",
+        "group": "solar-group",
+        "order": 1,
+        "width": "12",
+        "height": "6",
+        "label": "Solar Inverter Voltage (V)",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "No data received",
+        "dot": false,
+        "ymin": "100",
+        "ymax": "250",
+        "removeOlder": "20",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "1",
+        "cutout": "",
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000",
+            "#000000"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 650,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "67579d32a9aeb0ac",
+        "type": "ui_gauge",
+        "z": "52659386e15446f9",
+        "name": "Current Voltage",
+        "group": "solar-group",
+        "order": 2,
+        "width": "6",
+        "height": "3",
+        "gtype": "gage",
+        "title": "Current Voltage",
+        "label": "V",
+        "format": "{{value}}",
+        "min": "100",
+        "max": "250",
+        "colors": [
+            "#ca3838",
+            "#e6e600",
+            "#00b500"
+        ],
+        "seg1": "210",
+        "seg2": "230",
+        "diff": false,
+        "className": "",
+        "x": 650,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "85370e040ed3e37f",
+        "type": "ui_chart",
+        "z": "52659386e15446f9",
+        "name": "Compression History",
+        "group": "history-group",
+        "order": 1,
+        "width": "12",
+        "height": "5",
+        "label": "Compression Ratio Over Time",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "No history data",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "100",
+        "removeOlder": "50",
+        "removeOlderUnit": "1",
+        "colors": [
+            "#ff7f0e"
+        ],
+        "outputs": 0,
+        "x": 650,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "dd41ddd39d89c2ce",
+        "type": "ui_chart",
+        "z": "52659386e15446f9",
+        "name": "Bytes Comparison",
+        "group": "history-group",
+        "order": 2,
+        "width": "12",
+        "height": "5",
+        "label": "Original vs Compressed Bytes",
+        "chartType": "bar",
+        "legend": "true",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "No bytes data",
+        "dot": false,
+        "ymin": "0",
+        "removeOlder": "10",
+        "removeOlderUnit": "1",
+        "colors": [
+            "#1f77b4",
+            "#ff7f0e"
+        ],
+        "outputs": 0,
+        "x": 650,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "6e9ced76c61d4499",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-dashboard": "3.6.5",
+            "@flowfuse/node-red-dashboard": "1.21.0"
+        }
+    }
+]
