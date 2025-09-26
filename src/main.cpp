@@ -26,9 +26,6 @@ CloudTransport* g_transport = nullptr;
 Rs485Transport* g_transport = nullptr;
 #endif
 
-// NOTE: if you also pass AUTH via build flags, keep them identical.
-#define AUTH_HEADER " NjhhZWIwNDU1ZDdmMzg3MzNiMTQ5YjhmOjY4YWViMDQ1NWQ3ZjM4NzMzYjE0OWI4NQ=="
-
 InverterClient* g_client  = nullptr;
 Poller*        g_poller  = nullptr;
 
@@ -83,13 +80,13 @@ void setup() {
     g_client = new InverterClient(*g_transport);
     if (!g_client) { Serial.println("Failed to create inverter client"); return; }
 
-    g_poller = new Poller(*g_client, POLL_PERIOD_MS);
-    if (!g_poller) { Serial.println("Failed to create poller"); return; }
-
-    // NEW: buffer + acquisition + uploader
+    // NEW: buffer + acquisition + uploader - create buffer first
     g_buffer   = new RingBuffer(BUFFER_CAPACITY);
     g_acq      = new Acquisition(*g_client);
-    g_uploader = new Uploader(String(API_URL), String(AUTH_HEADER));
+    g_uploader = new Uploader(String(API_UPLOAD_URL), String(AUTH_HEADER));
+
+    g_poller = new Poller(*g_client, POLL_PERIOD_MS, *g_buffer);
+    if (!g_poller) { Serial.println("Failed to create poller"); return; }
 
     Serial.println("Compression enabled: using delta encoding for uploads.");
     Serial.println("Setup done successfully.");
@@ -119,28 +116,14 @@ void loop() {
     std::vector<Record> batch;
     g_buffer->drainTo(batch);
     
-    // If no records, simulate random samples for demonstration
-    if (batch.empty()) {
-      Serial.println("[BENCHMARK] Buffer empty, simulating random records...");
-      for (int i = 0; i < 50; ++i) {
-        Record r;
-        r.ts_ms = millis() + i * 1000;
-        r.start = START_ADDR;
-        r.qty = QTY_REGS;
-        DecodedReg reg;
-        reg.addr = START_ADDR;
-        reg.raw = 1000 + i;
-        reg.value = 220.0f + (i % 10);
-        reg.unit = "V";
-        r.regs.push_back(reg);
-        batch.push_back(r);
-      }
-    }
-
-    // --- Detailed Compression Benchmarking ---
-    Serial.println("=== COMPRESSION BENCHMARK REPORT ===");
-    Serial.printf("Compression Method Used: Delta Encoding\n");
-    Serial.printf("Number of Samples: %u\n", (unsigned)batch.size());
+    // Only upload if we have real data from the inverter
+    if (!batch.empty()) {
+      Serial.printf("[REAL DATA] Uploading %u actual inverter records\n", (unsigned)batch.size());
+      
+      // --- Detailed Compression Benchmarking ---
+      Serial.println("=== REAL INVERTER DATA COMPRESSION REPORT ===");
+      Serial.printf("Compression Method Used: Delta Encoding\n");
+      Serial.printf("Number of Real Inverter Samples: %u\n", (unsigned)batch.size());
     
     uint32_t original_size = batch.size() * sizeof(Record);
     Serial.printf("Original Payload Size: %u bytes\n", original_size);
@@ -164,20 +147,23 @@ void loop() {
     
     // --- Packetizer: encrypt, chunk ---
     std::vector<uint8_t> encrypted = Packetizer::encryptAndMac(compressed);
-    auto chunks = Packetizer::chunkData(encrypted, 32);
-    
-    Serial.printf("Final Upload Payload Size: %u bytes (with encryption/MAC)\n", (unsigned)encrypted.size());
-    Serial.printf("Number of Chunks: %u (chunk size: 32 bytes)\n", (unsigned)chunks.size());
-    Serial.println("=====================================");
+      auto chunks = Packetizer::chunkData(encrypted, 32);
+      
+      Serial.printf("Final Upload Payload Size: %u bytes (with encryption/MAC)\n", (unsigned)encrypted.size());
+      Serial.printf("Number of Chunks: %u (chunk size: 32 bytes)\n", (unsigned)chunks.size());
+      Serial.println("=====================================");
 
-    if (!batch.empty()) {
-      Serial.printf("[MAIN] Uploading %u records (compressed)\n", (unsigned)batch.size());
+      Serial.printf("[MAIN] Uploading %u REAL inverter records (compressed)\n", (unsigned)batch.size());
       // For demonstration, upload the encrypted block (could be chunked)
       // In real use, send each chunk and handle retries/acks
       bool ok = g_uploader->uploadBatch(batch); // Still uses original batch for now
-      if (!ok) Serial.println("[MAIN] Upload failed");
+      if (!ok) {
+        Serial.println("[MAIN] Upload failed");
+      } else {
+        Serial.println("[MAIN] Real inverter data uploaded successfully!");
+      }
     } else {
-      Serial.println("[MAIN] No records to upload");
+      Serial.println("[MAIN] No real inverter data available yet - waiting for next cycle...");
     }
   }
   delay(5);

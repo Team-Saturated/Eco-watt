@@ -18,7 +18,7 @@ stats = {
 }
 
 def decompress_delta(data: bytes):
-    """Decompress delta-encoded data matching Compression.cpp algorithm"""
+    """Decompress delta-encoded data matching ESP32 Compression.cpp algorithm"""
     if not data:
         return []
     
@@ -27,8 +27,24 @@ def decompress_delta(data: bytes):
     idx = 1
     out = []
     
+    # Register definitions matching CloudTransport.cpp
+    register_info = [
+        {"name": "Vac1", "unit": "V", "scale": 10.0, "desc": "L1 Phase voltage"},
+        {"name": "Iac1", "unit": "A", "scale": 10.0, "desc": "L1 Phase current"},
+        {"name": "Fac1", "unit": "Hz", "scale": 100.0, "desc": "L1 Phase frequency"},
+        {"name": "Vpv1", "unit": "V", "scale": 10.0, "desc": "PV1 input voltage"},
+        {"name": "Vpv2", "unit": "V", "scale": 10.0, "desc": "PV2 input voltage"},
+        {"name": "Ipv1", "unit": "A", "scale": 10.0, "desc": "PV1 input current"},
+        {"name": "Ipv2", "unit": "A", "scale": 10.0, "desc": "PV2 input current"},
+        {"name": "Temp", "unit": "C", "scale": 10.0, "desc": "Inverter internal temperature"},
+        {"name": "Export", "unit": "%", "scale": 1.0, "desc": "Export power percentage"},
+        {"name": "Power", "unit": "W", "scale": 1.0, "desc": "Inverter current output power"}
+    ]
+    
     print(f"[DECOMPRESS] Processing {n} records from {len(data)} bytes...")
     
+    # Since ESP32 sends records sequentially, each record represents one register
+    # from the complete set of 10 registers collected in each Modbus read
     for i in range(n):
         if idx + 2 >= len(data):
             print(f"[WARNING] Data truncated at record {i}")
@@ -38,16 +54,23 @@ def decompress_delta(data: bytes):
         delta = data[idx]; idx += 1
         ts += delta * 1000  # Convert delta to milliseconds
         
-        # Read compressed value (2 bytes, scaled by 100)
-        vi = (data[idx] << 8) | data[idx+1]; idx += 2
-        voltage = vi / 100.0  # Scale back to real voltage
+        # Read compressed value (2 bytes) - this is the raw register value
+        raw_value = (data[idx] << 8) | data[idx+1]; idx += 2
+        
+        # Determine which register this is based on the record sequence
+        # If ESP32 sends all 10 registers in one upload, cycle through them
+        reg_index = i % len(register_info)
+        reg_info = register_info[reg_index]
+        
+        actual_value = raw_value / reg_info["scale"]
         
         record = {
             "ts_ms": ts,
-            "value": voltage,
-            "voltage": voltage,
-            "unit": "V",
-            "register": "Vac1",
+            "raw_value": raw_value,
+            "value": actual_value,
+            "unit": reg_info["unit"],
+            "register": reg_info["name"],
+            "description": reg_info["desc"],
             "device_id": "ESP32_SOLAR"
         }
         out.append(record)
@@ -57,36 +80,104 @@ def decompress_delta(data: bytes):
 
 @app.route('/')
 def index():
-    """Enhanced dashboard view in browser"""
+    """Enhanced dashboard view for all inverter registers"""
     decompressed_preview = ""
     if stats['last_decompressed_data']:
-        decompressed_preview = "<br>".join([
-            f"Record {i+1}: ts={r['ts_ms']}ms, value={r['value']:.2f}V" 
-            for i, r in enumerate(stats['last_decompressed_data'][:5])
+        # Show ALL records without truncation
+        total_records = len(stats['last_decompressed_data'])
+        decompressed_preview = f"<p><strong>📊 Showing ALL {total_records} records (no truncation):</strong></p>"
+        decompressed_preview += "<br>".join([
+            f"Record {i+1}: {r['register']} = {r['value']:.3f} {r['unit']} (Raw: {r.get('raw_value', 'N/A')}) - {r.get('description', '')}" 
+            for i, r in enumerate(stats['last_decompressed_data'])
         ])
-        if len(stats['last_decompressed_data']) > 5:
-            decompressed_preview += f"<br>... and {len(stats['last_decompressed_data'])-5} more records"
+    
+    # Extract latest values for each register type for summary
+    latest_values = {}
+    if stats['last_decompressed_data']:
+        for record in stats['last_decompressed_data']:
+            reg_name = record.get('register', 'Unknown')
+            if reg_name not in latest_values:
+                latest_values[reg_name] = record
+    
+    inverter_status = ""
+    if latest_values:
+        inverter_status = "<h3>🔋 Current Inverter Status (Latest Values)</h3>"
+        inverter_status += "<div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; margin: 10px 0;'>"
+        
+        # Organize registers by category
+        power_regs = ['Vac1', 'Iac1', 'Fac1', 'Power']
+        pv_regs = ['Vpv1', 'Vpv2', 'Ipv1', 'Ipv2']
+        system_regs = ['Temp', 'Export']
+        
+        # AC Power section
+        inverter_status += "<div style='background: #e8f5e8; padding: 15px; border-radius: 8px; border-left: 4px solid #4CAF50;'>"
+        inverter_status += "<h4 style='margin-top: 0; color: #2E7D32;'>⚡ AC Output</h4>"
+        for reg_name in power_regs:
+            if reg_name in latest_values:
+                record = latest_values[reg_name]
+                inverter_status += f"<p style='margin: 5px 0;'><b>{record.get('description', reg_name)}:</b> <span style='font-size: 1.2em; color: #1976D2;'>{record['value']:.3f} {record['unit']}</span></p>"
+        inverter_status += "</div>"
+        
+        # PV Input section
+        inverter_status += "<div style='background: #fff3e0; padding: 15px; border-radius: 8px; border-left: 4px solid #FF9800;'>"
+        inverter_status += "<h4 style='margin-top: 0; color: #E65100;'>☀️ Solar Input</h4>"
+        for reg_name in pv_regs:
+            if reg_name in latest_values:
+                record = latest_values[reg_name]
+                inverter_status += f"<p style='margin: 5px 0;'><b>{record.get('description', reg_name)}:</b> <span style='font-size: 1.2em; color: #1976D2;'>{record['value']:.3f} {record['unit']}</span></p>"
+        inverter_status += "</div>"
+        
+        # System Status section
+        inverter_status += "<div style='background: #f3e5f5; padding: 15px; border-radius: 8px; border-left: 4px solid #9C27B0;'>"
+        inverter_status += "<h4 style='margin-top: 0; color: #7B1FA2;'>🔧 System Status</h4>"
+        for reg_name in system_regs:
+            if reg_name in latest_values:
+                record = latest_values[reg_name]
+                inverter_status += f"<p style='margin: 5px 0;'><b>{record.get('description', reg_name)}:</b> <span style='font-size: 1.2em; color: #1976D2;'>{record['value']:.3f} {record['unit']}</span></p>"
+        inverter_status += "</div>"
+        
+        inverter_status += "</div>"
     
     return f"""
-    <h1>EcoWatt Cloud API Dashboard</h1>
-    <div style="font-family: monospace; background: #f0f0f0; padding: 10px;">
-    <h3>📊 Compression Statistics</h3>
-    <p><b>Total uploads:</b> {stats['uploads']}</p>
-    <p><b>Last records received:</b> {stats['last_num_records']}</p>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>EcoWatt Solar Inverter Dashboard</title>
+        <meta http-equiv="refresh" content="5">
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+        <meta http-equiv="Pragma" content="no-cache">
+        <meta http-equiv="Expires" content="0">
+    </head>
+    <body>
+    <h1>🌞 EcoWatt Solar Inverter Dashboard</h1>
+    <div style="font-family: Arial, sans-serif; background: #f0f8ff; padding: 15px; border-radius: 10px;">
+    
+    {inverter_status}
+    
+    <h3>📊 Data Compression Statistics</h3>
+    <div style="background: #e6f3ff; padding: 10px; margin: 10px 0; border-radius: 5px;">
+    <p><b>Total uploads received:</b> {stats['uploads']}</p>
+    <p><b>Last records processed:</b> {stats['last_num_records']}</p>
     <p><b>Original payload size (est):</b> {stats['last_original_bytes']} bytes</p>
     <p><b>Compressed payload size:</b> {stats['last_compressed_bytes']} bytes</p>
     <p><b>Compression ratio:</b> {stats['last_ratio']:.2f}:1</p>
     <p><b>Space saved:</b> {stats.get('last_space_saved', 0):.1f}%</p>
+    <p><b>Last upload:</b> {stats.get('last_upload_time', 'Never')}</p>
+    </div>
     
-    <h3>📦 Raw Payload (Hex)</h3>
-    <p style="word-break: break-all; background: white; padding: 5px;">{stats['last_raw_payload'][:200]}{'...' if len(stats['last_raw_payload']) > 200 else ''}</p>
+    <h3>📦 Raw Compressed Payload (Hex)</h3>
+    <div style="background: #fff; padding: 5px; margin: 10px 0; border: 1px solid #ccc; font-family: monospace; word-break: break-all;">
+    {stats['last_raw_payload'][:400]}{'...' if len(stats['last_raw_payload']) > 400 else ''}
+    </div>
     
-    <h3>📋 Decompressed Data Preview</h3>
-    <div style="background: white; padding: 5px;">
-    {decompressed_preview if decompressed_preview else "No data received yet"}
+    <h3>📋 All Decompressed Inverter Records</h3>
+    <div style="background: #fff; padding: 10px; margin: 10px 0; border: 1px solid #ccc; max-height: 600px; overflow-y: auto;">
+    {decompressed_preview if decompressed_preview else "No inverter data received yet"}
     </div>
     </div>
-    <p><i>Refresh page to see latest data</i></p>
+    <p><i>Page auto-refreshes every 5 seconds | ESP32 uploads every 15 seconds</i></p>
+    </body>
+    </html>
     """
 
 @app.route('/api/inverter/upload', methods=['POST'])
@@ -140,11 +231,12 @@ def upload_data():
         num_records = len(records)
         print(f"Decompressed to {num_records} records")
 
-        # Show first few decompressed records
+        # Show first few decompressed records with detailed info
         if records:
-            print("First 3 decompressed records:")
+            print(f"First {min(len(records), 3)} decompressed inverter records:")
             for i, r in enumerate(records[:3]):
-                print(f"  Record {i+1}: ts={r['ts_ms']}ms, value={r['value']:.2f}V")
+                print(f"  Record {i+1}: {r['register']} = {r['value']:.3f} {r['unit']} (Raw: {r.get('raw_value', 'N/A')}) - {r.get('description', '')}")
+                print(f"    Timestamp: {r['ts_ms']}ms")
 
         # Calculate compression stats
         original_bytes_est = num_records * 192  # realistic estimate: timestamp(8) + value(4) + metadata(8)
@@ -214,22 +306,35 @@ def nodered_stats():
 
 @app.route('/api/nodered/solar-data', methods=['GET'])
 def nodered_solar_data():
-    """API endpoint for Node-RED dashboard - Solar inverter data"""
+    """API endpoint for Node-RED dashboard - All solar inverter registers"""
     solar_data = []
     records = stats.get("last_decompressed_data", [])
     
-    for i, record in enumerate(records[:10]):  # Last 10 records
+    for i, record in enumerate(records[:20]):  # Last 20 records
         solar_data.append({
             "timestamp": record.get("ts_ms", 0),
-            "voltage": record.get("voltage", record.get("value", 0)),
+            "register": record.get("register", "Unknown"),
+            "value": record.get("value", 0),
+            "raw_value": record.get("raw_value", 0),
+            "unit": record.get("unit", ""),
+            "description": record.get("description", ""),
             "record_id": i + 1,
-            "unit": record.get("unit", "V"),
             "device": record.get("device_id", "ESP32")
         })
     
+    # Organize by register type for easier consumption
+    by_register = {}
+    for data in solar_data:
+        reg = data["register"]
+        if reg not in by_register:
+            by_register[reg] = []
+        by_register[reg].append(data)
+    
     return jsonify({
         "data": solar_data,
+        "by_register": by_register,
         "count": len(solar_data),
+        "register_types": list(by_register.keys()),
         "last_update": stats.get("last_upload_time", "Never")
     })
 

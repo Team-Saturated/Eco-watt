@@ -5,8 +5,8 @@
 
 class Poller {
 public:
-  Poller(InverterClient& c, uint32_t periodMs)
-  : _c(c), _period(periodMs), _buf(64) {}   // capacity 64
+  Poller(InverterClient& c, uint32_t periodMs, RingBuffer& buf)
+  : _c(c), _period(periodMs), _buf(buf) {}
 
   void loop(uint8_t slave, uint16_t addr, uint16_t qty);
 
@@ -20,7 +20,7 @@ private:
   uint8_t  _consecErr = 0;
   uint8_t  _consecOk  = 0;
 
-  RingBuffer _buf;          // <-- now a ring buffer of Records
+  RingBuffer& _buf;          // <-- now a reference to external buffer
   uint32_t   _lastFlush = 0;
   const uint32_t _flushEveryMs = 15000;  // print/drain every 15s
 

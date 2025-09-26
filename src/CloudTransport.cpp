@@ -16,14 +16,14 @@
 // Map register address -> display scale and unit (from your table)
 static void regScaleUnit(uint16_t addr, float& scale, const char*& unit) {
   switch (addr) {
-    case 0:  scale = 10.f;  unit = "V";  break;  // Vac1 / L1 Phase voltage
-    case 1:  scale = 10.f;  unit = "A";  break;  // Iac1 / L1 Phase current
+    case 0:  scale = 10.f; unit = "V";  break;  // Vac1 / L1 Phase voltage
+    case 1:  scale = 10.f; unit = "A";  break;  // Iac1 / L1 Phase current
     case 2:  scale = 100.f; unit = "Hz"; break;  // Fac1 / L1 Phase frequency
-    case 3:  scale = 10.f;  unit = "V";  break;  // Vpv1 / PV1 input voltage
-    case 4:  scale = 10.f;  unit = "V";  break;  // Vpv2 / PV2 input voltage
-    case 5:  scale = 10.f;  unit = "A";  break;  // Ipv1 / PV1 input current
-    case 6:  scale = 10.f;  unit = "A";  break;  // Ipv2 / PV2 input current
-    case 7:  scale = 10.f;  unit = "C";  break;  // Inverter internal temperature
+    case 3:  scale = 10.f; unit = "V";  break;  // Vpv1 / PV1 input voltage
+    case 4:  scale = 10.f; unit = "V";  break;  // Vpv2 / PV2 input voltage
+    case 5:  scale = 10.f; unit = "A";  break;  // Ipv1 / PV1 input current
+    case 6:  scale = 10.f; unit = "A";  break;  // Ipv2 / PV2 input current
+    case 7:  scale = 10.f; unit = "C";  break;  // Inverter internal temperature
     case 8:  scale = 1.f;   unit = "%";  break;  // Export power percentage (R/W)
     case 9:  scale = 1.f;   unit = "W";  break;  // Inverter current output power
     default: scale = 1.f;   unit = "";   break;

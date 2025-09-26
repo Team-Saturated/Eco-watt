@@ -17,7 +17,7 @@
 #define QTY_REGS         10
 
 // ---------- Buffering & Upload schedule ----------
-#define UPLOAD_PERIOD_MS   15000      // send buffered data every 15 min (updated for Milestone 2)
+#define UPLOAD_PERIOD_MS   14000      // send buffered data every 14 sec (before Poller flush at 15s)
 #define BUFFER_CAPACITY    128         // number of samples to keep in RAM
 #define MAX_BATCH_BYTES    8192        // cap payload size per upload (approx)
 

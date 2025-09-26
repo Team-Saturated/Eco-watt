@@ -3,14 +3,14 @@
 
 void Acquisition::regScaleUnit(uint16_t addr, float& scale, const char*& unit) const {
   switch (addr) {
-    case 0:  scale = 10.f;  unit = "V";  break;  // Vac1
-    case 1:  scale = 10.f;  unit = "A";  break;  // Iac1
+    case 0:  scale = 100.f; unit = "V";  break;  // Vac1
+    case 1:  scale = 100.f; unit = "A";  break;  // Iac1
     case 2:  scale = 100.f; unit = "Hz"; break;  // Fac1
-    case 3:  scale = 10.f;  unit = "V";  break;  // Vpv1
-    case 4:  scale = 10.f;  unit = "V";  break;  // Vpv2
-    case 5:  scale = 10.f;  unit = "A";  break;  // Ipv1
-    case 6:  scale = 10.f;  unit = "A";  break;  // Ipv2
-    case 7:  scale = 10.f;  unit = "C";  break;  // Temp
+    case 3:  scale = 100.f; unit = "V";  break;  // Vpv1
+    case 4:  scale = 100.f; unit = "V";  break;  // Vpv2
+    case 5:  scale = 100.f; unit = "A";  break;  // Ipv1
+    case 6:  scale = 100.f; unit = "A";  break;  // Ipv2
+    case 7:  scale = 100.f; unit = "C";  break;  // Temp
     case 8:  scale = 1.f;   unit = "%";  break;  // Export %
     case 9:  scale = 1.f;   unit = "W";  break;  // Output power
     default: scale = 1.f;   unit = "";   break;
