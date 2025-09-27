@@ -70,7 +70,7 @@ void setup() {
 
 void loop() {
 
-
+  ensureWiFiConnected();
   static uint32_t lastUpload = millis();
   
   try {

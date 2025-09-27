@@ -7,3 +7,4 @@
 
 
 bool  wifiConnect();
+void ensureWiFiConnected();
