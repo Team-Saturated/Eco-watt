@@ -1,0 +1,55 @@
+\doxysection{Transport.\+h}
+\hypertarget{_transport_8h_source}{}\label{_transport_8h_source}\index{include/Transport.h@{include/Transport.h}}
+\mbox{\hyperlink{_transport_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <Arduino.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{enum\ class}\ \mbox{\hyperlink{_transport_8h_a3ec8eafe0a5dde2bdddaf9033c8ca26a}{ErrType}}\ :\ uint8\_t\ \{}
+\DoxyCodeLine{00023\ \ \ \mbox{\hyperlink{_transport_8h_a3ec8eafe0a5dde2bdddaf9033c8ca26aab50339a10e1de285ac99d4c3990b8693}{NONE}}\ =\ 0,\ \ \ \ \ }
+\DoxyCodeLine{00024\ \ \ \mbox{\hyperlink{_transport_8h_a3ec8eafe0a5dde2bdddaf9033c8ca26aa293c9ea246ff9985dc6f62a650f78986}{HTTP}},\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00025\ \ \ \mbox{\hyperlink{_transport_8h_a3ec8eafe0a5dde2bdddaf9033c8ca26aa0ecd11c1d7a287401d148a23bbd7a2f8}{JSON}},\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00026\ \ \ \mbox{\hyperlink{_transport_8h_a3ec8eafe0a5dde2bdddaf9033c8ca26aa1a4b5d84a0328c4a33bd669c608a34c3}{CRC}},\ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00027\ \ \ \mbox{\hyperlink{_transport_8h_a3ec8eafe0a5dde2bdddaf9033c8ca26aa070a0fb40f6c308ab544b227660aadff}{TIMEOUT}},\ \ \ \ \ \ }
+\DoxyCodeLine{00028\ \ \ \mbox{\hyperlink{_transport_8h_a3ec8eafe0a5dde2bdddaf9033c8ca26aaee69335f36c559202930f685b01c009e}{NO\_DATA}},\ \ \ \ \ \ }
+\DoxyCodeLine{00029\ \ \ \mbox{\hyperlink{_transport_8h_a3ec8eafe0a5dde2bdddaf9033c8ca26aad80a8216ccedf29a4eaa9df467b0ff14}{MODBUS\_EXC}},\ \ \ }
+\DoxyCodeLine{00030\ \ \ \mbox{\hyperlink{_transport_8h_a3ec8eafe0a5dde2bdddaf9033c8ca26aa03570470bad94692ce93e32700d2e1cb}{OTHER}}\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00031\ \};}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00041\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_decoded_reg}{DecodedReg}}\ \{}
+\DoxyCodeLine{00042\ \ \ uint16\_t\ \mbox{\hyperlink{struct_decoded_reg_ab3bc75d4322f83c73b0fe2cbce758251}{addr}};\ \ \ }
+\DoxyCodeLine{00043\ \ \ uint16\_t\ \mbox{\hyperlink{struct_decoded_reg_a2c3d9ea19fb30062644f239b4c7af5f7}{raw}};\ \ \ \ }
+\DoxyCodeLine{00044\ \ \ \textcolor{keywordtype}{float}\ \ \ \ \mbox{\hyperlink{struct_decoded_reg_ac2413202eca7533c487c26908564641b}{value}};\ \ }
+\DoxyCodeLine{00045\ \ \ \mbox{\hyperlink{class_string}{String}}\ \ \ \mbox{\hyperlink{struct_decoded_reg_ac225ee157adb5759a24b504149d6769a}{unit}};\ \ \ }
+\DoxyCodeLine{00046\ \};}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00056\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_transport_result}{TransportResult}}\ \{}
+\DoxyCodeLine{00057\ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{struct_transport_result_ab447555cc7dd7e66827c55a3f4453f55}{ok}}\ =\ \textcolor{keyword}{false};\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ \textcolor{comment}{//\ Status\ and\ classification}}
+\DoxyCodeLine{00060\ \ \ \textcolor{keywordtype}{int}\ \ \ \ \ \mbox{\hyperlink{struct_transport_result_a074d453f26830627497b72b671ea84dc}{status}}\ =\ 0;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00061\ \ \ \mbox{\hyperlink{_transport_8h_a3ec8eafe0a5dde2bdddaf9033c8ca26a}{ErrType}}\ \mbox{\hyperlink{struct_transport_result_a528310536f6b033d2ef42408f33d2923}{type}}\ \ =\ \mbox{\hyperlink{_transport_8h_a3ec8eafe0a5dde2bdddaf9033c8ca26aab50339a10e1de285ac99d4c3990b8693}{ErrType::NONE}};\ \ \ \ \ \ }
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \ \ \textcolor{comment}{//\ Optional\ error\ details}}
+\DoxyCodeLine{00064\ \ \ \mbox{\hyperlink{class_string}{String}}\ \ \mbox{\hyperlink{struct_transport_result_a461ea191618ad6694c95e211f3d0d6fc}{error}};\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00065\ \ \ \mbox{\hyperlink{class_string}{String}}\ \ \mbox{\hyperlink{struct_transport_result_ad573258c1730a40fbfdd99f9d287d555}{body}};\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \ \ \textcolor{comment}{//\ Response\ data}}
+\DoxyCodeLine{00068\ \ \ std::vector<uint8\_t>\ \ \ \mbox{\hyperlink{struct_transport_result_adf0826f576accf2e84efb4e7bdb3356f}{bytes}};\ \ \ \ \ \ \ }
+\DoxyCodeLine{00069\ \ \ std::vector<DecodedReg>\ \mbox{\hyperlink{struct_transport_result_a28d456dbc7bc2e038686b360dfd4b5dd}{regs}};\ \ \ \ \ \ \ }
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \ \ \textcolor{comment}{//\ Modbus\ exception\ information\ (valid\ when\ type==MODBUS\_EXC)}}
+\DoxyCodeLine{00072\ \ \ \textcolor{keywordtype}{int}\ \mbox{\hyperlink{struct_transport_result_a24f73b99219d64adb1357a3a0d907e2d}{exc\_code}}\ =\ -\/1;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00073\ \};}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00083\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_i_transport}{ITransport}}\ \{}
+\DoxyCodeLine{00084\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00088\ \ \ \textcolor{keyword}{virtual}\ \mbox{\hyperlink{class_i_transport_a14481569df3318b341f6733c15c0ff16}{\string~ITransport}}()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00089\ }
+\DoxyCodeLine{00100\ \ \ \textcolor{keyword}{virtual}\ \mbox{\hyperlink{struct_transport_result}{TransportResult}}\ \mbox{\hyperlink{class_i_transport_ac75b229ea42d112f52f80bad62abb657}{exchange}}(\textcolor{keyword}{const}\ std::vector<uint8\_t>\&\ request)\ =\ 0;}
+\DoxyCodeLine{00101\ \};}
+
+\end{DoxyCode}

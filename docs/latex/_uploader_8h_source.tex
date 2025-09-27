@@ -1,0 +1,37 @@
+\doxysection{Uploader.\+h}
+\hypertarget{_uploader_8h_source}{}\label{_uploader_8h_source}\index{include/Uploader.h@{include/Uploader.h}}
+\mbox{\hyperlink{_uploader_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <Arduino.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ "{}Buffer.h"{}}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_config_8h}{Config.h}}"{}}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00028\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_uploader_a9385e267cb2f11b02e674de65921bc91}{Uploader}}\ \{}
+\DoxyCodeLine{00029\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00036\ \ \ \mbox{\hyperlink{class_uploader_a9385e267cb2f11b02e674de65921bc91}{Uploader}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{class_string}{String}}\&\ apiUrl,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{class_string}{String}}\&\ authHeader);}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00051\ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{class_uploader_afa530dcb0d7ed96a6cd0bdd7a2a87631}{uploadBatch}}(std::vector<Record>\&\ batch);}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00057\ \ \ uint32\_t\ \mbox{\hyperlink{class_uploader_a7c98ff254fa7f3c7c8286c759c50b1ec}{uploads\_ok}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \_uploads\_ok;\ \}}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00063\ \ \ uint32\_t\ \mbox{\hyperlink{class_uploader_a466ca3930e32d3881051e0b66f2472eb}{uploads\_err}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \_uploads\_err;\ \}}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00069\ \ \ \textcolor{keywordtype}{int}\ \ \ \ \ \ \mbox{\hyperlink{class_uploader_a20cf8a17338a43301e4028510d868580}{last\_http\_status}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \_last\_http;\ \}}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00081\ \ \ \textcolor{keywordtype}{bool}\ uploadRawFrames(\textcolor{keyword}{const}\ std::vector<Record>\&\ batch);}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00092\ \ \ \textcolor{keywordtype}{bool}\ uploadDecodedBatch(\textcolor{keyword}{const}\ std::vector<Record>\&\ batch);}
+\DoxyCodeLine{00093\ }
+\DoxyCodeLine{00094\ \ \ \mbox{\hyperlink{class_string}{String}}\ \_apiUrl;\ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00095\ \ \ \mbox{\hyperlink{class_string}{String}}\ \_auth;\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00096\ \ \ uint32\_t\ \_uploads\_ok\ =\ 0;\ }
+\DoxyCodeLine{00097\ \ \ uint32\_t\ \_uploads\_err\ =\ 0;}
+\DoxyCodeLine{00098\ \ \ \textcolor{keywordtype}{int}\ \_last\_http\ =\ 0;\ \ \ \ \ \ \ }
+\DoxyCodeLine{00099\ \};}
+
+\end{DoxyCode}

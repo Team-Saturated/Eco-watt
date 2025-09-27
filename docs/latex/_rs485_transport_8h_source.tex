@@ -1,0 +1,20 @@
+\doxysection{Rs485\+Transport.\+h}
+\hypertarget{_rs485_transport_8h_source}{}\label{_rs485_transport_8h_source}\index{include/Rs485Transport.h@{include/Rs485Transport.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_transport_8h}{Transport.h}}"{}}}
+\DoxyCodeLine{00003\ }
+\DoxyCodeLine{00004\ \textcolor{keyword}{class\ }Rs485Transport\ :\ \textcolor{keyword}{public}\ \mbox{\hyperlink{class_i_transport}{ITransport}}\ \{}
+\DoxyCodeLine{00005\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00006\ \ \ Rs485Transport(HardwareSerial\&\ ser,\ uint32\_t\ baud,\ \textcolor{keywordtype}{int}\ deRePin,\ uint32\_t\ timeoutMs);}
+\DoxyCodeLine{00007\ \ \ \mbox{\hyperlink{struct_transport_result}{TransportResult}}\ \mbox{\hyperlink{class_rs485_transport_af348aacec9ce3a7eed5afbc68739c70c}{exchange}}(\textcolor{keyword}{const}\ std::vector<uint8\_t>\&\ request)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00010\ \ \ HardwareSerial\&\ \_ser;}
+\DoxyCodeLine{00011\ \ \ uint32\_t\ \_timeout;}
+\DoxyCodeLine{00012\ \ \ \textcolor{keywordtype}{int}\ \_deRe;}
+\DoxyCodeLine{00013\ \ \ \textcolor{keywordtype}{void}\ setTx(\textcolor{keywordtype}{bool}\ en);}
+\DoxyCodeLine{00014\ \};}
+
+\end{DoxyCode}

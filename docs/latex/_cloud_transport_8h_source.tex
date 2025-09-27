@@ -1,0 +1,20 @@
+\doxysection{Cloud\+Transport.\+h}
+\hypertarget{_cloud_transport_8h_source}{}\label{_cloud_transport_8h_source}\index{include/CloudTransport.h@{include/CloudTransport.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#include\ "{}\mbox{\hyperlink{_transport_8h}{Transport.h}}"{}}}
+\DoxyCodeLine{00003\ }
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00013\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_cloud_transport_a6d13b1747c46e412c134bec176db334c}{CloudTransport}}\ :\ \textcolor{keyword}{public}\ \mbox{\hyperlink{class_i_transport}{ITransport}}\ \{}
+\DoxyCodeLine{00014\ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00021\ \ \ \ \ \mbox{\hyperlink{class_cloud_transport_a6d13b1747c46e412c134bec176db334c}{CloudTransport}}(\textcolor{keyword}{const}\ \mbox{\hyperlink{class_string}{String}}\&\ url,\ \textcolor{keyword}{const}\ \mbox{\hyperlink{class_string}{String}}\&\ auth,\ uint32\_t\ timeoutMs);}
+\DoxyCodeLine{00022\ \ \ \ \ \mbox{\hyperlink{struct_transport_result}{TransportResult}}\ \mbox{\hyperlink{class_cloud_transport_a4ec99da3109aa4b9f167b7e9d01b3005}{exchange}}(\textcolor{keyword}{const}\ std::vector<uint8\_t>\&\ request)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00025\ \ \ \ \ \mbox{\hyperlink{class_string}{String}}\ \_url;}
+\DoxyCodeLine{00026\ \ \ \ \ \mbox{\hyperlink{class_string}{String}}\ \_auth;}
+\DoxyCodeLine{00027\ \ \ \ \ uint32\_t\ \_timeout;}
+\DoxyCodeLine{00028\ \ \ \};}
+
+\end{DoxyCode}

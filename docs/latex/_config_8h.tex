@@ -1,0 +1,67 @@
+\doxysection{include/\+Config.h File Reference}
+\hypertarget{_config_8h}{}\label{_config_8h}\index{include/Config.h@{include/Config.h}}
+
+
+Configuration parameters for the Eco\+Watt solar inverter data acquisition system.  
+
+
+\doxysubsubsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\#define {\bfseries WIFI\+\_\+\+SSID}~"{}Lasith\+Wifi"{}
+\begin{DoxyCompactList}\small\item\em Wi\+Fi network SSID (Service Set Identifier) \end{DoxyCompactList}\item 
+\#define {\bfseries WIFI\+\_\+\+PASSWORD}~"{}12345678"{}
+\begin{DoxyCompactList}\small\item\em Wi\+Fi network password for WPA/\+WPA2 authentication. \end{DoxyCompactList}\item 
+\#define {\bfseries POLL\+\_\+\+PERIOD\+\_\+\+MS}~1000
+\begin{DoxyCompactList}\small\item\em Polling period in milliseconds -\/ how often we poll the inverter for data. \end{DoxyCompactList}\item 
+\#define {\bfseries REQ\+\_\+\+TIMEOUT\+\_\+\+MS}~5000
+\begin{DoxyCompactList}\small\item\em HTTP/\+RS485 request timeout in milliseconds. \end{DoxyCompactList}\item 
+\#define {\bfseries RS485\+\_\+\+SERIAL}~Serial2
+\begin{DoxyCompactList}\small\item\em Serial port used for RS485 communication (ESP32\+: Serial2, ESP8266\+: Serial) \end{DoxyCompactList}\item 
+\#define {\bfseries RS485\+\_\+\+BAUD}~9600
+\begin{DoxyCompactList}\small\item\em Baud rate for RS485 communication. \end{DoxyCompactList}\item 
+\#define {\bfseries RS485\+\_\+\+DE\+\_\+\+RE\+\_\+\+PIN}~21
+\begin{DoxyCompactList}\small\item\em GPIO pin for RS485 DE/\+RE (Driver Enable/\+Receiver Enable) control. \end{DoxyCompactList}\item 
+\#define {\bfseries SLAVE\+\_\+\+ID}~0x11
+\begin{DoxyCompactList}\small\item\em \doxylink{namespace_modbus}{Modbus} slave ID of the target inverter. \end{DoxyCompactList}\item 
+\#define {\bfseries START\+\_\+\+ADDR}~0x0000
+\begin{DoxyCompactList}\small\item\em Starting register address for \doxylink{namespace_modbus}{Modbus} read operations. \end{DoxyCompactList}\item 
+\#define {\bfseries QTY\+\_\+\+REGS}~10
+\begin{DoxyCompactList}\small\item\em Number of consecutive registers to read in each \doxylink{namespace_modbus}{Modbus} query. \end{DoxyCompactList}\item 
+\#define \mbox{\hyperlink{group___buffer___upload___config_gad2db49fe184bbeb346ec14ae8ed4cb94}{UPLOAD\+\_\+\+PERIOD\+\_\+\+MS}}~14000
+\begin{DoxyCompactList}\small\item\em Upload period in milliseconds -\/ send buffered data every 14 seconds. \end{DoxyCompactList}\item 
+\#define {\bfseries BUFFER\+\_\+\+CAPACITY}~128
+\begin{DoxyCompactList}\small\item\em Maximum number of samples to keep in RAM buffer. \end{DoxyCompactList}\item 
+\#define {\bfseries MAX\+\_\+\+BATCH\+\_\+\+BYTES}~8192
+\begin{DoxyCompactList}\small\item\em Maximum payload size per upload in bytes (approximate) \end{DoxyCompactList}\item 
+\#define {\bfseries UPLOAD\+\_\+\+MAX\+\_\+\+RETRIES}~2
+\begin{DoxyCompactList}\small\item\em Maximum number of additional retry attempts for failed uploads. \end{DoxyCompactList}\item 
+\#define {\bfseries RETRY\+\_\+\+DELAY\+\_\+\+MS}~2000
+\begin{DoxyCompactList}\small\item\em Delay between retry attempts in milliseconds. \end{DoxyCompactList}\item 
+\#define {\bfseries UPLOAD\+\_\+\+MODE\+\_\+\+DECODED}~1
+\begin{DoxyCompactList}\small\item\em Upload mode constant for decoded register values. \end{DoxyCompactList}\item 
+\#define {\bfseries UPLOAD\+\_\+\+MODE\+\_\+\+RAW}~2
+\begin{DoxyCompactList}\small\item\em Upload mode constant for raw \doxylink{namespace_modbus}{Modbus} frames. \end{DoxyCompactList}\item 
+\#define {\bfseries UPLOAD\+\_\+\+MODE}~\mbox{\hyperlink{group___upload___mode___config_ga0e8e92c119170213ab6dbb25cb7c8d2f}{UPLOAD\+\_\+\+MODE\+\_\+\+DECODED}}
+\begin{DoxyCompactList}\small\item\em Current upload mode selection (default\+: decoded values) \end{DoxyCompactList}\item 
+\#define {\bfseries BACKOFF\+\_\+\+MIN\+\_\+\+MS}~2000
+\begin{DoxyCompactList}\small\item\em Initial backoff delay after first error in milliseconds. \end{DoxyCompactList}\item 
+\#define {\bfseries BACKOFF\+\_\+\+STEP\+\_\+\+MS}~2000
+\begin{DoxyCompactList}\small\item\em Backoff increment per consecutive error in milliseconds. \end{DoxyCompactList}\item 
+\#define {\bfseries BACKOFF\+\_\+\+MAX\+\_\+\+MS}~30000
+\begin{DoxyCompactList}\small\item\em Maximum backoff delay cap in milliseconds. \end{DoxyCompactList}\item 
+\#define {\bfseries ERR\+\_\+\+RESET\+\_\+\+AFTER}~1
+\begin{DoxyCompactList}\small\item\em Number of consecutive successes required to reset backoff policy. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Configuration parameters for the Eco\+Watt solar inverter data acquisition system. 
+
+This file contains all the configuration constants used throughout the Eco\+Watt project, including Wi\+Fi credentials, polling intervals, RS485 communication settings, buffer management, upload scheduling, and error handling policies.
+
+\begin{DoxyAuthor}{Author}
+Eco\+Watt Development Team 
+\end{DoxyAuthor}
+\begin{DoxyDate}{Date}
+2025 
+\end{DoxyDate}

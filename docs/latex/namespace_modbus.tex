@@ -1,0 +1,116 @@
+\doxysection{Modbus Namespace Reference}
+\hypertarget{namespace_modbus}{}\label{namespace_modbus}\index{Modbus@{Modbus}}
+
+
+Namespace containing \doxylink{namespace_modbus}{Modbus} protocol utilities and helper functions.  
+
+
+\doxysubsubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+uint16\+\_\+t \mbox{\hyperlink{namespace_modbus_aea7c0a57360377bd989d9ead46e29972}{crc16}} (const uint8\+\_\+t \texorpdfstring{$\ast$}{*}data, size\+\_\+t len)
+\begin{DoxyCompactList}\small\item\em Calculate \doxylink{namespace_modbus}{Modbus} CRC16 checksum for data integrity. \end{DoxyCompactList}\item 
+std\+::vector$<$ uint8\+\_\+t $>$ \mbox{\hyperlink{namespace_modbus_a054358a317159f0eb837b639d3c1c104}{build\+Read03}} (uint8\+\_\+t slave, uint16\+\_\+t addr, uint16\+\_\+t qty)
+\begin{DoxyCompactList}\small\item\em Build \doxylink{namespace_modbus}{Modbus} Function Code 0x03 (Read Holding Registers) request frame. \end{DoxyCompactList}\item 
+std\+::string \mbox{\hyperlink{namespace_modbus_af5efcb695f007bcefd95832b750cb32e}{to\+Hex}} (const std\+::vector$<$ uint8\+\_\+t $>$ \&v)
+\begin{DoxyCompactList}\small\item\em Convert byte vector to hexadecimal string representation. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{namespace_modbus_a1087f6d75647ae60e9fc5eaa5cb0a542}{from\+Hex}} (const char \texorpdfstring{$\ast$}{*}hex, std\+::vector$<$ uint8\+\_\+t $>$ \&out)
+\begin{DoxyCompactList}\small\item\em Convert hexadecimal string to byte vector. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Namespace containing \doxylink{namespace_modbus}{Modbus} protocol utilities and helper functions. 
+
+This namespace provides essential \doxylink{namespace_modbus}{Modbus} protocol functions including CRC16 calculation, frame construction for reading operations, and data format conversion utilities for debugging and communication. 
+
+\label{doc-func-members}
+\Hypertarget{namespace_modbus_doc-func-members}
+\doxysubsection{Function Documentation}
+\Hypertarget{namespace_modbus_a054358a317159f0eb837b639d3c1c104}\index{Modbus@{Modbus}!buildRead03@{buildRead03}}
+\index{buildRead03@{buildRead03}!Modbus@{Modbus}}
+\doxysubsubsection{\texorpdfstring{buildRead03()}{buildRead03()}}
+{\footnotesize\ttfamily \label{namespace_modbus_a054358a317159f0eb837b639d3c1c104} 
+std\+::vector$<$ uint8\+\_\+t $>$ Modbus\+::build\+Read03 (\begin{DoxyParamCaption}\item[{uint8\+\_\+t}]{slave}{, }\item[{uint16\+\_\+t}]{addr}{, }\item[{uint16\+\_\+t}]{qty}{}\end{DoxyParamCaption})}
+
+
+
+Build \doxylink{namespace_modbus}{Modbus} Function Code 0x03 (Read Holding Registers) request frame. 
+
+Constructs a complete \doxylink{namespace_modbus}{Modbus} RTU frame for reading holding registers, including slave address, function code, register address, quantity, and CRC16 checksum.
+
+
+\begin{DoxyParams}{Parameters}
+{\em slave} & \doxylink{namespace_modbus}{Modbus} slave address (valid range\+: 1-\/247) \\
+\hline
+{\em addr} & Starting register address (valid range\+: 0-\/65535) \\
+\hline
+{\em qty} & Number of consecutive registers to read (valid range\+: 1-\/125) \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Complete \doxylink{namespace_modbus}{Modbus} RTU frame as byte vector, ready for transmission 
+\end{DoxyReturn}
+\Hypertarget{namespace_modbus_aea7c0a57360377bd989d9ead46e29972}\index{Modbus@{Modbus}!crc16@{crc16}}
+\index{crc16@{crc16}!Modbus@{Modbus}}
+\doxysubsubsection{\texorpdfstring{crc16()}{crc16()}}
+{\footnotesize\ttfamily \label{namespace_modbus_aea7c0a57360377bd989d9ead46e29972} 
+uint16\+\_\+t Modbus\+::crc16 (\begin{DoxyParamCaption}\item[{const uint8\+\_\+t \texorpdfstring{$\ast$}{*}}]{data}{, }\item[{size\+\_\+t}]{len}{}\end{DoxyParamCaption})}
+
+
+
+Calculate \doxylink{namespace_modbus}{Modbus} CRC16 checksum for data integrity. 
+
+Computes the standard \doxylink{namespace_modbus}{Modbus} CRC16 checksum used for error detection in \doxylink{namespace_modbus}{Modbus} RTU frames. Uses the polynomial 0x\+A001 (reverse of 0x8005).
+
+
+\begin{DoxyParams}{Parameters}
+{\em data} & Pointer to byte array to calculate CRC for \\
+\hline
+{\em len} & Number of bytes in the data array \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+16-\/bit CRC checksum value (little-\/endian format) 
+\end{DoxyReturn}
+\Hypertarget{namespace_modbus_a1087f6d75647ae60e9fc5eaa5cb0a542}\index{Modbus@{Modbus}!fromHex@{fromHex}}
+\index{fromHex@{fromHex}!Modbus@{Modbus}}
+\doxysubsubsection{\texorpdfstring{fromHex()}{fromHex()}}
+{\footnotesize\ttfamily \label{namespace_modbus_a1087f6d75647ae60e9fc5eaa5cb0a542} 
+bool Modbus\+::from\+Hex (\begin{DoxyParamCaption}\item[{const char \texorpdfstring{$\ast$}{*}}]{hex}{, }\item[{std\+::vector$<$ uint8\+\_\+t $>$ \&}]{out}{}\end{DoxyParamCaption})}
+
+
+
+Convert hexadecimal string to byte vector. 
+
+Parses a hexadecimal string and converts it back into a byte vector. Useful for processing hex-\/encoded data received from APIs or stored in configuration files.
+
+
+\begin{DoxyParams}{Parameters}
+{\em hex} & C-\/string containing hexadecimal characters (e.\+g., "{}110300000002\+C69\+B"{}) \\
+\hline
+{\em out} & Output vector to fill with decoded bytes \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if parsing succeeded, false if input contains invalid characters or has odd length 
+\end{DoxyReturn}
+\Hypertarget{namespace_modbus_af5efcb695f007bcefd95832b750cb32e}\index{Modbus@{Modbus}!toHex@{toHex}}
+\index{toHex@{toHex}!Modbus@{Modbus}}
+\doxysubsubsection{\texorpdfstring{toHex()}{toHex()}}
+{\footnotesize\ttfamily \label{namespace_modbus_af5efcb695f007bcefd95832b750cb32e} 
+std\+::string Modbus\+::to\+Hex (\begin{DoxyParamCaption}\item[{const std\+::vector$<$ uint8\+\_\+t $>$ \&}]{v}{}\end{DoxyParamCaption})}
+
+
+
+Convert byte vector to hexadecimal string representation. 
+
+Transforms a vector of bytes into a hexadecimal string format for debugging, logging, or human-\/readable display purposes.
+
+
+\begin{DoxyParams}{Parameters}
+{\em v} & Byte vector to convert \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Hexadecimal string (e.\+g., "{}110300000002\+C69\+B"{} for a typical frame) 
+\end{DoxyReturn}

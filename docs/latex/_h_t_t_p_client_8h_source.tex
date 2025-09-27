@@ -1,0 +1,52 @@
+\doxysection{HTTPClient.\+h}
+\hypertarget{_h_t_t_p_client_8h_source}{}\label{_h_t_t_p_client_8h_source}\index{pc\_shim/HTTPClient.h@{pc\_shim/HTTPClient.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#ifndef\ PC\_HTTPCLIENT\_H\_SHIM}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#define\ PC\_HTTPCLIENT\_H\_SHIM}}
+\DoxyCodeLine{00003\ }
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ <iostream>}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{comment}{//\ Mock\ HTTPClient\ for\ PC\ simulation}}
+\DoxyCodeLine{00008\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_h_t_t_p_client}{HTTPClient}}\ \{}
+\DoxyCodeLine{00009\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00010\ \ \ \ \ \textcolor{keywordtype}{bool}\ begin(\textcolor{keyword}{const}\ std::string\&\ url)\ \{}
+\DoxyCodeLine{00011\ \ \ \ \ \ \ \ \ \_url\ =\ url;}
+\DoxyCodeLine{00012\ \ \ \ \ \ \ \ \ std::cout\ <<\ \textcolor{stringliteral}{"{}[HTTPClient]\ Connecting\ to:\ "{}}\ <<\ url\ <<\ std::endl;}
+\DoxyCodeLine{00013\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00014\ \ \ \ \ \}}
+\DoxyCodeLine{00015\ \ \ \ \ }
+\DoxyCodeLine{00016\ \ \ \ \ \textcolor{keywordtype}{void}\ addHeader(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ name,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ value)\ \{}
+\DoxyCodeLine{00017\ \ \ \ \ \ \ \ \ std::cout\ <<\ \textcolor{stringliteral}{"{}[HTTPClient]\ Header:\ "{}}\ <<\ name\ <<\ \textcolor{stringliteral}{"{}\ =\ "{}}\ <<\ value\ <<\ std::endl;}
+\DoxyCodeLine{00018\ \ \ \ \ \}}
+\DoxyCodeLine{00019\ \ \ \ \ }
+\DoxyCodeLine{00020\ \ \ \ \ \textcolor{keywordtype}{int}\ POST(\textcolor{keyword}{const}\ std::string\&\ payload)\ \{}
+\DoxyCodeLine{00021\ \ \ \ \ \ \ \ \ std::cout\ <<\ \textcolor{stringliteral}{"{}[HTTPClient]\ POST\ payload\ size:\ "{}}\ <<\ payload.size()\ <<\ \textcolor{stringliteral}{"{}\ bytes"{}}\ <<\ std::endl;}
+\DoxyCodeLine{00022\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Simulate\ successful\ response}}
+\DoxyCodeLine{00023\ \ \ \ \ \ \ \ \ \_response\ =\ R\textcolor{stringliteral}{"{}(\{"{}status"{}:"{}OK"{},"{}received\_bytes"{}:)"{}\ +\ std::to\_string(payload.size())\ +\ R}\textcolor{stringliteral}{"{}(,"{}config"{}:\{"{}upload\_interval"{}:15000\},"{}commands"{}:["{}noop"{}]\})"{};}}
+\DoxyCodeLine{00024\ \textcolor{stringliteral}{\ \ \ \ \ \ \ \ }\textcolor{keywordflow}{return}\ 200;\ \textcolor{comment}{//\ HTTP\ OK}}
+\DoxyCodeLine{00025\ \ \ \ \ \}}
+\DoxyCodeLine{00026\ \ \ \ \ }
+\DoxyCodeLine{00027\ \ \ \ \ std::string\ getString()\ \{}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \_response;}
+\DoxyCodeLine{00029\ \ \ \ \ \}}
+\DoxyCodeLine{00030\ \ \ \ \ }
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{keywordtype}{void}\ end()\ \{}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ std::cout\ <<\ \textcolor{stringliteral}{"{}[HTTPClient]\ Connection\ closed"{}}\ <<\ std::endl;}
+\DoxyCodeLine{00033\ \ \ \ \ \}}
+\DoxyCodeLine{00034\ \ \ \ \ }
+\DoxyCodeLine{00035\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00036\ \ \ \ \ std::string\ \_url;}
+\DoxyCodeLine{00037\ \ \ \ \ std::string\ \_response;}
+\DoxyCodeLine{00038\ \};}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \textcolor{comment}{//\ Mock\ WiFiClient\ for\ ESP8266\ compatibility}}
+\DoxyCodeLine{00041\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_wi_fi_client}{WiFiClient}}\ \{}
+\DoxyCodeLine{00042\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{comment}{//\ Empty\ mock\ class}}
+\DoxyCodeLine{00044\ \};}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ PC\_HTTPCLIENT\_H\_SHIM}}
+
+\end{DoxyCode}

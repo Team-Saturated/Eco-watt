@@ -1,0 +1,56 @@
+\doxysection{Rs485\+Transport Class Reference}
+\hypertarget{class_rs485_transport}{}\label{class_rs485_transport}\index{Rs485Transport@{Rs485Transport}}
+Inheritance diagram for Rs485\+Transport\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{class_rs485_transport}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{class_rs485_transport_a85d6da73fe6e6d0a4d4273ba71f095b7}\label{class_rs485_transport_a85d6da73fe6e6d0a4d4273ba71f095b7} 
+{\bfseries Rs485\+Transport} (Hardware\+Serial \&ser, uint32\+\_\+t baud, int de\+Re\+Pin, uint32\+\_\+t timeout\+Ms)
+\item 
+\mbox{\hyperlink{struct_transport_result}{Transport\+Result}} \mbox{\hyperlink{class_rs485_transport_af348aacec9ce3a7eed5afbc68739c70c}{exchange}} (const std\+::vector$<$ uint8\+\_\+t $>$ \&request) override
+\begin{DoxyCompactList}\small\item\em Exchange \doxylink{namespace_modbus}{Modbus} request/response through the transport layer. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions inherited from \mbox{\hyperlink{class_i_transport}{ITransport}}}
+\begin{DoxyCompactItemize}
+\item 
+virtual {\bfseries \texorpdfstring{$\sim$}{\string~}\+ITransport} ()=default
+\begin{DoxyCompactList}\small\item\em Virtual destructor for proper cleanup of derived classes. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\label{doc-func-members}
+\Hypertarget{class_rs485_transport_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_rs485_transport_af348aacec9ce3a7eed5afbc68739c70c}\index{Rs485Transport@{Rs485Transport}!exchange@{exchange}}
+\index{exchange@{exchange}!Rs485Transport@{Rs485Transport}}
+\doxysubsubsection{\texorpdfstring{exchange()}{exchange()}}
+{\footnotesize\ttfamily \label{class_rs485_transport_af348aacec9ce3a7eed5afbc68739c70c} 
+\mbox{\hyperlink{struct_transport_result}{Transport\+Result}} Rs485\+Transport\+::exchange (\begin{DoxyParamCaption}\item[{const std\+::vector$<$ uint8\+\_\+t $>$ \&}]{request}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [override]}, {\ttfamily [virtual]}}
+
+
+
+Exchange \doxylink{namespace_modbus}{Modbus} request/response through the transport layer. 
+
+Sends a complete \doxylink{namespace_modbus}{Modbus} request frame and receives the response through the specific transport implementation (RS485, HTTP, etc.). The request should be a properly formatted \doxylink{namespace_modbus}{Modbus} frame with CRC for RTU transports.
+
+
+\begin{DoxyParams}{Parameters}
+{\em request} & Complete \doxylink{namespace_modbus}{Modbus} request frame as byte vector \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+\doxylink{struct_transport_result}{Transport\+Result} containing response data, status, and error information 
+\end{DoxyReturn}
+
+
+Implements \mbox{\hyperlink{class_i_transport_ac75b229ea42d112f52f80bad62abb657}{ITransport}}.
+
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+include/Rs485\+Transport.\+h\item 
+src/Rs485\+Transport.\+cpp\end{DoxyCompactItemize}

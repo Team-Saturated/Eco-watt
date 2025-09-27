@@ -1,0 +1,41 @@
+\doxysection{Error\+Codes.\+h}
+\hypertarget{_error_codes_8h_source}{}\label{_error_codes_8h_source}\index{include/ErrorCodes.h@{include/ErrorCodes.h}}
+\mbox{\hyperlink{_error_codes_8h}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ }
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <Arduino.h>}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00021\ \textcolor{keyword}{namespace\ }\mbox{\hyperlink{namespace_modbus_error}{ModbusError}}\ \{}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00031\ \ \ \textcolor{keyword}{enum}\ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4}{Code}}\ :\ uint8\_t\ \{}
+\DoxyCodeLine{00032\ \ \ \ \ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a00d99550d9a9f74bbb950d4a212fcdf2}{ILLEGAL\_FUNCTION}}\ \ \ \ \ \ \ \ =\ 0x01,\ \ }
+\DoxyCodeLine{00033\ \ \ \ \ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a53896b6428933aff07f4e29543a20c15}{ILLEGAL\_DATA\_ADDRESS}}\ \ \ \ =\ 0x02,\ \ }
+\DoxyCodeLine{00034\ \ \ \ \ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4ad077f62d30d3fe27795810531c1a9633}{ILLEGAL\_DATA\_VALUE}}\ \ \ \ \ \ =\ 0x03,\ \ }
+\DoxyCodeLine{00035\ \ \ \ \ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4af44af519474a935b0fdef9b1071086d5}{SLAVE\_DEVICE\_FAILURE}}\ \ \ \ =\ 0x04,\ \ }
+\DoxyCodeLine{00036\ \ \ \ \ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a3e0769b106744ed108da639e49efa38a}{ACKNOWLEDGE}}\ \ \ \ \ \ \ \ \ \ \ \ \ =\ 0x05,\ \ }
+\DoxyCodeLine{00037\ \ \ \ \ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a72c9cef0878966fa2241fd71a001172f}{SLAVE\_DEVICE\_BUSY}}\ \ \ \ \ \ \ =\ 0x06,\ \ }
+\DoxyCodeLine{00038\ \ \ \ \ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4ac1949d5d9b70577e791fd0e5b3e460b8}{MEMORY\_PARITY\_ERROR}}\ \ \ \ \ =\ 0x08,\ \ }
+\DoxyCodeLine{00039\ \ \ \ \ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a08016b699ea1019e5df4d83d0f58449a}{GATEWAY\_PATH\_UNAVAILABLE}}=\ 0x0A,\ \ }
+\DoxyCodeLine{00040\ \ \ \ \ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4af6287e27ec6b793f4bf12940b449a916}{GATEWAY\_TARGET\_FAILED}}\ \ \ =\ 0x0B,\ \ }
+\DoxyCodeLine{00041\ \ \ \};}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00055\ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{const}\ \_\_FlashStringHelper*\ \mbox{\hyperlink{namespace_modbus_error_a7202450329e2806f2730190b6212f7ae}{meaning}}(uint8\_t\ code)\ \{}
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordflow}{switch}\ (code)\ \{}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a00d99550d9a9f74bbb950d4a212fcdf2}{ILLEGAL\_FUNCTION}}:\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ F(\textcolor{stringliteral}{"{}Illegal\ Function\ (not\ supported)"{}});}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a53896b6428933aff07f4e29543a20c15}{ILLEGAL\_DATA\_ADDRESS}}:\ \ \ \ \ \textcolor{keywordflow}{return}\ F(\textcolor{stringliteral}{"{}Illegal\ Data\ Address\ (invalid)"{}});}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4ad077f62d30d3fe27795810531c1a9633}{ILLEGAL\_DATA\_VALUE}}:\ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ F(\textcolor{stringliteral}{"{}Illegal\ Data\ Value\ (out\ of\ range)"{}});}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4af44af519474a935b0fdef9b1071086d5}{SLAVE\_DEVICE\_FAILURE}}:\ \ \ \ \ \textcolor{keywordflow}{return}\ F(\textcolor{stringliteral}{"{}Slave\ Device\ Failure"{}});}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a3e0769b106744ed108da639e49efa38a}{ACKNOWLEDGE}}:\ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ F(\textcolor{stringliteral}{"{}Acknowledge\ (processing\ delayed)"{}});}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a72c9cef0878966fa2241fd71a001172f}{SLAVE\_DEVICE\_BUSY}}:\ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ F(\textcolor{stringliteral}{"{}Slave\ Device\ Busy"{}});}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4ac1949d5d9b70577e791fd0e5b3e460b8}{MEMORY\_PARITY\_ERROR}}:\ \ \ \ \ \ \textcolor{keywordflow}{return}\ F(\textcolor{stringliteral}{"{}Memory\ Parity\ Error"{}});}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a08016b699ea1019e5df4d83d0f58449a}{GATEWAY\_PATH\_UNAVAILABLE}}:\ \textcolor{keywordflow}{return}\ F(\textcolor{stringliteral}{"{}Gateway\ Path\ Unavailable"{}});}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4af6287e27ec6b793f4bf12940b449a916}{GATEWAY\_TARGET\_FAILED}}:\ \ \ \ \textcolor{keywordflow}{return}\ F(\textcolor{stringliteral}{"{}Gateway\ Target\ Failed\ to\ Respond"{}});}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \textcolor{keywordflow}{default}:\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ F(\textcolor{stringliteral}{"{}Unknown\ Modbus\ Exception"{}});}
+\DoxyCodeLine{00067\ \ \ \ \ \}}
+\DoxyCodeLine{00068\ \ \ \}}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00070\ \}\ \textcolor{comment}{//\ namespace\ ModbusError}}
+
+\end{DoxyCode}
