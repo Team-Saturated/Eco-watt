@@ -1,0 +1,115 @@
+\doxysection{Modbus\+Error Namespace Reference}
+\hypertarget{namespace_modbus_error}{}\label{namespace_modbus_error}\index{ModbusError@{ModbusError}}
+
+
+Namespace containing \doxylink{namespace_modbus}{Modbus} exception codes and error handling utilities.  
+
+
+\doxysubsubsection*{Enumerations}
+\begin{DoxyCompactItemize}
+\item 
+enum \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4}{Code}} \+: uint8\+\_\+t \{ \newline
+\mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a00d99550d9a9f74bbb950d4a212fcdf2}{ILLEGAL\+\_\+\+FUNCTION}} = 0x01
+, \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a53896b6428933aff07f4e29543a20c15}{ILLEGAL\+\_\+\+DATA\+\_\+\+ADDRESS}} = 0x02
+, \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4ad077f62d30d3fe27795810531c1a9633}{ILLEGAL\+\_\+\+DATA\+\_\+\+VALUE}} = 0x03
+, \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4af44af519474a935b0fdef9b1071086d5}{SLAVE\+\_\+\+DEVICE\+\_\+\+FAILURE}} = 0x04
+, \newline
+\mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a3e0769b106744ed108da639e49efa38a}{ACKNOWLEDGE}} = 0x05
+, \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a72c9cef0878966fa2241fd71a001172f}{SLAVE\+\_\+\+DEVICE\+\_\+\+BUSY}} = 0x06
+, \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4ac1949d5d9b70577e791fd0e5b3e460b8}{MEMORY\+\_\+\+PARITY\+\_\+\+ERROR}} = 0x08
+, \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a08016b699ea1019e5df4d83d0f58449a}{GATEWAY\+\_\+\+PATH\+\_\+\+UNAVAILABLE}} = 0x0A
+, \newline
+\mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4af6287e27ec6b793f4bf12940b449a916}{GATEWAY\+\_\+\+TARGET\+\_\+\+FAILED}} = 0x0B
+ \}
+\begin{DoxyCompactList}\small\item\em Standard \doxylink{namespace_modbus}{Modbus} exception codes from the \doxylink{namespace_modbus}{Modbus} specification. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+const \+\_\+\+\_\+\+Flash\+String\+Helper \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{namespace_modbus_error_a7202450329e2806f2730190b6212f7ae}{meaning}} (uint8\+\_\+t code)
+\begin{DoxyCompactList}\small\item\em Convert \doxylink{namespace_modbus}{Modbus} exception code to human-\/readable description. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Namespace containing \doxylink{namespace_modbus}{Modbus} exception codes and error handling utilities. 
+
+This namespace provides standardized exception codes as defined in the \doxylink{namespace_modbus}{Modbus} specification, along with utility functions to convert numeric error codes into descriptive human-\/readable messages. 
+
+\label{doc-enum-members}
+\Hypertarget{namespace_modbus_error_doc-enum-members}
+\doxysubsection{Enumeration Type Documentation}
+\Hypertarget{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4}\index{ModbusError@{ModbusError}!Code@{Code}}
+\index{Code@{Code}!ModbusError@{ModbusError}}
+\doxysubsubsection{\texorpdfstring{Code}{Code}}
+{\footnotesize\ttfamily \label{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4} 
+enum \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4}{Modbus\+Error\+::\+Code}} \+: uint8\+\_\+t}
+
+
+
+Standard \doxylink{namespace_modbus}{Modbus} exception codes from the \doxylink{namespace_modbus}{Modbus} specification. 
+
+These exception codes are returned by \doxylink{namespace_modbus}{Modbus} slaves (inverters) to indicate various error conditions during communication. Each code has a specific meaning as defined in the \doxylink{namespace_modbus}{Modbus} protocol specification. \begin{DoxyEnumFields}[2]{Enumerator}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{ILLEGAL\_FUNCTION@{ILLEGAL\_FUNCTION}!ModbusError@{ModbusError}}\index{ModbusError@{ModbusError}!ILLEGAL\_FUNCTION@{ILLEGAL\_FUNCTION}}}\Hypertarget{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a00d99550d9a9f74bbb950d4a212fcdf2}\label{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a00d99550d9a9f74bbb950d4a212fcdf2} 
+ILLEGAL\+\_\+\+FUNCTION&Function code not supported by slave. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{ILLEGAL\_DATA\_ADDRESS@{ILLEGAL\_DATA\_ADDRESS}!ModbusError@{ModbusError}}\index{ModbusError@{ModbusError}!ILLEGAL\_DATA\_ADDRESS@{ILLEGAL\_DATA\_ADDRESS}}}\Hypertarget{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a53896b6428933aff07f4e29543a20c15}\label{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a53896b6428933aff07f4e29543a20c15} 
+ILLEGAL\+\_\+\+DATA\+\_\+\+ADDRESS&Register address is invalid or out of range. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{ILLEGAL\_DATA\_VALUE@{ILLEGAL\_DATA\_VALUE}!ModbusError@{ModbusError}}\index{ModbusError@{ModbusError}!ILLEGAL\_DATA\_VALUE@{ILLEGAL\_DATA\_VALUE}}}\Hypertarget{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4ad077f62d30d3fe27795810531c1a9633}\label{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4ad077f62d30d3fe27795810531c1a9633} 
+ILLEGAL\+\_\+\+DATA\+\_\+\+VALUE&Data value is out of allowable range. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{SLAVE\_DEVICE\_FAILURE@{SLAVE\_DEVICE\_FAILURE}!ModbusError@{ModbusError}}\index{ModbusError@{ModbusError}!SLAVE\_DEVICE\_FAILURE@{SLAVE\_DEVICE\_FAILURE}}}\Hypertarget{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4af44af519474a935b0fdef9b1071086d5}\label{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4af44af519474a935b0fdef9b1071086d5} 
+SLAVE\+\_\+\+DEVICE\+\_\+\+FAILURE&Unrecoverable error occurred in slave. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{ACKNOWLEDGE@{ACKNOWLEDGE}!ModbusError@{ModbusError}}\index{ModbusError@{ModbusError}!ACKNOWLEDGE@{ACKNOWLEDGE}}}\Hypertarget{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a3e0769b106744ed108da639e49efa38a}\label{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a3e0769b106744ed108da639e49efa38a} 
+ACKNOWLEDGE&Slave accepted request but processing is delayed. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{SLAVE\_DEVICE\_BUSY@{SLAVE\_DEVICE\_BUSY}!ModbusError@{ModbusError}}\index{ModbusError@{ModbusError}!SLAVE\_DEVICE\_BUSY@{SLAVE\_DEVICE\_BUSY}}}\Hypertarget{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a72c9cef0878966fa2241fd71a001172f}\label{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a72c9cef0878966fa2241fd71a001172f} 
+SLAVE\+\_\+\+DEVICE\+\_\+\+BUSY&Slave is busy processing another command. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{MEMORY\_PARITY\_ERROR@{MEMORY\_PARITY\_ERROR}!ModbusError@{ModbusError}}\index{ModbusError@{ModbusError}!MEMORY\_PARITY\_ERROR@{MEMORY\_PARITY\_ERROR}}}\Hypertarget{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4ac1949d5d9b70577e791fd0e5b3e460b8}\label{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4ac1949d5d9b70577e791fd0e5b3e460b8} 
+MEMORY\+\_\+\+PARITY\+\_\+\+ERROR&Memory parity error detected in slave. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{GATEWAY\_PATH\_UNAVAILABLE@{GATEWAY\_PATH\_UNAVAILABLE}!ModbusError@{ModbusError}}\index{ModbusError@{ModbusError}!GATEWAY\_PATH\_UNAVAILABLE@{GATEWAY\_PATH\_UNAVAILABLE}}}\Hypertarget{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a08016b699ea1019e5df4d83d0f58449a}\label{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a08016b699ea1019e5df4d83d0f58449a} 
+GATEWAY\+\_\+\+PATH\+\_\+\+UNAVAILABLE&Gateway path to target device unavailable. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{GATEWAY\_TARGET\_FAILED@{GATEWAY\_TARGET\_FAILED}!ModbusError@{ModbusError}}\index{ModbusError@{ModbusError}!GATEWAY\_TARGET\_FAILED@{GATEWAY\_TARGET\_FAILED}}}\Hypertarget{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4af6287e27ec6b793f4bf12940b449a916}\label{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4af6287e27ec6b793f4bf12940b449a916} 
+GATEWAY\+\_\+\+TARGET\+\_\+\+FAILED&Gateway target device failed to respond. \\
+\hline
+
+\end{DoxyEnumFields}
+
+
+\label{doc-func-members}
+\Hypertarget{namespace_modbus_error_doc-func-members}
+\doxysubsection{Function Documentation}
+\Hypertarget{namespace_modbus_error_a7202450329e2806f2730190b6212f7ae}\index{ModbusError@{ModbusError}!meaning@{meaning}}
+\index{meaning@{meaning}!ModbusError@{ModbusError}}
+\doxysubsubsection{\texorpdfstring{meaning()}{meaning()}}
+{\footnotesize\ttfamily \label{namespace_modbus_error_a7202450329e2806f2730190b6212f7ae} 
+const \+\_\+\+\_\+\+Flash\+String\+Helper \texorpdfstring{$\ast$}{*} Modbus\+Error\+::meaning (\begin{DoxyParamCaption}\item[{uint8\+\_\+t}]{code}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Convert \doxylink{namespace_modbus}{Modbus} exception code to human-\/readable description. 
+
+Translates numeric \doxylink{namespace_modbus}{Modbus} exception codes into descriptive Flash strings for error reporting and debugging purposes. Uses Arduino\textquotesingle{}s F() macro to store strings in program memory to conserve RAM.
+
+
+\begin{DoxyParams}{Parameters}
+{\em code} & Numeric \doxylink{namespace_modbus}{Modbus} exception code (typically 0x01-\/0x0B) \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Flash string pointer containing descriptive error message
+\end{DoxyReturn}
+\begin{DoxyNote}{Note}
+Returns "{}\+Unknown Modbus Exception"{} for unrecognized error codes 
+\end{DoxyNote}

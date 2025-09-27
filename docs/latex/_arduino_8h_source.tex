@@ -1,0 +1,146 @@
+\doxysection{Arduino.\+h}
+\hypertarget{_arduino_8h_source}{}\label{_arduino_8h_source}\index{pc\_shim/Arduino.h@{pc\_shim/Arduino.h}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#ifndef\ ARDUINO\_H\_SHIM}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#define\ ARDUINO\_H\_SHIM}}
+\DoxyCodeLine{00003\ }
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ <chrono>}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ <thread>}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ <random>}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <iostream>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <cmath>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <ios>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <sstream>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <cstdarg>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{keyword}{using\ }std::uint32\_t;}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{comment}{//\ -\/-\/-\/\ String\ class\ for\ Arduino\ compatibility\ -\/-\/-\/}}
+\DoxyCodeLine{00018\ \textcolor{keyword}{class\ }String\ \{}
+\DoxyCodeLine{00019\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00020\ \ \ \ \ String()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00021\ \ \ \ \ String(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ str)\ :\ \_str(str\ ?\ str\ :\ \textcolor{stringliteral}{"{}"{}})\ \{\}}
+\DoxyCodeLine{00022\ \ \ \ \ String(\textcolor{keyword}{const}\ std::string\&\ str)\ :\ \_str(str)\ \{\}}
+\DoxyCodeLine{00023\ \ \ \ \ String(\textcolor{keywordtype}{int}\ val)\ \{\ }
+\DoxyCodeLine{00024\ \ \ \ \ \ \ \ \ std::ostringstream\ ss;\ }
+\DoxyCodeLine{00025\ \ \ \ \ \ \ \ \ ss\ <<\ val;\ }
+\DoxyCodeLine{00026\ \ \ \ \ \ \ \ \ \_str\ =\ ss.str();\ }
+\DoxyCodeLine{00027\ \ \ \ \ \}}
+\DoxyCodeLine{00028\ \ \ \ \ String(\textcolor{keywordtype}{float}\ val)\ \{\ }
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ std::ostringstream\ ss;\ }
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ ss\ <<\ val;\ }
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \_str\ =\ ss.str();\ }
+\DoxyCodeLine{00032\ \ \ \ \ \}}
+\DoxyCodeLine{00033\ \ \ \ \ }
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ c\_str()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \_str.c\_str();\ \}}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ length()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \_str.length();\ \}}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keywordtype}{bool}\ isEmpty()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \_str.empty();\ \}}
+\DoxyCodeLine{00037\ \ \ \ \ }
+\DoxyCodeLine{00038\ \ \ \ \ String\ operator+(\textcolor{keyword}{const}\ String\&\ other)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ String(\_str\ +\ other.\_str);}
+\DoxyCodeLine{00040\ \ \ \ \ \}}
+\DoxyCodeLine{00041\ \ \ \ \ }
+\DoxyCodeLine{00042\ \ \ \ \ String\&\ operator+=(\textcolor{keyword}{const}\ String\&\ other)\ \{}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \_str\ +=\ other.\_str;}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00045\ \ \ \ \ \}}
+\DoxyCodeLine{00046\ \ \ \ \ }
+\DoxyCodeLine{00047\ \ \ \ \ String\&\ operator+=(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ str)\ \{}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \_str\ +=\ str;}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00050\ \ \ \ \ \}}
+\DoxyCodeLine{00051\ \ \ \ \ }
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keyword}{operator}\ std::string()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \_str;\ \}}
+\DoxyCodeLine{00053\ \ \ \ \ }
+\DoxyCodeLine{00054\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00055\ \ \ \ \ std::string\ \_str;}
+\DoxyCodeLine{00056\ \};}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \textcolor{comment}{//\ -\/-\/-\/\ timing\ -\/-\/-\/}}
+\DoxyCodeLine{00059\ \textcolor{keyword}{inline}\ uint32\_t\ millis()\ \{}
+\DoxyCodeLine{00060\ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{auto}\ t0\ =\ std::chrono::steady\_clock::now();}
+\DoxyCodeLine{00061\ \ \ \textcolor{keywordflow}{return}\ (uint32\_t)std::chrono::duration\_cast<std::chrono::milliseconds>(}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \ \ \ std::chrono::steady\_clock::now()\ -\/\ t0).count();}
+\DoxyCodeLine{00063\ \}}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \textcolor{keyword}{inline}\ uint32\_t\ micros()\ \{}
+\DoxyCodeLine{00066\ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{auto}\ t0\ =\ std::chrono::steady\_clock::now();}
+\DoxyCodeLine{00067\ \ \ \textcolor{keywordflow}{return}\ (uint32\_t)std::chrono::duration\_cast<std::chrono::microseconds>(}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \ \ \ std::chrono::steady\_clock::now()\ -\/\ t0).count();}
+\DoxyCodeLine{00069\ \}}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \textcolor{preprocessor}{\#ifdef\ \_WIN32}}
+\DoxyCodeLine{00072\ \textcolor{preprocessor}{\ \ \#include\ <windows.h>}}
+\DoxyCodeLine{00073\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ delay(uint32\_t\ ms)\ \{\ ::Sleep(ms);\ \}}
+\DoxyCodeLine{00074\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00075\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ delay(uint32\_t\ ms)\ \{}
+\DoxyCodeLine{00076\ \ \ \ \ std::this\_thread::sleep\_for(std::chrono::milliseconds(ms));}
+\DoxyCodeLine{00077\ \ \ \}}
+\DoxyCodeLine{00078\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00080\ \textcolor{comment}{//\ -\/-\/-\/\ math\ -\/-\/-\/}}
+\DoxyCodeLine{00081\ \textcolor{preprocessor}{\#ifndef\ PI}}
+\DoxyCodeLine{00082\ \textcolor{preprocessor}{\#define\ PI\ 3.14159265358979323846}}
+\DoxyCodeLine{00083\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \textcolor{comment}{//\ -\/-\/-\/\ random\ -\/-\/-\/}}
+\DoxyCodeLine{00086\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{long}\ random(\textcolor{keywordtype}{long}\ a,\ \textcolor{keywordtype}{long}\ b)\ \{}
+\DoxyCodeLine{00087\ \ \ \textcolor{keyword}{static}\ std::mt19937\ rng\{std::random\_device\{\}()\};}
+\DoxyCodeLine{00088\ \ \ std::uniform\_int\_distribution<long>\ dist(a,\ b\ -\/\ 1);}
+\DoxyCodeLine{00089\ \ \ \textcolor{keywordflow}{return}\ dist(rng);}
+\DoxyCodeLine{00090\ \}}
+\DoxyCodeLine{00091\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ randomSeed(uint32\_t)\ \{\}}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \textcolor{comment}{//\ -\/-\/-\/\ ESP\ mock\ -\/-\/-\/}}
+\DoxyCodeLine{00094\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_e_s_p_class}{ESPClass}}\ \{\ uint32\_t\ getChipId()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ 1234567;\ \}\ \};}
+\DoxyCodeLine{00095\ \textcolor{keyword}{static}\ \mbox{\hyperlink{struct_e_s_p_class}{ESPClass}}\ ESP;}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00097\ \textcolor{comment}{//\ -\/-\/-\/\ Serial\ mock\ -\/-\/-\/}}
+\DoxyCodeLine{00098\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_serial_class}{SerialClass}}\ \{}
+\DoxyCodeLine{00099\ \ \ \textcolor{keywordtype}{void}\ begin(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{long})\ \{\ std::cout\ <<\ \textcolor{stringliteral}{"{}[Serial]\ Started\ at\ baud\ rate\(\backslash\)n"{}};\ \}}
+\DoxyCodeLine{00100\ \ \ \textcolor{keywordtype}{void}\ println()\ \{\ std::cout\ <<\ std::endl;\ \}}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00102\ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00103\ \ \ \textcolor{keywordtype}{void}\ print(\textcolor{keyword}{const}\ T\&\ v)\ \{\ std::cout\ <<\ v;\ \}}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00105\ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00106\ \ \ \textcolor{keywordtype}{void}\ println(\textcolor{keyword}{const}\ T\&\ v)\ \{\ std::cout\ <<\ v\ <<\ std::endl;\ \}}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00108\ \ \ \textcolor{keywordtype}{void}\ print(\textcolor{keyword}{const}\ \mbox{\hyperlink{class_string}{String}}\&\ s)\ \{\ std::cout\ <<\ s.c\_str();\ \}}
+\DoxyCodeLine{00109\ \ \ \textcolor{keywordtype}{void}\ println(\textcolor{keyword}{const}\ \mbox{\hyperlink{class_string}{String}}\&\ s)\ \{\ std::cout\ <<\ s.c\_str()\ <<\ std::endl;\ \}}
+\DoxyCodeLine{00110\ }
+\DoxyCodeLine{00111\ \ \ \textcolor{comment}{//\ Printf\ style}}
+\DoxyCodeLine{00112\ \ \ \textcolor{keywordtype}{void}\ printf(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ format,\ ...)\ \{}
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{keywordtype}{char}\ buffer[1024];}
+\DoxyCodeLine{00114\ \ \ \ \ std::va\_list\ args;}
+\DoxyCodeLine{00115\ \ \ \ \ va\_start(args,\ format);}
+\DoxyCodeLine{00116\ \ \ \ \ vsnprintf(buffer,\ \textcolor{keyword}{sizeof}(buffer),\ format,\ args);}
+\DoxyCodeLine{00117\ \ \ \ \ va\_end(args);}
+\DoxyCodeLine{00118\ \ \ \ \ std::cout\ <<\ buffer;}
+\DoxyCodeLine{00119\ \ \ \}}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00121\ \ \ \textcolor{comment}{//\ Arduino-\/style\ float/double\ with\ precision}}
+\DoxyCodeLine{00122\ \ \ \textcolor{keywordtype}{void}\ print(\textcolor{keywordtype}{double}\ v,\ \textcolor{keywordtype}{int}\ precision)\ \{}
+\DoxyCodeLine{00123\ \ \ \ \ std::streamsize\ old\_prec\ =\ std::cout.precision();}
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{keyword}{auto}\ old\_flags\ =\ std::cout.flags();}
+\DoxyCodeLine{00125\ \ \ \ \ std::cout.setf(std::ios::fixed);}
+\DoxyCodeLine{00126\ \ \ \ \ std::cout.precision(precision);}
+\DoxyCodeLine{00127\ \ \ \ \ std::cout\ <<\ v;}
+\DoxyCodeLine{00128\ \ \ \ \ std::cout.precision(old\_prec);}
+\DoxyCodeLine{00129\ \ \ \ \ std::cout.flags(old\_flags);}
+\DoxyCodeLine{00130\ \ \ \}}
+\DoxyCodeLine{00131\ \ \ \textcolor{keywordtype}{void}\ print(\textcolor{keywordtype}{float}\ v,\ \ \ \textcolor{keywordtype}{int}\ precision)\ \{\ print(\textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{double}\textcolor{keyword}{>}(v),\ precision);\ \}}
+\DoxyCodeLine{00132\ \ \ \textcolor{keywordtype}{void}\ println(\textcolor{keywordtype}{double}\ v,\ \textcolor{keywordtype}{int}\ precision)\ \{\ print(v,\ precision);\ std::cout\ <<\ std::endl;\ \}}
+\DoxyCodeLine{00133\ \ \ \textcolor{keywordtype}{void}\ println(\textcolor{keywordtype}{float}\ v,\ \ \textcolor{keywordtype}{int}\ precision)\ \{\ print(\textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{double}\textcolor{keyword}{>}(v),\ precision);\ std::cout\ <<\ std::endl;\ \}}
+\DoxyCodeLine{00134\ \};}
+\DoxyCodeLine{00135\ \textcolor{keyword}{static}\ \mbox{\hyperlink{struct_serial_class}{SerialClass}}\ Serial;}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00137\ \textcolor{comment}{//\ flash-\/string\ macro\ stub}}
+\DoxyCodeLine{00138\ \textcolor{preprocessor}{\#define\ F(x)\ x}}
+\DoxyCodeLine{00139\ }
+\DoxyCodeLine{00140\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ ARDUINO\_H\_SHIM}}
+
+\end{DoxyCode}
