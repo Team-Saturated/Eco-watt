@@ -54,7 +54,7 @@ PROJECT_NUMBER         = 1
 # for a project that appears at the top of each page and should give viewers a
 # quick idea about the purpose of the project. Keep the description short.
 
-PROJECT_BRIEF          = "ECO-WATT: A Smart Energy Management System"
+PROJECT_BRIEF          = "ECO-WATT: A Smart Solar Inverter System"
 
 # With the PROJECT_LOGO tag one can specify a logo or an icon that is included
 # in the documentation. The maximum height of the logo should not exceed 55

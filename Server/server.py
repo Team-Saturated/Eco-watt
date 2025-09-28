@@ -32,7 +32,7 @@ try:
     mqtt_client.loop_start()  # Start the network loop in a separate thread
     print(f"🔗 Attempting to connect to MQTT broker at {MQTT_BROKER}:{MQTT_PORT}")
 except Exception as e:
-    print(f"⚠️ MQTT connection failed: {e}. Server will continue without MQTT.")
+    print(f" MQTT connection failed: {e}. Server will continue without MQTT.")
     mqtt_client = None
 
 # --- Global state for demo dashboard ---
