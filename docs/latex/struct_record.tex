@@ -1,0 +1,39 @@
+\doxysection{Record Struct Reference}
+\hypertarget{struct_record}{}\label{struct_record}\index{Record@{Record}}
+
+
+One buffered \doxylink{namespace_modbus}{Modbus} sample.  
+
+
+
+
+{\ttfamily \#include $<$Buffer.\+h$>$}
+
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{struct_record_a1d4f8e6bcc3309e4abd6ae13e985867f}\label{struct_record_a1d4f8e6bcc3309e4abd6ae13e985867f} 
+uint64\+\_\+t {\bfseries ts\+\_\+ms} = 0
+\begin{DoxyCompactList}\small\item\em Timestamp in milliseconds. \end{DoxyCompactList}\item 
+\Hypertarget{struct_record_a7f1e21513c05245d0a318d8cb1176ffa}\label{struct_record_a7f1e21513c05245d0a318d8cb1176ffa} 
+uint16\+\_\+t {\bfseries start} = 0
+\begin{DoxyCompactList}\small\item\em Starting register address of the read. \end{DoxyCompactList}\item 
+\Hypertarget{struct_record_a673b25948c2883cc82524f9e90d91f69}\label{struct_record_a673b25948c2883cc82524f9e90d91f69} 
+uint16\+\_\+t {\bfseries qty} = 0
+\begin{DoxyCompactList}\small\item\em Number of consecutive registers read. \end{DoxyCompactList}\item 
+\Hypertarget{struct_record_a6995055e8519899c58282c6bf501777c}\label{struct_record_a6995055e8519899c58282c6bf501777c} 
+\mbox{\hyperlink{class_string}{String}} {\bfseries raw\+Frame\+Hex}
+\begin{DoxyCompactList}\small\item\em Optional\+: reply as hex (e.\+g., "{}110304..."{}). \end{DoxyCompactList}\item 
+\Hypertarget{struct_record_a57722e5588c366d0c9486749c55340db}\label{struct_record_a57722e5588c366d0c9486749c55340db} 
+std\+::vector$<$ \mbox{\hyperlink{struct_decoded_reg}{Decoded\+Reg}} $>$ {\bfseries regs}
+\begin{DoxyCompactList}\small\item\em Optional\+: decoded register list. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+One buffered \doxylink{namespace_modbus}{Modbus} sample. 
+
+A record may carry both the raw \doxylink{namespace_modbus}{Modbus} reply (hex string) and a parsed list of decoded registers. The timestamp is in milliseconds (e.\+g., from millis(). 
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+include/Buffer.\+h\end{DoxyCompactItemize}

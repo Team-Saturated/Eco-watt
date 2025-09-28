@@ -1,0 +1,27 @@
+\doxysection{Error Handling and Backoff Policy }
+\hypertarget{group___error___backoff___config}{}\label{group___error___backoff___config}\index{Error Handling and Backoff Policy@{Error Handling and Backoff Policy}}
+
+
+Configuration for error recovery and exponential backoff.  
+
+
+\doxysubsubsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{group___error___backoff___config_ga4a3545b0691b8e90d6931c8faa6b326b}\label{group___error___backoff___config_ga4a3545b0691b8e90d6931c8faa6b326b} 
+\#define {\bfseries BACKOFF\+\_\+\+MIN\+\_\+\+MS}~2000
+\begin{DoxyCompactList}\small\item\em Initial backoff delay after first error in milliseconds. \end{DoxyCompactList}\item 
+\Hypertarget{group___error___backoff___config_ga9c486dab4acc3bc4567129c445c3c455}\label{group___error___backoff___config_ga9c486dab4acc3bc4567129c445c3c455} 
+\#define {\bfseries BACKOFF\+\_\+\+STEP\+\_\+\+MS}~2000
+\begin{DoxyCompactList}\small\item\em Backoff increment per consecutive error in milliseconds. \end{DoxyCompactList}\item 
+\Hypertarget{group___error___backoff___config_ga3f795eb0e855e984d166d35ce04a877e}\label{group___error___backoff___config_ga3f795eb0e855e984d166d35ce04a877e} 
+\#define {\bfseries BACKOFF\+\_\+\+MAX\+\_\+\+MS}~30000
+\begin{DoxyCompactList}\small\item\em Maximum backoff delay cap in milliseconds. \end{DoxyCompactList}\item 
+\Hypertarget{group___error___backoff___config_gae059c1dad544e65d215dae90550788d0}\label{group___error___backoff___config_gae059c1dad544e65d215dae90550788d0} 
+\#define {\bfseries ERR\+\_\+\+RESET\+\_\+\+AFTER}~1
+\begin{DoxyCompactList}\small\item\em Number of consecutive successes required to reset backoff policy. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Configuration for error recovery and exponential backoff. 
+

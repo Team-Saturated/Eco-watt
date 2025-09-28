@@ -1,0 +1,41 @@
+\doxysection{include/\+Error\+Codes.h File Reference}
+\hypertarget{_error_codes_8h}{}\label{_error_codes_8h}\index{include/ErrorCodes.h@{include/ErrorCodes.h}}
+
+
+\doxylink{namespace_modbus}{Modbus} exception code definitions and error message utilities.  
+
+
+{\ttfamily \#include $<$Arduino.\+h$>$}\newline
+\doxysubsubsection*{Namespaces}
+\begin{DoxyCompactItemize}
+\item 
+namespace \mbox{\hyperlink{namespace_modbus_error}{Modbus\+Error}}
+\begin{DoxyCompactList}\small\item\em Namespace containing \doxylink{namespace_modbus}{Modbus} exception codes and error handling utilities. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Enumerations}
+\begin{DoxyCompactItemize}
+\item 
+enum \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4}{Modbus\+Error\+::\+Code}} \+: uint8\+\_\+t \{ \newline
+\mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a00d99550d9a9f74bbb950d4a212fcdf2}{Modbus\+Error\+::\+ILLEGAL\+\_\+\+FUNCTION}} = 0x01
+, \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a53896b6428933aff07f4e29543a20c15}{Modbus\+Error\+::\+ILLEGAL\+\_\+\+DATA\+\_\+\+ADDRESS}} = 0x02
+, \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4ad077f62d30d3fe27795810531c1a9633}{Modbus\+Error\+::\+ILLEGAL\+\_\+\+DATA\+\_\+\+VALUE}} = 0x03
+, \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4af44af519474a935b0fdef9b1071086d5}{Modbus\+Error\+::\+SLAVE\+\_\+\+DEVICE\+\_\+\+FAILURE}} = 0x04
+, \newline
+\mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a3e0769b106744ed108da639e49efa38a}{Modbus\+Error\+::\+ACKNOWLEDGE}} = 0x05
+, \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a72c9cef0878966fa2241fd71a001172f}{Modbus\+Error\+::\+SLAVE\+\_\+\+DEVICE\+\_\+\+BUSY}} = 0x06
+, \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4ac1949d5d9b70577e791fd0e5b3e460b8}{Modbus\+Error\+::\+MEMORY\+\_\+\+PARITY\+\_\+\+ERROR}} = 0x08
+, \mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4a08016b699ea1019e5df4d83d0f58449a}{Modbus\+Error\+::\+GATEWAY\+\_\+\+PATH\+\_\+\+UNAVAILABLE}} = 0x0A
+, \newline
+\mbox{\hyperlink{namespace_modbus_error_ae42f54490992e21825d6e3acb00087c4af6287e27ec6b793f4bf12940b449a916}{Modbus\+Error\+::\+GATEWAY\+\_\+\+TARGET\+\_\+\+FAILED}} = 0x0B
+ \}
+\begin{DoxyCompactList}\small\item\em Standard \doxylink{namespace_modbus}{Modbus} exception codes from the \doxylink{namespace_modbus}{Modbus} specification. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+const \+\_\+\+\_\+\+Flash\+String\+Helper \texorpdfstring{$\ast$}{*} \mbox{\hyperlink{namespace_modbus_error_a7202450329e2806f2730190b6212f7ae}{Modbus\+Error\+::meaning}} (uint8\+\_\+t code)
+\begin{DoxyCompactList}\small\item\em Convert \doxylink{namespace_modbus}{Modbus} exception code to human-\/readable description. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\doxylink{namespace_modbus}{Modbus} exception code definitions and error message utilities. 
+
+This file provides standardized \doxylink{namespace_modbus}{Modbus} exception codes and utility functions for converting error codes into human-\/readable messages. Based on the official \doxylink{namespace_modbus}{Modbus} specification and inverter documentation. 
