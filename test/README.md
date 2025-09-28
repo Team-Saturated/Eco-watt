@@ -246,12 +246,6 @@ find uploads/ -name "*.bin" -mtime +1 -delete
 ls -t uploads/*.bin | tail -n +11 | xargs rm --
 ```
 
-#### **Production Considerations:**
-- **Disk Space**: Each upload = 46 bytes (very efficient)
-- **Daily Storage**: ~4MB per day (assuming 1 upload/15 seconds)
-- **Log Rotation**: Implement if running continuously
-- **Backup**: Files contain complete solar data for analysis
-
 ## 🌐 **Server Status & IP Configuration**
 
 ### **Server Endpoints**:
