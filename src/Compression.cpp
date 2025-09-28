@@ -20,7 +20,7 @@ std::vector<uint8_t> Compression::compressDelta(const std::vector<Record>& recor
     uint64_t first_ts = records[0].ts_ms;
     uint64_t last_ts = records.back().ts_ms;
     
-    Serial.printf("[COMPRESS] 📅 Timestamp range: %llu to %llu ms (span: %llu ms)\n", 
+    Serial.printf("[COMPRESS] Timestamp range: %llu to %llu ms (span: %llu ms)\n", 
                  first_ts, last_ts, (last_ts - first_ts));
     
     for (const auto& r : records) {
@@ -38,7 +38,7 @@ std::vector<uint8_t> Compression::compressDelta(const std::vector<Record>& recor
         }
     }
     
-    Serial.printf("[COMPRESS] ✅ Compressed to %d bytes (includes timestamps as deltas)\n", (int)out.size());
+    Serial.printf("[COMPRESS]  Compressed to %d bytes (includes timestamps as deltas)\n", (int)out.size());
     return out;
 }
 

@@ -122,20 +122,20 @@ void loop() {
     // Initialize batch timer if this is first record
     if (g_recordBatch.empty()) {
       g_batchStartTime = now;
-      Serial.println("🔄 Starting new batch collection...");
+      Serial.println("Starting new batch collection...");
     }
     
     // Add new records to batch with timestamp tracking
     for (const auto& record : newRecords) {
       g_recordBatch.push_back(record);
-      Serial.printf("[BATCH] ➕ Added record with timestamp %llu ms\n", record.ts_ms);
+      Serial.printf("[BATCH]  Added record with timestamp %llu ms\n", record.ts_ms);
     }
     
     // Show batch progress with timestamp info
     if (!g_recordBatch.empty()) {
       uint64_t first_ts = g_recordBatch.front().ts_ms;
       uint64_t last_ts = g_recordBatch.back().ts_ms;
-      Serial.printf("📊 Batch progress: %d/%d records (timestamps: %llu to %llu ms)\n", 
+      Serial.printf(" Batch progress: %d/%d records (timestamps: %llu to %llu ms)\n", 
                    (int)g_recordBatch.size(), TARGET_BATCH_SIZE, first_ts, last_ts);
     }
   }
@@ -148,12 +148,12 @@ void loop() {
     if (g_recordBatch.size() >= TARGET_BATCH_SIZE) {
       // We have exactly TARGET_BATCH_SIZE records - upload now
       shouldUpload = true;
-      uploadReason = "✅ Collected " + String(TARGET_BATCH_SIZE) + " records";
+      uploadReason = " Collected " + String(TARGET_BATCH_SIZE) + " records";
     } 
     else if (now - g_batchStartTime >= MAX_BATCH_TIME_MS) {
       // Time limit reached - upload whatever we have
       shouldUpload = true;
-      uploadReason = "⏰ Time limit reached (" + String(MAX_BATCH_TIME_MS/1000) + "s)";
+      uploadReason = " Time limit reached (" + String(MAX_BATCH_TIME_MS/1000) + "s)";
     }
   }
   
@@ -164,7 +164,7 @@ void loop() {
     if (!g_recordBatch.empty()) {
       uint64_t first_ts = g_recordBatch.front().ts_ms;
       uint64_t last_ts = g_recordBatch.back().ts_ms;
-      Serial.printf("📅 BATCH TIMESTAMP INFO: First=%llu ms, Last=%llu ms, Span=%llu ms\n", 
+      Serial.printf(" BATCH TIMESTAMP INFO: First=%llu ms, Last=%llu ms, Span=%llu ms\n", 
                    first_ts, last_ts, (last_ts - first_ts));
     }
     
@@ -201,25 +201,25 @@ void loop() {
     Serial.printf("Number of Chunks: %u (chunk size: 32 bytes)\n", (unsigned)chunks.size());
     Serial.println("=====================================");
 
-    Serial.printf("[MAIN] 📤 Uploading %u REAL inverter records with timestamps (compressed)\n", (unsigned)g_recordBatch.size());
+    Serial.printf("[MAIN] Uploading %u REAL inverter records with timestamps (compressed)\n", (unsigned)g_recordBatch.size());
     
     // Upload the batch
     bool uploadSuccess = g_uploader->uploadBatch(g_recordBatch);
     if (!uploadSuccess) {
-      Serial.println("[MAIN] ❌ Upload failed");
+      Serial.println("[MAIN]  Upload failed");
     } else {
-      Serial.println("[MAIN] ✅ Real inverter data with timestamps uploaded successfully!");
+      Serial.println("[MAIN]  Real inverter data with timestamps uploaded successfully!");
     }
     
     // Clear batch for next collection
     int uploadedCount = g_recordBatch.size();
     g_recordBatch.clear();
     g_batchStartTime = 0;
-    Serial.printf("📤 Batch cleared - uploaded %d timestamped records\n", uploadedCount);
-    Serial.println("🔄 Ready for next batch collection...");
+    Serial.printf(" Batch cleared - uploaded %d timestamped records\n", uploadedCount);
+    Serial.println(" Ready for next batch collection...");
     g_batchStartTime = 0;
-    Serial.printf("📤 Uploaded batch with %d records\n", (int)g_recordBatch.size());
-    Serial.println("🔄 Ready for next batch collection...");
+    Serial.printf(" Uploaded batch with %d records\n", (int)g_recordBatch.size());
+    Serial.println(" Ready for next batch collection...");
   }
   
   delay(5);

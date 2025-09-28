@@ -22,8 +22,8 @@ bool Uploader::uploadBatch(std::vector<Record>& batch) {
   // Show timestamp information for the batch
   uint64_t first_ts = batch.front().ts_ms;
   uint64_t last_ts = batch.back().ts_ms;
-  Serial.printf("[UPLOAD] 📦 Uploading batch with timestamps: %llu to %llu ms\n", first_ts, last_ts);
-  Serial.printf("[UPLOAD] 📊 Batch contains %d records spanning %llu ms\n", 
+  Serial.printf("[UPLOAD]  Uploading batch with timestamps: %llu to %llu ms\n", first_ts, last_ts);
+  Serial.printf("[UPLOAD]  Batch contains %d records spanning %llu ms\n", 
                (int)batch.size(), (last_ts - first_ts));
 
   // --- Compress batch before upload ---
@@ -56,7 +56,7 @@ bool Uploader::uploadBatch(std::vector<Record>& batch) {
   bool ok = (code >= 200 && code < 300);
 
   Serial.printf("[UPLOAD] HTTP Response Code: %d\n", code);
-  Serial.printf("[UPLOAD] 📤 Payload sent: %u bytes with compressed timestamps\n", (unsigned)payload.length());
+  Serial.printf("[UPLOAD]  Payload sent: %u bytes with compressed timestamps\n", (unsigned)payload.length());
 
   // --- Handle server feedback (ACK/config/commands) ---
   String response;

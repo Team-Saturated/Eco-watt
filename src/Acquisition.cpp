@@ -54,14 +54,14 @@ bool Acquisition::acquire(uint8_t slave, uint16_t start, uint16_t qty, Record& o
   out.start = start;
   out.qty   = qty;
 
-  Serial.printf("[ACQ] 🕒 Request timestamp: %llu ms (registers %u-%u)\n", 
+  Serial.printf("[ACQ]  Request timestamp: %llu ms (registers %u-%u)\n", 
                out.ts_ms, start, start + qty - 1);
 
   // Perform read via client/transport
   auto tr = _client.readHolding(slave, start, qty);
   if (!tr.ok) {
     err = tr.error.length() ? tr.error : String(F("transport error"));
-    Serial.printf("[ACQ] ❌ Error at timestamp %llu ms: %s\n", out.ts_ms, err.c_str());
+    Serial.printf("[ACQ]  Error at timestamp %llu ms: %s\n", out.ts_ms, err.c_str());
     return false;
   }
 
@@ -73,7 +73,7 @@ bool Acquisition::acquire(uint8_t slave, uint16_t start, uint16_t qty, Record& o
   // 2) If transport already decoded, pass through
   if (!tr.regs.empty()) {
     out.regs = tr.regs;
-    Serial.printf("[ACQ] ✅ Successfully acquired %d registers at timestamp %llu ms\n", 
+    Serial.printf("[ACQ]  Successfully acquired %d registers at timestamp %llu ms\n", 
                  (int)tr.regs.size(), out.ts_ms);
     return true;
   }
@@ -92,12 +92,12 @@ bool Acquisition::acquire(uint8_t slave, uint16_t start, uint16_t qty, Record& o
         String derr;
         if (decode03ToRegs(rx, start, qty, regs, derr)) {
           out.regs = std::move(regs);
-          Serial.printf("[ACQ] ✅ Decoded %d registers from JSON at timestamp %llu ms\n", 
+          Serial.printf("[ACQ]  Decoded %d registers from JSON at timestamp %llu ms\n", 
                        (int)regs.size(), out.ts_ms);
           return true;
         } else {
           err = derr.length() ? derr : String(F("decode failed"));
-          Serial.printf("[ACQ] ❌ Decode failed at timestamp %llu ms: %s\n", out.ts_ms, err.c_str());
+          Serial.printf("[ACQ]  Decode failed at timestamp %llu ms: %s\n", out.ts_ms, err.c_str());
           return false;
         }
       } else {
