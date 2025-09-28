@@ -1,4 +1,4 @@
-# ECO-WATT Server Documentation# 🚀 ECO-WATT Server-Side Complete Guide# 🚀 ECO-WATT Server-Side Complete Guide# 🚀 Node-RED EcoWatt Dashboard - Quick Setup Guide
+# ECO-WATT Server Documentation# ECO-WATT Server Documentation# 🚀 ECO-WATT Server-Side Complete Guide# 🚀 ECO-WATT Server-Side Complete Guide# 🚀 Node-RED EcoWatt Dashboard - Quick Setup Guide
 
 
 
@@ -6,267 +6,535 @@
 
 The ECO-WATT server processes compressed solar inverter data from ESP32 devices, decompresses it with 9:1 efficiency, and publishes real-time data via MQTT for dashboard visualization.
 
-## 📋 Quick Navigation
+## Overview
 
 ## Quick Setup
 
-1. **Install Dependencies**: `pip install flask paho-mqtt`• [Architecture](#🏗️-architecture) • [Flask Setup](#🌐-flask-setup) • [MQTT](#📡-mqtt) • [Compression](#🗜️-compression) • [API](#🔌-api) • [Node-RED](#📊-node-red) • [Testing](#🧪-testing) • [Config](#⚙️-config) • [Debug](#🛠️-debug)
+1. **Install Dependencies**: `pip install flask paho-mqtt`The ECO-WATT server processes compressed solar inverter data from ESP32 devices, decompresses it with 9:1 efficiency, and publishes real-time data via MQTT for dashboard visualization.
 
 2. **Start Server**: `python server.py`
 
-3. **Test System**: `python test/test_upload.py`## 📋 **Table of Contents**## 📊 **Data Flow Overview**
+3. **Test System**: `python test/test_upload.py`## 📋 Quick Navigation
 
-4. **View Dashboard**: Install Node-RED and import flow
+4. **Monitor MQTT**: `python mqtt_subscriber.py`
 
----
+## Quick Setup
 
 ## System Architecture
 
-- **ESP32** → Sends compressed solar data (314 bytes from 2,880 bytes)1. [Server Architecture Overview](#architecture)```
+- **ESP32** → Sends compressed solar data (314 bytes from 2,880 bytes)1. **Install Dependencies**: `pip install flask paho-mqtt`• [Architecture](#🏗️-architecture) • [Flask Setup](#🌐-flask-setup) • [MQTT](#📡-mqtt) • [Compression](#🗜️-compression) • [API](#🔌-api) • [Node-RED](#📊-node-red) • [Testing](#🧪-testing) • [Config](#⚙️-config) • [Debug](#🛠️-debug)
 
 - **Flask Server** → Decompresses and processes data
 
-- **MQTT Broker** → Publishes to topic `vdl/replace`## 🏗️ Architecture
+- **MQTT Broker** → Publishes to topic `vdl/replace`2. **Start Server**: `python server.py`
 
 - **Node-RED Dashboard** → Displays real-time charts and gauges
 
-2. [Flask API Server Setup](#flask-setup)  ESP32 → Flask Server (46 bytes compressed) → MQTT → Node-RED → Dashboard
+3. **Test System**: `python test/test_upload.py`## 📋 **Table of Contents**## 📊 **Data Flow Overview**
 
 ---
 
-### System Flow
+4. **View Dashboard**: Install Node-RED and import flow
 
 ## Flask Server Setup
 
-```3. [MQTT Integration](#mqtt-integration)```
+---
 
 ### Installation
 
-```bashESP32 → Flask Server → MQTT Broker → Node-RED Dashboard
+```bash## System Architecture
 
 python -m venv .venv
 
-.venv\Scripts\activate  ↓         ↓             ↓              ↓4. [Data Compression System](#compression)
+.venv\Scripts\activate- **ESP32** → Sends compressed solar data (314 bytes from 2,880 bytes)1. [Server Architecture Overview](#architecture)```
 
 pip install flask paho-mqtt requests
 
-```Solar → Compression → Cloud Pub → Real-time UI
+```- **Flask Server** → Decompresses and processes data
 
 
 
-### Configuration```5. [API Endpoints Documentation](#api-endpoints)## ⚡ **Quick Installation**
+### Configuration- **MQTT Broker** → Publishes to topic `vdl/replace`## 🏗️ Architecture
 
 ```python
 
-# Key settings in server.py
+# Key settings in server.py- **Node-RED Dashboard** → Displays real-time charts and gauges
 
 MQTT_BROKER = "broker.emqx.io"
 
-MQTT_TOPIC = "vdl/replace"### Key Metrics6. [Node-RED Dashboard](#node-red-dashboard)
+MQTT_TOPIC = "vdl/replace"2. [Flask API Server Setup](#flask-setup)  ESP32 → Flask Server (46 bytes compressed) → MQTT → Node-RED → Dashboard
 
 HOST = "0.0.0.0"
 
-PORT = 5000- **Compression**: 9.17:1 ratio (2,880 → 314 bytes)
+PORT = 5000---
 
 ```
 
-- **Space Saved**: 89.1%7. [Testing & Validation](#testing)### **1. Install Node.js & Node-RED**
+### System Flow
 
 ### Main Upload Handler
 
-The server receives compressed data, decompresses it, and publishes to MQTT:- **Upload Interval**: 15 seconds
+The server receives compressed data, decompresses it, and publishes to MQTT:## Flask Server Setup
 
 ```python
 
-@app.route('/api/inverter/upload', methods=['POST'])- **Records/Upload**: 158. [Configuration Guide](#configuration)```bash
+@app.route('/api/inverter/upload', methods=['POST'])```3. [MQTT Integration](#mqtt-integration)```
 
 def upload_inverter_data():
 
-    # Receive 314-byte compressed payload- **Registers**: 10 (AC/DC voltage, current, power, temp, etc.)
+    # Receive 314-byte compressed payload### Installation
 
     # Decompress to 15 records with 10 registers each
 
-    # Publish JSON to MQTT broker9. [Troubleshooting](#troubleshooting)# Download Node.js from: https://nodejs.org/
+    # Publish JSON to MQTT broker```bashESP32 → Flask Server → MQTT Broker → Node-RED Dashboard
 
     # Return compression statistics
 
-```---
+```python -m venv .venv
 
 
 
----node --version  # Verify installation
+---.venv\Scripts\activate  ↓         ↓             ↓              ↓4. [Data Compression System](#compression)
 
 
 
-## MQTT Integration## 🌐 Flask Setup
+## MQTT Integrationpip install flask paho-mqtt requests
 
 
 
-### Connection Details---
+### Connection Details```Solar → Compression → Cloud Pub → Real-time UI
 
 - **Broker**: broker.emqx.io:1883
 
-- **Topic**: vdl/replace### Quick Install
+- **Topic**: vdl/replace
 
 - **Format**: JSON with solar data and compression stats
 
-```powershell# Install Node-RED globally
+### Configuration```5. [API Endpoints Documentation](#api-endpoints)## ⚡ **Quick Installation**
 
 ### Published Data Structure
 
-```jsonpython -m venv .venv
+```json```python
 
 {
 
-  "device_id": "ESP32_SOLAR_INV_001",.venv\Scripts\activate## 🏗️ **Server Architecture Overview** {#architecture}npm install -g node-red
+  "device_id": "ESP32_SOLAR_INV_001",# Key settings in server.py
 
   "data": [
 
-    {pip install flask paho-mqtt requests
+    {MQTT_BROKER = "broker.emqx.io"
 
       "timestamp": 1727522445,
 
-      "ac_voltage": 230.5,python server.py
+      "ac_voltage": 230.5,MQTT_TOPIC = "vdl/replace"### Key Metrics6. [Node-RED Dashboard](#node-red-dashboard)
 
       "ac_current": 4.2,
 
-      "ac_power": 968.1,```
+      "ac_power": 968.1,HOST = "0.0.0.0"
 
       "temperature": 42.5
 
-    }### **System Data Flow:**# Install dashboard module
+    }PORT = 5000- **Compression**: 9.17:1 ratio (2,880 → 314 bytes)
 
   ],
 
-  "compression_stats": {### Core Configuration
+  "compression_stats": {```
 
     "ratio": 9.17,
 
-    "space_saved_percent": 89.1```python```npm install -g node-red-dashboard
+    "space_saved_percent": 89.1- **Space Saved**: 89.1%7. [Testing & Validation](#testing)### **1. Install Node.js & Node-RED**
 
   }
 
-}# MQTT Settings
+}### Main Upload Handler
 
 ```
 
-MQTT_BROKER = "broker.emqx.io"  # Public brokerESP32/NodeMCU → Flask Server → MQTT Broker → Node-RED Dashboard```
+The server receives compressed data, decompresses it, and publishes to MQTT:- **Upload Interval**: 15 seconds
 
 ---
 
-MQTT_PORT = 1883
+```python
 
-## Data Compression
+## Testing
 
-MQTT_TOPIC = "vdl/replace"     ↓              ↓             ↓              ↓
+@app.route('/api/inverter/upload', methods=['POST'])- **Records/Upload**: 158. [Configuration Guide](#configuration)```bash
 
-### How It Works
+### Available Test Files
 
-- ESP32 collects 15 records over 15 seconds
+1. **test/test_upload.py** → Simulates ESP32 compressed data uploaddef upload_inverter_data():
 
-- Each record has 10 solar inverter registers
+2. **mqtt_subscriber.py** → Listens for MQTT messages (root directory)
 
-- Delta compression reduces 2,880 bytes to 314 bytes# Server Settings  Solar Data → Compression → Cloud Pub → Real-time UI### **2. Import Dashboard Flow**
+3. **mqtt_test_publisher.py** → Publishes test MQTT messages (root directory)    # Receive 314-byte compressed payload- **Registers**: 10 (AC/DC voltage, current, power, temp, etc.)
 
-- Achieves 9.17:1 compression ratio
+4. **test/benchmark_test.py** → Performance testing
 
-HOST = "0.0.0.0"
+    # Decompress to 15 records with 10 registers each
 
-### Decompression Process
+### Manual Testing Steps
 
-The server decompresses the binary data back to readable solar values:PORT = 5000``````bash
+```bash    # Publish JSON to MQTT broker9. [Troubleshooting](#troubleshooting)# Download Node.js from: https://nodejs.org/
 
-1. Read header (number of records and registers)
+# Terminal 1: Start server
 
-2. Process timestamp deltasDEBUG = True
-
-3. Extract register values
-
-4. Scale values to real units (voltage, current, power)```# Start Node-RED
+python server.py    # Return compression statistics
 
 
 
----
+# Terminal 2: Monitor MQTT messages```---
+
+python mqtt_subscriber.py
 
 
 
-## API Endpoints### Main Upload Handler### **Key Technologies:**node-red
+# Terminal 3: Test upload
+
+python test/test_upload.py---node --version  # Verify installation
 
 
 
-### Upload Endpoint```python
+# Terminal 4: Test MQTT independently
 
-```http
+python mqtt_test_publisher.py
 
-POST /api/inverter/upload@app.route('/api/inverter/upload', methods=['POST'])- **🐍 Flask Server**: Python web server handling ESP32 uploads
-
-Content-Type: application/json or application/octet-stream
-
-```def upload_inverter_data():
+```## MQTT Integration## 🌐 Flask Setup
 
 
 
-**Request**: Compressed solar data (314 bytes)    # 1. Receive compressed data (314 bytes)- **📡 MQTT Broker**: `broker.emqx.io:1883` for real-time messaging  # Open: http://localhost:1880/
+### Expected Results
 
-**Response**: Success status and compression statistics
+- ✅ Upload successful with 9.17:1 compression ratio
 
-    # 2. Decompress using 9:1 algorithm
+- ✅ MQTT message published to vdl/replace topic### Connection Details---
 
-### Dashboard Endpoints
+- ✅ MQTT subscriber displays formatted data
 
-- **GET /api/dashboard/health** → Server status and MQTT connection    # 3. Extract 10 solar registers- **📊 Node-RED**: Dashboard for data visualization# Menu (☰) → Import → Paste contents of 'nodered-ecowatt-dashboard.json'
-
-- **GET /api/dashboard/stats** → Upload statistics and performance
-
-- **GET /api/dashboard/solar-data** → Latest solar readings    # 4. Publish to MQTT
+- ✅ All 15 records decompressed correctly- **Broker**: broker.emqx.io:1883
 
 
 
----    # 5. Return compression stats- **🗜️ Compression**: 9:1 delta compression algorithm```
+---- **Topic**: vdl/replace### Quick Install
 
 
 
-## Node-RED Dashboard    
+## Node-RED Dashboard- **Format**: JSON with solar data and compression stats
 
 
 
-### Installation    if request.content_type == 'application/octet-stream':- **Delta-compressed timestamps** and **scaled values** (×100)
+### Installation```powershell# Install Node-RED globally
 
 ```bash
 
-npm install -g node-red        compressed_data = request.data
+npm install -g node-red### Published Data Structure
 
 cd %USERPROFILE%\.node-red
 
-npm install node-red-dashboard    else:### **Performance Metrics:**
+npm install node-red-dashboard```jsonpython -m venv .venv
 
 ```
 
-        json_data = request.get_json()
+{
 
 ### Setup Steps
 
-1. Start Node-RED: `node-red`        compressed_data = binascii.unhexlify(json_data['data'])- **Compression Ratio**: 9.17:1 (2,880 → 314 bytes)#### **🔹 Node-RED API Endpoints** (Auto-created by Flask server)
+1. Start Node-RED: `node-red`  "device_id": "ESP32_SOLAR_INV_001",.venv\Scripts\activate## 🏗️ **Server Architecture Overview** {#architecture}npm install -g node-red
 
 2. Open editor: http://localhost:1880
 
-3. Import flow from `nodered-ecowatt-dashboard.json`    
+3. Import flow from `Server/nodered-ecowatt-dashboard.json`  "data": [
 
 4. Configure MQTT input node with broker.emqx.io:1883
 
-5. Access dashboard: http://localhost:1880/ui    records = decompressDelta(compressed_data)- **Space Saved**: 89.1%1. **`/api/nodered/stats`** - Compression statistics
+5. Access dashboard: http://localhost:1880/ui    {pip install flask paho-mqtt requests
 
 
 
-### Dashboard Components    mqtt_payload = format_for_mqtt(records)
+### Dashboard Components      "timestamp": 1727522445,
 
 - **Voltage Charts** → Real-time AC/DC voltage monitoring
 
-- **Power Gauges** → Current power generation and efficiency    publish_to_mqtt(mqtt_payload)- **Upload Interval**: 15 seconds2. **`/api/nodered/solar-data`** - Decompressed solar inverter readings  
+- **Power Gauges** → Current power generation and efficiency      "ac_voltage": 230.5,python server.py
 
 - **Compression Analytics** → Live compression ratio display
 
-- **Device Status** → Connection and health indicators    
+- **Device Status** → Connection and health indicators      "ac_current": 4.2,
+
+
+
+---      "ac_power": 968.1,```
+
+
+
+## API Endpoints      "temperature": 42.5
+
+
+
+### Upload Endpoint    }### **System Data Flow:**# Install dashboard module
+
+```http
+
+POST /api/inverter/upload  ],
+
+Content-Type: application/json or application/octet-stream
+
+```  "compression_stats": {### Core Configuration
+
+
+
+**Request**: Compressed solar data (314 bytes)    "ratio": 9.17,
+
+**Response**: Success status and compression statistics
+
+    "space_saved_percent": 89.1```python```npm install -g node-red-dashboard
+
+### Dashboard Endpoints
+
+- **GET /api/dashboard/health** → Server status and MQTT connection  }
+
+- **GET /api/dashboard/stats** → Upload statistics and performance
+
+- **GET /api/dashboard/solar-data** → Latest solar readings}# MQTT Settings
+
+
+
+---```
+
+
+
+## ConfigurationMQTT_BROKER = "broker.emqx.io"  # Public brokerESP32/NodeMCU → Flask Server → MQTT Broker → Node-RED Dashboard```
+
+
+
+### Production Settings---
+
+```python
+
+# Secure MQTT brokerMQTT_PORT = 1883
+
+MQTT_BROKER = "your-production-broker.com"
+
+MQTT_USERNAME = "username"## Data Compression
+
+MQTT_PASSWORD = "password"
+
+MQTT_TOPIC = "vdl/replace"     ↓              ↓             ↓              ↓
+
+# Production server
+
+app.config['DEBUG'] = False### How It Works
+
+HOST = "0.0.0.0"
+
+PORT = 80- ESP32 collects 15 records over 15 seconds
+
+```
+
+- Each record has 10 solar inverter registers
+
+### Development Settings
+
+```python- Delta compression reduces 2,880 bytes to 314 bytes# Server Settings  Solar Data → Compression → Cloud Pub → Real-time UI### **2. Import Dashboard Flow**
+
+# Public MQTT broker (testing)
+
+MQTT_BROKER = "broker.emqx.io"- Achieves 9.17:1 compression ratio
+
+
+
+# Development serverHOST = "0.0.0.0"
+
+app.config['DEBUG'] = True
+
+HOST = "127.0.0.1"### Decompression Process
+
+PORT = 5000
+
+```The server decompresses the binary data back to readable solar values:PORT = 5000``````bash
+
+
+
+---1. Read header (number of records and registers)
+
+
+
+## Troubleshooting2. Process timestamp deltasDEBUG = True
+
+
+
+### Common Issues3. Extract register values
+
+
+
+**Server Won't Start**4. Scale values to real units (voltage, current, power)```# Start Node-RED
+
+- Check if port 5000 is available: `netstat -an | findstr :5000`
+
+- Try different port: `python server.py --port 5001`
+
+
+
+**MQTT Connection Failed**---
+
+- Test connectivity: `ping broker.emqx.io`
+
+- Try alternative broker: `test.mosquitto.org`
+
+
+
+**No MQTT Messages Received**## API Endpoints### Main Upload Handler### **Key Technologies:**node-red
+
+- Run MQTT test publisher: `python mqtt_test_publisher.py`
+
+- Check subscriber is running: `python mqtt_subscriber.py`
+
+- Verify topic spelling: "vdl/replace" (case sensitive)
+
+### Upload Endpoint```python
+
+### Debug Commands
+
+```bash```http
+
+# Check server health
+
+curl http://localhost:5000/api/dashboard/healthPOST /api/inverter/upload@app.route('/api/inverter/upload', methods=['POST'])- **🐍 Flask Server**: Python web server handling ESP32 uploads
+
+
+
+# Monitor MQTT messages manuallyContent-Type: application/json or application/octet-stream
+
+mosquitto_sub -h broker.emqx.io -t "vdl/replace" -v
+
+```def upload_inverter_data():
+
+# Test network connectivity
+
+netstat -an | findstr ":5000\|:1883\|:1880"
+
+```
+
+**Request**: Compressed solar data (314 bytes)    # 1. Receive compressed data (314 bytes)- **📡 MQTT Broker**: `broker.emqx.io:1883` for real-time messaging  # Open: http://localhost:1880/
+
+---
+
+**Response**: Success status and compression statistics
+
+## Quick Start Checklist
+
+    # 2. Decompress using 9:1 algorithm
+
+### Complete Setup (5 minutes)
+
+1. **Install and start server** (2 min)### Dashboard Endpoints
+
+   ```bash
+
+   pip install flask paho-mqtt- **GET /api/dashboard/health** → Server status and MQTT connection    # 3. Extract 10 solar registers- **📊 Node-RED**: Dashboard for data visualization# Menu (☰) → Import → Paste contents of 'nodered-ecowatt-dashboard.json'
+
+   python server.py
+
+   ```- **GET /api/dashboard/stats** → Upload statistics and performance
+
+
+
+2. **Test MQTT system** (1 min)- **GET /api/dashboard/solar-data** → Latest solar readings    # 4. Publish to MQTT
+
+   ```bash
+
+   # Terminal 1: Start subscriber
+
+   python mqtt_subscriber.py
+
+   ---    # 5. Return compression stats- **🗜️ Compression**: 9:1 delta compression algorithm```
+
+   # Terminal 2: Test publisher
+
+   python mqtt_test_publisher.py
+
+   ```
+
+## Node-RED Dashboard    
+
+3. **Test data upload** (1 min)
+
+   ```bash
+
+   python test/test_upload.py
+
+   ```### Installation    if request.content_type == 'application/octet-stream':- **Delta-compressed timestamps** and **scaled values** (×100)
+
+
+
+4. **Setup Node-RED dashboard** (1 min)```bash
+
+   ```bash
+
+   npm install -g node-rednpm install -g node-red        compressed_data = request.data
+
+   node-red
+
+   # Import flow and access http://localhost:1880/uicd %USERPROFILE%\.node-red
+
+   ```
+
+npm install node-red-dashboard    else:### **Performance Metrics:**
+
+### Verification
+
+- ✅ Server running and MQTT connected```
+
+- ✅ MQTT subscriber receives test messages
+
+- ✅ Upload test shows 9.17:1 compression        json_data = request.get_json()
+
+- ✅ Dashboard displays real-time charts
+
+### Setup Steps
+
+---
+
+1. Start Node-RED: `node-red`        compressed_data = binascii.unhexlify(json_data['data'])- **Compression Ratio**: 9.17:1 (2,880 → 314 bytes)#### **🔹 Node-RED API Endpoints** (Auto-created by Flask server)
+
+## File Locations
+
+2. Open editor: http://localhost:1880
+
+### Root Directory
+
+- `mqtt_subscriber.py` → MQTT message listener3. Import flow from `nodered-ecowatt-dashboard.json`    
+
+- `mqtt_test_publisher.py` → MQTT test message publisher
+
+- `server.py` → Main Flask server4. Configure MQTT input node with broker.emqx.io:1883
+
+
+
+### Server Directory5. Access dashboard: http://localhost:1880/ui    records = decompressDelta(compressed_data)- **Space Saved**: 89.1%1. **`/api/nodered/stats`** - Compression statistics
+
+- `Server/server.py` → Flask server implementation
+
+- `Server/nodered-ecowatt-dashboard.json` → Node-RED flow
+
+- `Server/server-guide.md` → This documentation
+
+### Dashboard Components    mqtt_payload = format_for_mqtt(records)
+
+### Test Directory
+
+- `test/test_upload.py` → ESP32 upload simulation- **Voltage Charts** → Real-time AC/DC voltage monitoring
+
+- `test/benchmark_test.py` → Performance testing
+
+- **Power Gauges** → Current power generation and efficiency    publish_to_mqtt(mqtt_payload)- **Upload Interval**: 15 seconds2. **`/api/nodered/solar-data`** - Decompressed solar inverter readings  
+
+---
+
+- **Compression Analytics** → Live compression ratio display
+
+## Summary
+
+The ECO-WATT server efficiently handles compressed solar data with 9:1 compression ratio, provides real-time MQTT publishing, and supports professional dashboard visualization. The system includes comprehensive testing tools and is designed for easy deployment.- **Device Status** → Connection and health indicators    
 
 
 
