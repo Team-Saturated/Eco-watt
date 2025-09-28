@@ -1,73 +1,1677 @@
 [
     {
-        "id": "flow1",
+        "id": "cd2a1d3f69a38fc4",
         "type": "tab",
-        "label": "EcoWatt Dashboard",
+        "label": "Flow 2",
         "disabled": false,
-        "info": ""
+        "info": "",
+        "env": []
     },
     {
-        "id": "http-in",
-        "type": "http in",
-        "z": "flow1",
-        "name": "Receive Upload",
-        "url": "/api/inverter/upload",
-        "method": "post",
-        "upload": false,
-        "swaggerDoc": "",
-        "x": 140,
-        "y": 100,
-        "wires": [["process"]]
+        "id": "c40056e499ca5f82",
+        "type": "mqtt in",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "topic": "vdl/replace",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "034ffacc85f96e04",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 380,
+        "y": 280,
+        "wires": [
+            [
+                "0b73f78dd7306c59",
+                "a6f180bb05ba0e87",
+                "d79ad938084ef204",
+                "0311d8bef6d4b440",
+                "2facc7e769902572",
+                "6989f8b87ed09bed",
+                "dd9640b51688f19e",
+                "3d212c8e04df4725",
+                "7e4db7bf7cc35db1",
+                "0ae20d64aa27a6e7",
+                "bb4bfd543b17aa2b"
+            ]
+        ]
     },
     {
-        "id": "process",
-        "type": "function",
-        "z": "flow1",
-        "name": "Process Data",
-        "func": "// Extract payload\nvar payload = msg.payload;\nvar compressed_size = payload.length;\n\n// Simulate decompression stats\nvar original_size = compressed_size * 3; // estimate\nvar ratio = original_size / compressed_size;\n\n// Create response\nvar response = {\n    status: \"OK\",\n    compressed_bytes: compressed_size,\n    original_bytes_est: original_size,\n    compression_ratio: ratio.toFixed(2),\n    timestamp: new Date().toISOString()\n};\n\n// Send to dashboard\nnode.send([{payload: response}, {payload: response, topic: \"upload\"}]);\n\nreturn null;",
-        "outputs": 2,
-        "noerr": 0,
-        "x": 320,
-        "y": 100,
-        "wires": [["http-response"], ["dashboard"]]
-    },
-    {
-        "id": "http-response",
-        "type": "http response",
-        "z": "flow1",
-        "name": "Send Response",
-        "statusCode": "200",
-        "headers": {},
-        "x": 520,
-        "y": 80,
-        "wires": []
-    },
-    {
-        "id": "dashboard",
+        "id": "a2df0cccac558607",
         "type": "ui_chart",
-        "z": "flow1",
-        "name": "Compression Chart",
-        "group": "dashboard-group",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "27d4cf9848c3c329",
         "order": 1,
         "width": 0,
         "height": 0,
-        "label": "Compression Ratio",
+        "label": "chart",
         "chartType": "line",
         "legend": "false",
-        "xformat": "HH:mm:ss",
+        "xformat": "auto",
         "interpolate": "linear",
-        "nodata": "No Data",
-        "dot": false,
-        "ymin": "0",
-        "ymax": "10",
+        "nodata": "",
+        "dot": true,
+        "ymin": "",
+        "ymax": "",
         "removeOlder": 1,
         "removeOlderPoints": "",
         "removeOlderUnit": "3600",
         "cutout": 0,
         "useOneColor": false,
-        "colors": ["#1f77b4"],
-        "x": 520,
-        "y": 120,
-        "wires": [[]]
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 970,
+        "y": 260,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "0b73f78dd7306c59",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "Vac1",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Vac1\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 670,
+        "y": 260,
+        "wires": [
+            [
+                "a2df0cccac558607",
+                "6ab5e7c8f91becbd"
+            ]
+        ]
+    },
+    {
+        "id": "a6f180bb05ba0e87",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "Iac1",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Iac1\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 670,
+        "y": 400,
+        "wires": [
+            [
+                "acc32b6a7791e093",
+                "7e0db9549b07aa17"
+            ]
+        ]
+    },
+    {
+        "id": "23cc50bfdef2e09b",
+        "type": "ui_chart",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "1304e10680da521f",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "label": "chart",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "auto",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": true,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 970,
+        "y": 520,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "d79ad938084ef204",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "Fac1",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Fac1\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 670,
+        "y": 520,
+        "wires": [
+            [
+                "23cc50bfdef2e09b",
+                "b798dd30f0fa8ead"
+            ]
+        ]
+    },
+    {
+        "id": "1a876ac725793661",
+        "type": "ui_chart",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "07c03fe6d1f05848",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "label": "chart",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "auto",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": true,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 970,
+        "y": 640,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "0311d8bef6d4b440",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "Vpv1",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Vpv1\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 670,
+        "y": 640,
+        "wires": [
+            [
+                "1a876ac725793661",
+                "1f1fdb6c19f96e60"
+            ]
+        ]
+    },
+    {
+        "id": "8cae8177d9ac4762",
+        "type": "ui_chart",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "b99d10f55cbeb1b1",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "label": "chart",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "auto",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": true,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 970,
+        "y": 740,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "2facc7e769902572",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "Vpv2",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Vpv2\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 670,
+        "y": 740,
+        "wires": [
+            [
+                "8cae8177d9ac4762",
+                "2ed9c7283e8ec56c"
+            ]
+        ]
+    },
+    {
+        "id": "e38010566fa2dcab",
+        "type": "ui_chart",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "6340c64fedd1b4fa",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "label": "chart",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "auto",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": true,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 970,
+        "y": 840,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "6989f8b87ed09bed",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "Ipv1",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Ipv1\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 670,
+        "y": 840,
+        "wires": [
+            [
+                "e38010566fa2dcab",
+                "39ba2149944e3c89"
+            ]
+        ]
+    },
+    {
+        "id": "c1d10813e537fea7",
+        "type": "ui_chart",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "0c6bb0a12b829dcf",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "label": "chart",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "auto",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": true,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 970,
+        "y": 940,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "dd9640b51688f19e",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "Ipv2",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Ipv2\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 670,
+        "y": 940,
+        "wires": [
+            [
+                "c1d10813e537fea7",
+                "938f7f9679da8acb"
+            ]
+        ]
+    },
+    {
+        "id": "03a06305923153c7",
+        "type": "ui_chart",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "4385e3b1b0015548",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "label": "chart",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "auto",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": true,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 970,
+        "y": 1040,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "3d212c8e04df4725",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "Temp",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Temp\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 660,
+        "y": 1040,
+        "wires": [
+            [
+                "03a06305923153c7",
+                "fb46452d89eb39d7"
+            ]
+        ]
+    },
+    {
+        "id": "6de4b4d0c72ee50f",
+        "type": "ui_chart",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "961b10b74c049d8b",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "label": "chart",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "auto",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": true,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 970,
+        "y": 1140,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "7e4db7bf7cc35db1",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "Export",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Export\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 670,
+        "y": 1140,
+        "wires": [
+            [
+                "6de4b4d0c72ee50f",
+                "a69f56f8ccca3310"
+            ]
+        ]
+    },
+    {
+        "id": "8a3801d33815433c",
+        "type": "ui_chart",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "01a89dce1efb8ca3",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "label": "chart",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "auto",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": true,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 970,
+        "y": 1240,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "0ae20d64aa27a6e7",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "Output power",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Output power\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 690,
+        "y": 1240,
+        "wires": [
+            [
+                "8a3801d33815433c",
+                "c711e42a85c489fb"
+            ]
+        ]
+    },
+    {
+        "id": "acc32b6a7791e093",
+        "type": "ui_chart",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "e77401e5717a6b06",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "label": "chart",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "auto",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": true,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 970,
+        "y": 400,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "8bed823fce2f1337",
+        "type": "ui_gauge",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "27d4cf9848c3c329",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "gauge",
+        "label": "units",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "300",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 970,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "6ab5e7c8f91becbd",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "avg",
+        "func": "// Expecting msg.payload to be an array with one series (Vac1)\nconst chartData = msg.payload;\n\nlet yValues = [];\n\nif (Array.isArray(chartData) && chartData.length > 0 && chartData[0]?.data?.[0]) {\n    const points = chartData[0].data[0]; // array of { x, y }\n    if (Array.isArray(points)) {\n        yValues = points\n            .map(p => Number(p?.y))\n            .filter(v => Number.isFinite(v));\n    }\n}\n\n// Average all y values\nconst avgRaw = yValues.length\n    ? yValues.reduce((sum, v) => sum + v, 0) / yValues.length\n    : 0;\n\n// Round to 2 decimals and keep it as a number\nconst avgY = Math.round(avgRaw * 100) / 100;\n\nmsg.payload = avgY;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 830,
+        "y": 320,
+        "wires": [
+            [
+                "8bed823fce2f1337"
+            ]
+        ]
+    },
+    {
+        "id": "c24092625d21fca1",
+        "type": "ui_gauge",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "e77401e5717a6b06",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "gauge",
+        "label": "units",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "30",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 990,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "7e0db9549b07aa17",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "avg",
+        "func": "// Expecting msg.payload to be an array with one series (Vac1)\nconst chartData = msg.payload;\n\nlet yValues = [];\n\nif (Array.isArray(chartData) && chartData.length > 0 && chartData[0]?.data?.[0]) {\n    const points = chartData[0].data[0]; // array of { x, y }\n    if (Array.isArray(points)) {\n        yValues = points\n            .map(p => Number(p?.y))\n            .filter(v => Number.isFinite(v));\n    }\n}\n\n// Average all y values\nconst avgRaw = yValues.length\n    ? yValues.reduce((sum, v) => sum + v, 0) / yValues.length\n    : 0;\n\n// Round to 2 decimals and keep it as a number\nconst avgY = Math.round(avgRaw * 100) / 100;\n\nmsg.payload = avgY;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 850,
+        "y": 460,
+        "wires": [
+            [
+                "c24092625d21fca1"
+            ]
+        ]
+    },
+    {
+        "id": "6f92addfb38408d5",
+        "type": "ui_gauge",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "1304e10680da521f",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "gauge",
+        "label": "units",
+        "format": "{{value}}",
+        "min": "30",
+        "max": "70",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 990,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "b798dd30f0fa8ead",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "avg",
+        "func": "// Expecting msg.payload to be an array with one series (Vac1)\nconst chartData = msg.payload;\n\nlet yValues = [];\n\nif (Array.isArray(chartData) && chartData.length > 0 && chartData[0]?.data?.[0]) {\n    const points = chartData[0].data[0]; // array of { x, y }\n    if (Array.isArray(points)) {\n        yValues = points\n            .map(p => Number(p?.y))\n            .filter(v => Number.isFinite(v));\n    }\n}\n\n// Average all y values\nconst avgRaw = yValues.length\n    ? yValues.reduce((sum, v) => sum + v, 0) / yValues.length\n    : 0;\n\n// Round to 2 decimals and keep it as a number\nconst avgY = Math.round(avgRaw * 100) / 100;\n\nmsg.payload = avgY;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 850,
+        "y": 580,
+        "wires": [
+            [
+                "6f92addfb38408d5"
+            ]
+        ]
+    },
+    {
+        "id": "458a66711a0be89b",
+        "type": "ui_gauge",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "07c03fe6d1f05848",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "gauge",
+        "label": "units",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "500",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 970,
+        "y": 680,
+        "wires": []
+    },
+    {
+        "id": "1f1fdb6c19f96e60",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "avg",
+        "func": "// Expecting msg.payload to be an array with one series (Vac1)\nconst chartData = msg.payload;\n\nlet yValues = [];\n\nif (Array.isArray(chartData) && chartData.length > 0 && chartData[0]?.data?.[0]) {\n    const points = chartData[0].data[0]; // array of { x, y }\n    if (Array.isArray(points)) {\n        yValues = points\n            .map(p => Number(p?.y))\n            .filter(v => Number.isFinite(v));\n    }\n}\n\n// Average all y values\nconst avgRaw = yValues.length\n    ? yValues.reduce((sum, v) => sum + v, 0) / yValues.length\n    : 0;\n\n// Round to 2 decimals and keep it as a number\nconst avgY = Math.round(avgRaw * 100) / 100;\n\nmsg.payload = avgY;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 830,
+        "y": 680,
+        "wires": [
+            [
+                "458a66711a0be89b"
+            ]
+        ]
+    },
+    {
+        "id": "fe87c95dc0df1823",
+        "type": "ui_gauge",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "b99d10f55cbeb1b1",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "gauge",
+        "label": "units",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "500",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 970,
+        "y": 800,
+        "wires": []
+    },
+    {
+        "id": "2ed9c7283e8ec56c",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "avg",
+        "func": "// Expecting msg.payload to be an array with one series (Vac1)\nconst chartData = msg.payload;\n\nlet yValues = [];\n\nif (Array.isArray(chartData) && chartData.length > 0 && chartData[0]?.data?.[0]) {\n    const points = chartData[0].data[0]; // array of { x, y }\n    if (Array.isArray(points)) {\n        yValues = points\n            .map(p => Number(p?.y))\n            .filter(v => Number.isFinite(v));\n    }\n}\n\n// Average all y values\nconst avgRaw = yValues.length\n    ? yValues.reduce((sum, v) => sum + v, 0) / yValues.length\n    : 0;\n\n// Round to 2 decimals and keep it as a number\nconst avgY = Math.round(avgRaw * 100) / 100;\n\nmsg.payload = avgY;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 830,
+        "y": 800,
+        "wires": [
+            [
+                "fe87c95dc0df1823"
+            ]
+        ]
+    },
+    {
+        "id": "c053ba34b784a11e",
+        "type": "ui_gauge",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "6340c64fedd1b4fa",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "gauge",
+        "label": "units",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "300",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 970,
+        "y": 900,
+        "wires": []
+    },
+    {
+        "id": "39ba2149944e3c89",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "avg",
+        "func": "// Expecting msg.payload to be an array with one series (Vac1)\nconst chartData = msg.payload;\n\nlet yValues = [];\n\nif (Array.isArray(chartData) && chartData.length > 0 && chartData[0]?.data?.[0]) {\n    const points = chartData[0].data[0]; // array of { x, y }\n    if (Array.isArray(points)) {\n        yValues = points\n            .map(p => Number(p?.y))\n            .filter(v => Number.isFinite(v));\n    }\n}\n\n// Average all y values\nconst avgRaw = yValues.length\n    ? yValues.reduce((sum, v) => sum + v, 0) / yValues.length\n    : 0;\n\n// Round to 2 decimals and keep it as a number\nconst avgY = Math.round(avgRaw * 100) / 100;\n\nmsg.payload = avgY;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 830,
+        "y": 900,
+        "wires": [
+            [
+                "c053ba34b784a11e"
+            ]
+        ]
+    },
+    {
+        "id": "47d265326fd6ab47",
+        "type": "ui_gauge",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "0c6bb0a12b829dcf",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "gauge",
+        "label": "units",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "30",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 970,
+        "y": 1000,
+        "wires": []
+    },
+    {
+        "id": "938f7f9679da8acb",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "avg",
+        "func": "// Expecting msg.payload to be an array with one series (Vac1)\nconst chartData = msg.payload;\n\nlet yValues = [];\n\nif (Array.isArray(chartData) && chartData.length > 0 && chartData[0]?.data?.[0]) {\n    const points = chartData[0].data[0]; // array of { x, y }\n    if (Array.isArray(points)) {\n        yValues = points\n            .map(p => Number(p?.y))\n            .filter(v => Number.isFinite(v));\n    }\n}\n\n// Average all y values\nconst avgRaw = yValues.length\n    ? yValues.reduce((sum, v) => sum + v, 0) / yValues.length\n    : 0;\n\n// Round to 2 decimals and keep it as a number\nconst avgY = Math.round(avgRaw * 100) / 100;\n\nmsg.payload = avgY;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 830,
+        "y": 1000,
+        "wires": [
+            [
+                "47d265326fd6ab47"
+            ]
+        ]
+    },
+    {
+        "id": "b92e3e44cea796fb",
+        "type": "ui_gauge",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "4385e3b1b0015548",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "gauge",
+        "label": "units",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "70",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 970,
+        "y": 1100,
+        "wires": []
+    },
+    {
+        "id": "fb46452d89eb39d7",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "avg",
+        "func": "// Expecting msg.payload to be an array with one series (Vac1)\nconst chartData = msg.payload;\n\nlet yValues = [];\n\nif (Array.isArray(chartData) && chartData.length > 0 && chartData[0]?.data?.[0]) {\n    const points = chartData[0].data[0]; // array of { x, y }\n    if (Array.isArray(points)) {\n        yValues = points\n            .map(p => Number(p?.y))\n            .filter(v => Number.isFinite(v));\n    }\n}\n\n// Average all y values\nconst avgRaw = yValues.length\n    ? yValues.reduce((sum, v) => sum + v, 0) / yValues.length\n    : 0;\n\n// Round to 2 decimals and keep it as a number\nconst avgY = Math.round(avgRaw * 100) / 100;\n\nmsg.payload = avgY;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 830,
+        "y": 1100,
+        "wires": [
+            [
+                "b92e3e44cea796fb"
+            ]
+        ]
+    },
+    {
+        "id": "788056158041f8ec",
+        "type": "ui_gauge",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "961b10b74c049d8b",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "gauge",
+        "label": "units",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "10",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 970,
+        "y": 1180,
+        "wires": []
+    },
+    {
+        "id": "a69f56f8ccca3310",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "avg",
+        "func": "// Expecting msg.payload to be an array with one series (Vac1)\nconst chartData = msg.payload;\n\nlet yValues = [];\n\nif (Array.isArray(chartData) && chartData.length > 0 && chartData[0]?.data?.[0]) {\n    const points = chartData[0].data[0]; // array of { x, y }\n    if (Array.isArray(points)) {\n        yValues = points\n            .map(p => Number(p?.y))\n            .filter(v => Number.isFinite(v));\n    }\n}\n\n// Average all y values\nconst avgRaw = yValues.length\n    ? yValues.reduce((sum, v) => sum + v, 0) / yValues.length\n    : 0;\n\n// Round to 2 decimals and keep it as a number\nconst avgY = Math.round(avgRaw * 100) / 100;\n\nmsg.payload = avgY;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 830,
+        "y": 1180,
+        "wires": [
+            [
+                "788056158041f8ec"
+            ]
+        ]
+    },
+    {
+        "id": "effe3e9d7efbdfbf",
+        "type": "ui_gauge",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "",
+        "group": "01a89dce1efb8ca3",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "gauge",
+        "label": "units",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "10000",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 970,
+        "y": 1280,
+        "wires": []
+    },
+    {
+        "id": "c711e42a85c489fb",
+        "type": "function",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "avg",
+        "func": "// Expecting msg.payload to be an array with one series (Vac1)\nconst chartData = msg.payload;\n\nlet yValues = [];\n\nif (Array.isArray(chartData) && chartData.length > 0 && chartData[0]?.data?.[0]) {\n    const points = chartData[0].data[0]; // array of { x, y }\n    if (Array.isArray(points)) {\n        yValues = points\n            .map(p => Number(p?.y))\n            .filter(v => Number.isFinite(v));\n    }\n}\n\n// Average all y values\nconst avgRaw = yValues.length\n    ? yValues.reduce((sum, v) => sum + v, 0) / yValues.length\n    : 0;\n\n// Round to 2 decimals and keep it as a number\nconst avgY = Math.round(avgRaw * 100) / 100;\n\nmsg.payload = avgY;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 830,
+        "y": 1280,
+        "wires": [
+            [
+                "effe3e9d7efbdfbf"
+            ]
+        ]
+    },
+    {
+        "id": "2d062e5b85e5dea5",
+        "type": "ui_text",
+        "z": "cd2a1d3f69a38fc4",
+        "group": "79789ec24b7e7f8d",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "original_bytes",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 1720,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "b98ae192b1224362",
+        "type": "change",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "original_bytes",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.original_bytes",
+                "tot": "jsonata"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1480,
+        "y": 60,
+        "wires": [
+            [
+                "2d062e5b85e5dea5",
+                "94762c2e321a52c5"
+            ]
+        ]
+    },
+    {
+        "id": "94762c2e321a52c5",
+        "type": "debug",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "debug 8",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1720,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "bb4bfd543b17aa2b",
+        "type": "change",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "compression_stats",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.compression_stats",
+                "tot": "jsonata"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1030,
+        "y": 60,
+        "wires": [
+            [
+                "b98ae192b1224362",
+                "d56d6e9b2f2396b6",
+                "7fa9f474640630d2",
+                "7c7d4ec127cc6741",
+                "e3c7cf6b07d67972",
+                "1fd3965c59b8ab3c"
+            ]
+        ]
+    },
+    {
+        "id": "136095d9c8a06cd1",
+        "type": "ui_text",
+        "z": "cd2a1d3f69a38fc4",
+        "group": "79789ec24b7e7f8d",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "compressed_bytes",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 1730,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "d56d6e9b2f2396b6",
+        "type": "change",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "compressed_bytes",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.compressed_bytes",
+                "tot": "jsonata"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1490,
+        "y": 220,
+        "wires": [
+            [
+                "136095d9c8a06cd1"
+            ]
+        ]
+    },
+    {
+        "id": "c81d48eb435cc29d",
+        "type": "ui_text",
+        "z": "cd2a1d3f69a38fc4",
+        "group": "79789ec24b7e7f8d",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "compression_ratio",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 1730,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "7fa9f474640630d2",
+        "type": "change",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "compression_ratio",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.compression_ratio",
+                "tot": "jsonata"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1490,
+        "y": 260,
+        "wires": [
+            [
+                "c81d48eb435cc29d"
+            ]
+        ]
+    },
+    {
+        "id": "382424a4b5c80d4e",
+        "type": "ui_text",
+        "z": "cd2a1d3f69a38fc4",
+        "group": "79789ec24b7e7f8d",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "space_saved_percent",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 1740,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "7c7d4ec127cc6741",
+        "type": "change",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "space_saved_percent",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.space_saved_percent",
+                "tot": "jsonata"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1500,
+        "y": 300,
+        "wires": [
+            [
+                "382424a4b5c80d4e"
+            ]
+        ]
+    },
+    {
+        "id": "9e11e80cf9fc9e21",
+        "type": "ui_text",
+        "z": "cd2a1d3f69a38fc4",
+        "group": "79789ec24b7e7f8d",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "space_saved_percent",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 1740,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "e3c7cf6b07d67972",
+        "type": "change",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "space_saved_percent",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.space_saved_percent",
+                "tot": "jsonata"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1500,
+        "y": 340,
+        "wires": [
+            [
+                "9e11e80cf9fc9e21"
+            ]
+        ]
+    },
+    {
+        "id": "ab3c02cd019ae730",
+        "type": "ui_text",
+        "z": "cd2a1d3f69a38fc4",
+        "group": "79789ec24b7e7f8d",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "upload_count",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 1720,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "1fd3965c59b8ab3c",
+        "type": "change",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "upload_count",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.upload_count",
+                "tot": "jsonata"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1480,
+        "y": 380,
+        "wires": [
+            [
+                "ab3c02cd019ae730"
+            ]
+        ]
+    },
+    {
+        "id": "34bb3c6278e196dd",
+        "type": "ui_spacer",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "spacer",
+        "group": "27d4cf9848c3c329",
+        "order": 1,
+        "width": 1,
+        "height": 1
+    },
+    {
+        "id": "034ffacc85f96e04",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "broker.emqx.io",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "5",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "27d4cf9848c3c329",
+        "type": "ui_group",
+        "name": "Vac1",
+        "tab": "10dff9367131d1c4",
+        "order": 2,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "1304e10680da521f",
+        "type": "ui_group",
+        "name": "Fac1",
+        "tab": "10dff9367131d1c4",
+        "order": 4,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "07c03fe6d1f05848",
+        "type": "ui_group",
+        "name": "Vpv1",
+        "tab": "10dff9367131d1c4",
+        "order": 5,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "b99d10f55cbeb1b1",
+        "type": "ui_group",
+        "name": "Vpv2",
+        "tab": "10dff9367131d1c4",
+        "order": 6,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "6340c64fedd1b4fa",
+        "type": "ui_group",
+        "name": "Ipv1",
+        "tab": "10dff9367131d1c4",
+        "order": 7,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "0c6bb0a12b829dcf",
+        "type": "ui_group",
+        "name": "Ipv2",
+        "tab": "10dff9367131d1c4",
+        "order": 8,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "4385e3b1b0015548",
+        "type": "ui_group",
+        "name": "Temp",
+        "tab": "10dff9367131d1c4",
+        "order": 9,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "961b10b74c049d8b",
+        "type": "ui_group",
+        "name": "Export",
+        "tab": "10dff9367131d1c4",
+        "order": 10,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "01a89dce1efb8ca3",
+        "type": "ui_group",
+        "name": "Output Power",
+        "tab": "10dff9367131d1c4",
+        "order": 11,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "e77401e5717a6b06",
+        "type": "ui_group",
+        "name": "Iac1",
+        "tab": "10dff9367131d1c4",
+        "order": 3,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "79789ec24b7e7f8d",
+        "type": "ui_group",
+        "name": "Compression Data",
+        "tab": "10dff9367131d1c4",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "10dff9367131d1c4",
+        "type": "ui_tab",
+        "name": "Tab 6",
+        "icon": "dashboard",
+        "order": 1
     }
 ]
