@@ -1,0 +1,79 @@
+\doxysection{Poller Class Reference}
+\hypertarget{class_poller}{}\label{class_poller}\index{Poller@{Poller}}
+
+
+Manages periodic polling of inverter data with error handling and buffering.  
+
+
+
+
+{\ttfamily \#include $<$Poller.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{class_poller_ae3fdf1d32014c4e57e55c6d021e4e58b}{Poller}} (\mbox{\hyperlink{class_inverter_client}{Inverter\+Client}} \&c, uint32\+\_\+t period\+Ms, \mbox{\hyperlink{class_ring_buffer}{Ring\+Buffer}} \&buf)
+\begin{DoxyCompactList}\small\item\em Construct a new \doxylink{class_poller}{Poller} object. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{class_poller_aaeaaa6c559ef4521f74ae49c97f9e34a}{loop}} (uint8\+\_\+t slave, uint16\+\_\+t addr, uint16\+\_\+t qty)
+\begin{DoxyCompactList}\small\item\em Main polling loop function to be called repeatedly. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Manages periodic polling of inverter data with error handling and buffering. 
+
+The \doxylink{class_poller}{Poller} class orchestrates regular data acquisition from solar inverters, implementing robust error handling with exponential backoff for failed requests and automatic buffer management with periodic flushing. 
+
+\label{doc-constructors}
+\Hypertarget{class_poller_doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{class_poller_ae3fdf1d32014c4e57e55c6d021e4e58b}\index{Poller@{Poller}!Poller@{Poller}}
+\index{Poller@{Poller}!Poller@{Poller}}
+\doxysubsubsection{\texorpdfstring{Poller()}{Poller()}}
+{\footnotesize\ttfamily \label{class_poller_ae3fdf1d32014c4e57e55c6d021e4e58b} 
+Poller\+::\+Poller (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{class_inverter_client}{Inverter\+Client}} \&}]{c}{, }\item[{uint32\+\_\+t}]{period\+Ms}{, }\item[{\mbox{\hyperlink{class_ring_buffer}{Ring\+Buffer}} \&}]{buf}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Construct a new \doxylink{class_poller}{Poller} object. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em c} & Reference to the \doxylink{class_inverter_client}{Inverter\+Client} used for communication \\
+\hline
+{\em period\+Ms} & Polling period in milliseconds between data acquisition attempts \\
+\hline
+{\em buf} & Reference to the \doxylink{class_ring_buffer}{Ring\+Buffer} for storing acquired data records \\
+\hline
+\end{DoxyParams}
+
+
+\label{doc-func-members}
+\Hypertarget{class_poller_doc-func-members}
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_poller_aaeaaa6c559ef4521f74ae49c97f9e34a}\index{Poller@{Poller}!loop@{loop}}
+\index{loop@{loop}!Poller@{Poller}}
+\doxysubsubsection{\texorpdfstring{loop()}{loop()}}
+{\footnotesize\ttfamily \label{class_poller_aaeaaa6c559ef4521f74ae49c97f9e34a} 
+void Poller\+::loop (\begin{DoxyParamCaption}\item[{uint8\+\_\+t}]{slave}{, }\item[{uint16\+\_\+t}]{addr}{, }\item[{uint16\+\_\+t}]{qty}{}\end{DoxyParamCaption})}
+
+
+
+Main polling loop function to be called repeatedly. 
+
+This function should be called continuously in the main loop. It manages timing for periodic data acquisition, handles errors with backoff logic, and performs automatic buffer flushing.
+
+
+\begin{DoxyParams}{Parameters}
+{\em slave} & \doxylink{namespace_modbus}{Modbus} slave address of the inverter \\
+\hline
+{\em addr} & Starting register address to read from \\
+\hline
+{\em qty} & Number of consecutive registers to read \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+include/\mbox{\hyperlink{_poller_8h}{Poller.\+h}}\item 
+src/Poller.\+cpp\end{DoxyCompactItemize}

@@ -1,0 +1,25 @@
+var _config_8h =
+[
+    [ "BACKOFF_MAX_MS", "group___error___backoff___config.html#ga3f795eb0e855e984d166d35ce04a877e", null ],
+    [ "BACKOFF_MIN_MS", "group___error___backoff___config.html#ga4a3545b0691b8e90d6931c8faa6b326b", null ],
+    [ "BACKOFF_STEP_MS", "group___error___backoff___config.html#ga9c486dab4acc3bc4567129c445c3c455", null ],
+    [ "BUFFER_CAPACITY", "group___buffer___upload___config.html#ga473776433ac44bc525b8cd5186969b4b", null ],
+    [ "ERR_RESET_AFTER", "group___error___backoff___config.html#gae059c1dad544e65d215dae90550788d0", null ],
+    [ "MAX_BATCH_BYTES", "group___buffer___upload___config.html#gac229e6c9a43d4e00128c4caed5b0dfc4", null ],
+    [ "POLL_PERIOD_MS", "group___timing___config.html#ga100f59bd6fbfc6634e1007704175859d", null ],
+    [ "QTY_REGS", "group___r_s485___config.html#ga088652e16e3c3a4de5897054e9e00cc1", null ],
+    [ "REQ_TIMEOUT_MS", "group___timing___config.html#gaa0619a6738fe27ca50e0c5f39b0378d4", null ],
+    [ "RETRY_DELAY_MS", "group___retry___config.html#gab5aa8e705170d968a0b82a8e498b0afa", null ],
+    [ "RS485_BAUD", "group___r_s485___config.html#ga4412be03d7f5e834b630cc0a3651b804", null ],
+    [ "RS485_DE_RE_PIN", "group___r_s485___config.html#ga326bbc85722db15e459b6cfa437d94bc", null ],
+    [ "RS485_SERIAL", "group___r_s485___config.html#ga6024eaaa4b78180875f2a4ae57003bac", null ],
+    [ "SLAVE_ID", "group___r_s485___config.html#gaed258e18fa2ea561f21f58d651a33cff", null ],
+    [ "START_ADDR", "group___r_s485___config.html#ga3e5f052539c22308aa320cc42527dd5c", null ],
+    [ "UPLOAD_MAX_RETRIES", "group___retry___config.html#ga28c3db5b87337e4560e20e26b9764aa4", null ],
+    [ "UPLOAD_MODE", "group___upload___mode___config.html#ga1e38cfe7a55afe4a855db21350d73f2f", null ],
+    [ "UPLOAD_MODE_DECODED", "group___upload___mode___config.html#ga0e8e92c119170213ab6dbb25cb7c8d2f", null ],
+    [ "UPLOAD_MODE_RAW", "group___upload___mode___config.html#ga0faa3883aef05430f5c12c866604507d", null ],
+    [ "UPLOAD_PERIOD_MS", "group___buffer___upload___config.html#gad2db49fe184bbeb346ec14ae8ed4cb94", null ],
+    [ "WIFI_PASSWORD", "group___wi_fi___config.html#ga8685d8aff7e570048090a3a51afceb07", null ],
+    [ "WIFI_SSID", "group___wi_fi___config.html#ga586542b79d00e4db7e1d5a667ae83a2b", null ]
+];

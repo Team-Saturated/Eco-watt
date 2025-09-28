@@ -1,0 +1,41 @@
+\doxysection{Buffering and Upload Configuration }
+\hypertarget{group___buffer___upload___config}{}\label{group___buffer___upload___config}\index{Buffering and Upload Configuration@{Buffering and Upload Configuration}}
+
+
+Settings for data buffering and cloud upload scheduling.  
+
+
+\doxysubsubsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\#define \mbox{\hyperlink{group___buffer___upload___config_gad2db49fe184bbeb346ec14ae8ed4cb94}{UPLOAD\+\_\+\+PERIOD\+\_\+\+MS}}~14000
+\begin{DoxyCompactList}\small\item\em Upload period in milliseconds -\/ send buffered data every 14 seconds. \end{DoxyCompactList}\item 
+\Hypertarget{group___buffer___upload___config_ga473776433ac44bc525b8cd5186969b4b}\label{group___buffer___upload___config_ga473776433ac44bc525b8cd5186969b4b} 
+\#define {\bfseries BUFFER\+\_\+\+CAPACITY}~128
+\begin{DoxyCompactList}\small\item\em Maximum number of samples to keep in RAM buffer. \end{DoxyCompactList}\item 
+\Hypertarget{group___buffer___upload___config_gac229e6c9a43d4e00128c4caed5b0dfc4}\label{group___buffer___upload___config_gac229e6c9a43d4e00128c4caed5b0dfc4} 
+\#define {\bfseries MAX\+\_\+\+BATCH\+\_\+\+BYTES}~8192
+\begin{DoxyCompactList}\small\item\em Maximum payload size per upload in bytes (approximate) \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Settings for data buffering and cloud upload scheduling. 
+
+
+
+\label{doc-define-members}
+\Hypertarget{group___buffer___upload___config_doc-define-members}
+\doxysubsection{Macro Definition Documentation}
+\Hypertarget{group___buffer___upload___config_gad2db49fe184bbeb346ec14ae8ed4cb94}\index{Buffering and Upload Configuration@{Buffering and Upload Configuration}!UPLOAD\_PERIOD\_MS@{UPLOAD\_PERIOD\_MS}}
+\index{UPLOAD\_PERIOD\_MS@{UPLOAD\_PERIOD\_MS}!Buffering and Upload Configuration@{Buffering and Upload Configuration}}
+\doxysubsubsection{\texorpdfstring{UPLOAD\_PERIOD\_MS}{UPLOAD\_PERIOD\_MS}}
+{\footnotesize\ttfamily \label{group___buffer___upload___config_gad2db49fe184bbeb346ec14ae8ed4cb94} 
+\#define UPLOAD\+\_\+\+PERIOD\+\_\+\+MS~14000}
+
+
+
+Upload period in milliseconds -\/ send buffered data every 14 seconds. 
+
+\begin{DoxyNote}{Note}
+Must be less than \doxylink{class_poller}{Poller} flush period (15s) to avoid data loss 
+\end{DoxyNote}
