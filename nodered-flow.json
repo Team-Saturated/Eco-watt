@@ -34,7 +34,8 @@
                 "3d212c8e04df4725",
                 "7e4db7bf7cc35db1",
                 "0ae20d64aa27a6e7",
-                "bb4bfd543b17aa2b"
+                "bb4bfd543b17aa2b",
+                "94e8fca1158e638c"
             ]
         ]
     },
@@ -87,7 +88,7 @@
         "type": "function",
         "z": "cd2a1d3f69a38fc4",
         "name": "Vac1",
-        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Vac1\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Vac1\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nlet i = 0;\nfor (let key in inp) {\n    if (key.startsWith(\"data\")) {\n        let item = inp[key];\n        let timestamp = Date.now() + i * 1000;  // fake timestamp (1s apart)\n        \n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: timestamp,\n                    y: item[field]\n                });\n            }\n        });\n        i++;\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -99,7 +100,8 @@
         "wires": [
             [
                 "a2df0cccac558607",
-                "6ab5e7c8f91becbd"
+                "6ab5e7c8f91becbd",
+                "f641b21fa49c5af1"
             ]
         ]
     },
@@ -108,7 +110,7 @@
         "type": "function",
         "z": "cd2a1d3f69a38fc4",
         "name": "Iac1",
-        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Iac1\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Iac1\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nlet i = 0;\nfor (let key in inp) {\n    if (key.startsWith(\"data\")) {\n        let item = inp[key];\n        let timestamp = Date.now() + i * 1000;  // fake timestamp (1s apart)\n        \n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: timestamp,\n                    y: item[field]\n                });\n            }\n        });\n        i++;\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -120,7 +122,8 @@
         "wires": [
             [
                 "acc32b6a7791e093",
-                "7e0db9549b07aa17"
+                "7e0db9549b07aa17",
+                "b03440efcccb4fe0"
             ]
         ]
     },
@@ -173,7 +176,7 @@
         "type": "function",
         "z": "cd2a1d3f69a38fc4",
         "name": "Fac1",
-        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Fac1\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Fac1\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nlet i = 0;\nfor (let key in inp) {\n    if (key.startsWith(\"data\")) {\n        let item = inp[key];\n        let timestamp = Date.now() + i * 1000;  // fake timestamp (1s apart)\n        \n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: timestamp,\n                    y: item[field]\n                });\n            }\n        });\n        i++;\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -238,7 +241,7 @@
         "type": "function",
         "z": "cd2a1d3f69a38fc4",
         "name": "Vpv1",
-        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Vpv1\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Vpv1\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nlet i = 0;\nfor (let key in inp) {\n    if (key.startsWith(\"data\")) {\n        let item = inp[key];\n        let timestamp = Date.now() + i * 1000;  // fake timestamp (1s apart)\n        \n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: timestamp,\n                    y: item[field]\n                });\n            }\n        });\n        i++;\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -303,7 +306,7 @@
         "type": "function",
         "z": "cd2a1d3f69a38fc4",
         "name": "Vpv2",
-        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Vpv2\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Vpv2\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nlet i = 0;\nfor (let key in inp) {\n    if (key.startsWith(\"data\")) {\n        let item = inp[key];\n        let timestamp = Date.now() + i * 1000;  // fake timestamp (1s apart)\n\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: timestamp,\n                    y: item[field]\n                });\n            }\n        });\n        i++;\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -368,7 +371,7 @@
         "type": "function",
         "z": "cd2a1d3f69a38fc4",
         "name": "Ipv1",
-        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Ipv1\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Ipv1\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nlet i = 0;\nfor (let key in inp) {\n    if (key.startsWith(\"data\")) {\n        let item = inp[key];\n        let timestamp = Date.now() + i * 1000;  // fake timestamp (1s apart)\n\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: timestamp,\n                    y: item[field]\n                });\n            }\n        });\n        i++;\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -433,7 +436,7 @@
         "type": "function",
         "z": "cd2a1d3f69a38fc4",
         "name": "Ipv2",
-        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Ipv2\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Ipv2\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nlet i = 0;\nfor (let key in inp) {\n    if (key.startsWith(\"data\")) {\n        let item = inp[key];\n        let timestamp = Date.now() + i * 1000;  // fake timestamp (1s apart)\n        \n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: timestamp,\n                    y: item[field]\n                });\n            }\n        });\n        i++;\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -498,7 +501,7 @@
         "type": "function",
         "z": "cd2a1d3f69a38fc4",
         "name": "Temp",
-        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Temp\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Temp\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nlet i = 0;\nfor (let key in inp) {\n    if (key.startsWith(\"data\")) {\n        let item = inp[key];\n        let timestamp = Date.now() + i * 1000;  // fake timestamp (1s apart)\n\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: timestamp,\n                    y: item[field]\n                });\n            }\n        });\n        i++;\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -563,7 +566,7 @@
         "type": "function",
         "z": "cd2a1d3f69a38fc4",
         "name": "Export",
-        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Export\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Export\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nlet i = 0;\nfor (let key in inp) {\n    if (key.startsWith(\"data\")) {\n        let item = inp[key];\n        let timestamp = Date.now() + i * 1000;  // fake timestamp (1s apart)\n\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: timestamp,\n                    y: item[field]\n                });\n            }\n        });\n        i++;\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -628,7 +631,7 @@
         "type": "function",
         "z": "cd2a1d3f69a38fc4",
         "name": "Output power",
-        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Output power\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nfor (let key in inp) {\n    if (inp[key] && inp[key].timestamp !== undefined) {\n        let item = inp[key];\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: item.timestamp,\n                    y: item[field]\n                });\n            }\n        });\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;\n",
+        "func": "const inp = msg.payload;\n\n// Define which fields you want in the series\nconst series = [\"Output power\"];\n\nlet outObj = [{\n    series: series,\n    data: series.map(() => []),  // create an empty array for each series\n    labels: [\"\"]\n}];\n\n// Loop through data objects (data1, data2, ...)\nlet i = 0;\nfor (let key in inp) {\n    if (key.startsWith(\"data\")) {\n        let item = inp[key];\n        let timestamp = Date.now() + i * 1000;  // fake timestamp (1s apart)\n\n        series.forEach((field, idx) => {\n            if (item[field] !== undefined) {\n                outObj[0].data[idx].push({\n                    x: timestamp,\n                    y: item[field]\n                });\n            }\n        });\n        i++;\n    }\n}\n\nmsg.payload = outObj;\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -1504,6 +1507,54 @@
                 "ab3c02cd019ae730"
             ]
         ]
+    },
+    {
+        "id": "94e8fca1158e638c",
+        "type": "debug",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "debug 9",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 600,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "b03440efcccb4fe0",
+        "type": "debug",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "debug 10",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1140,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "f641b21fa49c5af1",
+        "type": "debug",
+        "z": "cd2a1d3f69a38fc4",
+        "name": "debug 11",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1020,
+        "y": 200,
+        "wires": []
     },
     {
         "id": "34bb3c6278e196dd",
