@@ -4,6 +4,6 @@ Video Links
 
 Millestone 01: https://drive.google.com/file/d/1MVOB7h8qTtJ0MxUhxQDnDy69xXurbujf/view?usp=sharing
 Millestone 02: https://drive.google.com/file/d/1hEavEfT15CIfmV2vrpXerurY_LmC8xn_/view?usp=sharing
-Millestone 03:
+Millestone 03: 
 
 Simulation program path: \Eco-watt\.pio\build\native
