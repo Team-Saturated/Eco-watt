@@ -81,24 +81,24 @@ void Poller::loop(uint8_t slave, uint16_t addr, uint16_t qty) {
 #endif
 
     // --- periodic flush/print of buffered Records ---
-    if (now - _lastFlush >= _flushEveryMs) {
-      std::vector<Record> out;
-      _buf.drainTo(out);
-      if (!out.empty()) {
-        Serial.printf("[FLUSH] printing %u buffered sample(s)\n", (unsigned)out.size());
-        for (const auto& r : out) {
-          Serial.printf("  ts=%llu start=%u qty=%u\n",
-                        (unsigned long long)r.ts_ms, r.start, r.qty);
-          if (!r.rawFrameHex.isEmpty())
-            Serial.printf("    raw=%s\n", r.rawFrameHex.c_str());
-          for (const auto& reg : r.regs) {
-            Serial.printf("    Addr=%u Raw=0x%04X -> %.3f %s\n",
-                          reg.addr, reg.raw, reg.value, reg.unit.c_str());
-          }
-        }
-      }
-      _lastFlush = now;
-    }
+    //if (now - _lastFlush >= _flushEveryMs) {
+     // std::vector<Record> out;
+     // _buf.drainTo(out);
+     //// if (!out.empty()) {
+     ////   Serial.printf("[FLUSH] printing %u buffered sample(s)\n", (unsigned)out.size());
+     ////   for (const auto& r : out) {
+     ////     Serial.printf("  ts=%llu start=%u qty=%u\n",
+     ////                   (unsigned long long)r.ts_ms, r.start, r.qty);
+     ////     if (!r.rawFrameHex.isEmpty())
+     ////       Serial.printf("    raw=%s\n", r.rawFrameHex.c_str());
+     ////     for (const auto& reg : r.regs) {
+     ////       Serial.printf("    Addr=%u Raw=0x%04X -> %.3f %s\n",
+     ////                     reg.addr, reg.raw, reg.value, reg.unit.c_str());
+     ////     }
+     ////   }
+     //// }
+     //// _lastFlush = now;
+    //}
 
     // schedule next regular poll
     _next = now + _period;
