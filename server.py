@@ -48,44 +48,59 @@ stats = {
 }
 
 def group_records_to_json(records):
-    """Group inverter records into data1, data2, etc. format with just register names and values"""
+    """Group inverter records into data1, data2, etc. format with just register names and values,
+    and include a per-group Timestamp (ms since epoch) from the records in that group."""
     if not records:
         return {}
-    
+
     # Register names in the order we expect them (based on Acquisition.cpp)
     register_names = ["Vac1", "Iac1", "Fac1", "Vpv1", "Vpv2", "Ipv1", "Ipv2", "Temp", "Export", "Power"]
-    
+
     grouped_data = {}
     group_count = 0
-    
+
     # Group records by sets of 10 (one complete reading session)
     for i in range(0, len(records), 10):
         group_count += 1
         group_name = f"data{group_count}"
         group_data = {}
-        
+        group_ts_ms = 0  # latest timestamp among the 10 records in this group
+
         # Process up to 10 records in this group
         for j in range(10):
             if i + j < len(records):
                 record = records[i + j]
                 register_name = record.get('register', f'Unknown_{j}')
-                
+
                 # Use "Output power" instead of "Power" for the last register
                 if register_name == "Power":
                     register_name = "Output power"
-                
+
                 # Just store the value (rounded to 1 decimal place for cleaner JSON)
                 group_data[register_name] = round(record.get('value', 0), 1)
+
+                # Track the latest timestamp in this group (ms)
+                try:
+                    ts_ms = int(record.get('ts_ms', 0))
+                except Exception:
+                    ts_ms = 0
+                if ts_ms > group_ts_ms:
+                    group_ts_ms = ts_ms
             else:
                 # Fill missing registers with 0
                 expected_register = register_names[j] if j < len(register_names) else f'Unknown_{j}'
                 if expected_register == "Power":
                     expected_register = "Output power"
-                
+
                 group_data[expected_register] = 0
-        
+
+        # Add group timestamp (ms). Fallback to current time if unavailable
+        if group_ts_ms <= 0:
+            group_ts_ms = int(time.time() * 1000)
+        group_data["timestamp"] = int(group_ts_ms)
+
         grouped_data[group_name] = group_data
-    
+
     return grouped_data
 
 def publish_to_mqtt(grouped_data):
