@@ -101,126 +101,56 @@ void setup() {
 
 void loop() {
   static bool benchmarked = false;
-  
-  if (g_poller) {
-    try {
-      g_poller->loop(SLAVE_ID, START_ADDR, QTY_REGS);
-    } catch (const std::exception& e) {
-      Serial.printf("Error in main loop: %s\n", e.what());
-    }
-  } else {
-    Serial.println("Poller not initialized. Retrying setup...");
-    setup();
-  }
-
-  // Batch collection logic - collect records from buffer
+  g_poller->loop(SLAVE_ID, START_ADDR, QTY_REGS);
+  static uint32_t last = 0;
   uint32_t now = millis();
-  std::vector<Record> newRecords;
-  g_buffer->drainTo(newRecords);
-  
-  if (!newRecords.empty()) {
-    // Initialize batch timer if this is first record
-    if (g_recordBatch.empty()) {
-      g_batchStartTime = now;
-      Serial.println("Starting new batch collection...");
-    }
-    
-    // Add new records to batch with timestamp tracking
-    for (const auto& record : newRecords) {
-      g_recordBatch.push_back(record);
-      Serial.printf("[BATCH]  Added record with timestamp %llu ms\n", record.ts_ms);
-    }
-    
-    // Show batch progress with timestamp info
-    if (!g_recordBatch.empty()) {
-      uint64_t first_ts = g_recordBatch.front().ts_ms;
-      uint64_t last_ts = g_recordBatch.back().ts_ms;
-      Serial.printf(" Batch progress: %d/%d records (timestamps: %llu to %llu ms)\n", 
-                   (int)g_recordBatch.size(), TARGET_BATCH_SIZE, first_ts, last_ts);
-    }
-  }
-  
-  // Check if we should upload now
-  bool shouldUpload = false;
-  String uploadReason = "";
-  
-  if (!g_recordBatch.empty()) {
-    if (g_recordBatch.size() >= TARGET_BATCH_SIZE) {
-      // We have exactly TARGET_BATCH_SIZE records - upload now
-      shouldUpload = true;
-      uploadReason = " Collected " + String(TARGET_BATCH_SIZE) + " records";
-    } 
-    else if (now - g_batchStartTime >= MAX_BATCH_TIME_MS) {
-      // Time limit reached - upload whatever we have
-      shouldUpload = true;
-      uploadReason = " Time limit reached (" + String(MAX_BATCH_TIME_MS/1000) + "s)";
-    }
-  }
-  
-  if (shouldUpload) {
-    Serial.println(uploadReason + " - uploading batch");
-    
-    // Show detailed timestamp info for this batch
-    if (!g_recordBatch.empty()) {
-      uint64_t first_ts = g_recordBatch.front().ts_ms;
-      uint64_t last_ts = g_recordBatch.back().ts_ms;
-      Serial.printf(" BATCH TIMESTAMP INFO: First=%llu ms, Last=%llu ms, Span=%llu ms\n", 
-                   first_ts, last_ts, (last_ts - first_ts));
-    }
-    
-    // --- Detailed Compression Benchmarking ---
-    Serial.println("=== REAL INVERTER DATA COMPRESSION REPORT (WITH TIMESTAMPS) ===");
-    Serial.printf("Compression Method Used: Delta Encoding with Timestamp Compression\n");
-    Serial.printf("Number of Real Inverter Samples: %u\n", (unsigned)g_recordBatch.size());
-  
-    uint32_t original_size = g_recordBatch.size() * sizeof(Record);
-    Serial.printf("Original Payload Size: %u bytes\n", original_size);
-    
-    // Measure compression time
-    uint32_t compress_start = micros();
-    std::vector<uint8_t> compressed = Packetizer::finalizeBlock(g_recordBatch);
-    uint32_t compress_time = micros() - compress_start;
-    
-    Serial.printf("Compressed Payload Size: %u bytes\n", (unsigned)compressed.size());
-    float compression_ratio = (float)original_size / (float)compressed.size();
-    Serial.printf("Compression Ratio: %.2f:1 (%.1f%% reduction)\n", 
-                  compression_ratio, 
-                  (1.0f - (float)compressed.size() / (float)original_size) * 100.0f);
-    Serial.printf("CPU Time: %u microseconds\n", compress_time);
-    
-    // Lossless Recovery Verification
-    std::vector<Record> decompressed = Compression::decompressDelta(compressed);
-    bool lossless = (decompressed.size() == g_recordBatch.size());
-    Serial.printf("Lossless Recovery Verification: %s\n", lossless ? "PASSED" : "FAILED");
-    
-    // --- Packetizer: encrypt, chunk ---
-    std::vector<uint8_t> encrypted = Packetizer::encryptAndMac(compressed);
-    auto chunks = Packetizer::chunkData(encrypted, 32);
-    
-    Serial.printf("Final Upload Payload Size: %u bytes (with encryption/MAC + timestamps)\n", (unsigned)encrypted.size());
-    Serial.printf("Number of Chunks: %u (chunk size: 32 bytes)\n", (unsigned)chunks.size());
-    Serial.println("=====================================");
 
-    Serial.printf("[MAIN] Uploading %u REAL inverter records with timestamps (compressed)\n", (unsigned)g_recordBatch.size());
-    
-    // Upload the batch
-    bool uploadSuccess = g_uploader->uploadBatch(g_recordBatch);
-    if (!uploadSuccess) {
-      Serial.println("[MAIN]  Upload failed");
+  if(now-last >= UPLOAD_PERIOD_MS) {
+    last = now;
+    std::vector<Record> newRecords;
+    g_buffer->drainTo(newRecords);
+
+    if(newRecords.empty()) {
+      Serial.println("[MAIN] No new records to upload.");
     } else {
-      Serial.println("[MAIN]  Real inverter data with timestamps uploaded successfully!");
-    }
+      Serial.printf("[MAIN] Drained %u new records from buffer (dropped %u)\n", (unsigned)newRecords.size(), (unsigned)g_buffer->droppedCount());
     
-    // Clear batch for next collection
-    int uploadedCount = g_recordBatch.size();
-    g_recordBatch.clear();
-    g_batchStartTime = 0;
-    Serial.printf(" Batch cleared - uploaded %d timestamped records\n", uploadedCount);
-    Serial.println(" Ready for next batch collection...");
-    g_batchStartTime = 0;
-    Serial.printf(" Uploaded batch with %d records\n", (int)g_recordBatch.size());
-    Serial.println(" Ready for next batch collection...");
+      Serial.println("=== REAL INVERTER DATA COMPRESSION REPORT (WITH TIMESTAMPS) ===");
+      Serial.printf("Compression Method Used: Delta Encoding with Timestamp Compression\n");
+      Serial.printf("Number of Real Inverter Samples: %u\n", (unsigned)newRecords.size());
+      uint32_t original_size = newRecords.size() * sizeof(Record);
+      Serial.printf("Original Payload Size: %u bytes\n", original_size);
+
+      // Measure compression time
+      uint32_t compress_start = micros();
+      std::vector<uint8_t> compressed = Packetizer::finalizeBlock(newRecords);
+      uint32_t compress_time = micros() - compress_start;
+
+      Serial.printf("Compressed Payload Size: %u bytes\n", (unsigned)compressed.size());
+      float compression_ratio = (float)original_size / (float)compressed.size();
+      Serial.printf("Compression Ratio: %.2f:1 (%.1f%% reduction)\n", 
+                    compression_ratio, 
+                    (1.0f - (float)compressed.size() / (float)original_size) * 100.0f);
+      Serial.printf("CPU Time: %u microseconds\n", compress_time);
+
+      std::vector<Record> decompressed = Compression::decompressDelta(compressed);
+      bool lossless = (decompressed.size() == newRecords.size());
+      Serial.printf("Lossless Recovery Verification: %s\n", lossless ? "PASSED" : "FAILED");
+
+      // --- Packetizer: encrypt, chunk ---
+      //std::vector<uint8_t> encrypted = Packetizer::encryptAndMac(compressed);
+      //auto chunks = Packetizer::chunkData(encrypted, 32);
+
+      
+
+      bool uploadSuccess = g_uploader->uploadBatch(newRecords);
+      if (!uploadSuccess) {
+        Serial.println("[MAIN]  Upload failed");
+      } else {
+        Serial.println("[MAIN]  Real inverter data with timestamps uploaded successfully!");
+      }
+    }
   }
-  
+
   delay(5);
 }
