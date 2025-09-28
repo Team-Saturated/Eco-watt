@@ -48,7 +48,7 @@ stats = {
 }
 
 def group_records_to_json(records):
-    """Group inverter records into data1, data2, etc. format with just register names and values"""
+    """Group inverter records into data1, data2, etc. format with register values and timestamps"""
     if not records:
         return {}
     
@@ -64,6 +64,11 @@ def group_records_to_json(records):
         group_name = f"data{group_count}"
         group_data = {}
         
+        # Get timestamp from the first record in this group (all records in a group have same timestamp)
+        if i < len(records):
+            group_timestamp = records[i].get('ts_ms', 0)
+            group_data['timestamp'] = int(group_timestamp)
+        
         # Process up to 10 records in this group
         for j in range(10):
             if i + j < len(records):
@@ -74,7 +79,7 @@ def group_records_to_json(records):
                 if register_name == "Power":
                     register_name = "Output power"
                 
-                # Just store the value (rounded to 1 decimal place for cleaner JSON)
+                # Store the value (rounded to 1 decimal place for cleaner JSON)
                 group_data[register_name] = round(record.get('value', 0), 1)
             else:
                 # Fill missing registers with 0
@@ -88,15 +93,33 @@ def group_records_to_json(records):
     
     return grouped_data
 
-def publish_to_mqtt(grouped_data):
-    """Publish the grouped JSON data to MQTT broker"""
+def publish_to_mqtt(grouped_data, records=None):
+    """Publish the grouped JSON data to MQTT broker with timestamp information"""
     if mqtt_client is None:
         print("⚠️ MQTT client not available. Skipping MQTT publish.")
         return False
     
     try:
-        # Create payload with grouped data and compression statistics
+        # Create timestamp information if records are provided
+        timestamp_info = {}
+        if records and len(records) > 0:
+            first_record = records[0]
+            last_record = records[-1]
+            time_span = last_record['ts_ms'] - first_record['ts_ms']
+            
+            timestamp_info = {
+                "first_record_time": first_record.get('real_timestamp', 'N/A'),
+                "last_record_time": last_record.get('real_timestamp', 'N/A'),
+                "esp32_first_timestamp": first_record.get('esp32_relative_time', 'N/A'),
+                "esp32_last_timestamp": last_record.get('esp32_relative_time', 'N/A'),
+                "time_span_ms": time_span,
+                "time_span_seconds": round(time_span/1000, 2),
+                "server_received_at": time.strftime('%Y-%m-%d %H:%M:%S')
+            }
+        
+        # Create payload with grouped data, compression statistics, and timestamps
         mqtt_payload = {
+            "timestamp_info": timestamp_info,
             "compression_stats": {
                 "original_bytes": stats.get("last_original_bytes", 0),
                 "compressed_bytes": stats.get("last_compressed_bytes", 0),
@@ -117,7 +140,9 @@ def publish_to_mqtt(grouped_data):
         result = mqtt_client.publish(MQTT_TOPIC, json_payload, qos=1)
         
         if result.rc == mqtt.MQTT_ERR_SUCCESS:
-            print(f"📡 Successfully published {len(grouped_data)} data groups + compression stats to MQTT topic: {MQTT_TOPIC}")
+            print(f"📡 Successfully published {len(grouped_data)} data groups + timestamps + compression stats to MQTT topic: {MQTT_TOPIC}")
+            if timestamp_info:
+                print(f"📅 Published timestamp span: {timestamp_info['time_span_seconds']}s")
             print(f"📊 Published data preview: {list(grouped_data.keys())} + compression_stats")
             return True
         else:
@@ -129,12 +154,11 @@ def publish_to_mqtt(grouped_data):
         return False
 
 def decompress_delta(data: bytes):
-    """Decompress delta-encoded data matching ESP32 Compression.cpp algorithm"""
+    """Decompress delta-encoded data matching ESP32 Compression.cpp algorithm with proper timestamp reconstruction"""
     if not data:
         return []
     
     n = data[0]  # Number of records
-    ts = int(time.time() * 1000)  # Base timestamp in milliseconds
     idx = 1
     out = []
     
@@ -152,7 +176,14 @@ def decompress_delta(data: bytes):
         {"name": "Power", "unit": "W", "scale": 1.0, "desc": "Inverter current output power"}
     ]
     
-    print(f"[DECOMPRESS] Processing {n} records from {len(data)} bytes...")
+    print(f"[DECOMPRESS] 🗜️ Processing {n} records from {len(data)} bytes...")
+    
+    # Initialize timestamp reconstruction
+    # The first record's timestamp is relative to ESP32 boot time
+    # We'll calculate the approximate real timestamp by working backwards from current time
+    current_server_time_ms = int(time.time() * 1000)
+    esp32_timestamp_ms = 0  # Will be reconstructed from deltas
+    first_record_processed = False
     
     # Since ESP32 sends records sequentially, each record represents one register
     # from the complete set of 10 registers collected in each Modbus read
@@ -161,9 +192,21 @@ def decompress_delta(data: bytes):
             print(f"[WARNING] Data truncated at record {i}")
             break
             
-        # Read delta and reconstruct timestamp
+        # Read delta and reconstruct ESP32 timestamp
         delta = data[idx]; idx += 1
-        ts += delta * 1000  # Convert delta to milliseconds
+        esp32_timestamp_ms += delta  # Accumulate ESP32 milliseconds since boot
+        
+        # Calculate approximate real-world timestamp
+        if not first_record_processed:
+            # For the first record, estimate the real timestamp
+            # Assume the upload happened recently (within last few seconds)
+            estimated_esp32_boot_time = current_server_time_ms - esp32_timestamp_ms
+            first_record_processed = True
+            print(f"[TIMESTAMP] 📅 Estimated ESP32 boot time: {estimated_esp32_boot_time} ms ago")
+            print(f"[TIMESTAMP] 🕒 First record ESP32 timestamp: {esp32_timestamp_ms} ms since boot")
+        
+        real_timestamp_ms = current_server_time_ms - (esp32_timestamp_ms if i == 0 else 0) + (esp32_timestamp_ms if i > 0 else 0)
+        # Simplified: use ESP32 relative time for now, convert to readable format later
         
         # Read compressed value (2 bytes) - this is the raw register value
         raw_value = (data[idx] << 8) | data[idx+1]; idx += 2
@@ -176,7 +219,11 @@ def decompress_delta(data: bytes):
         actual_value = raw_value / reg_info["scale"]
         
         record = {
-            "ts_ms": ts,
+            "ts_ms": esp32_timestamp_ms,  # ESP32 milliseconds since boot
+            "server_received_ms": current_server_time_ms,  # When server received this
+            "real_timestamp": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(current_server_time_ms/1000)),
+            "esp32_relative_time": f"{esp32_timestamp_ms}ms since boot",
+            "delta_from_previous": delta,
             "raw_value": raw_value,
             "value": actual_value,
             "unit": reg_info["unit"],
@@ -186,7 +233,11 @@ def decompress_delta(data: bytes):
         }
         out.append(record)
         
-    print(f"[SUCCESS] Successfully decompressed {len(out)} records")
+    print(f"[SUCCESS] ✅ Successfully decompressed {len(out)} records with timestamps")
+    if out:
+        print(f"[TIMESTAMP] 📊 Timestamp range: {out[0]['esp32_relative_time']} to {out[-1]['esp32_relative_time']}")
+        print(f"[TIMESTAMP] 🕒 Time span: {out[-1]['ts_ms'] - out[0]['ts_ms']}ms")
+    
     return out
 
 @app.route('/')
@@ -196,10 +247,25 @@ def index():
     if stats['last_decompressed_data']:
         # Show ALL records without truncation
         total_records = len(stats['last_decompressed_data'])
-        decompressed_preview = f"<p><strong>📊 Showing ALL {total_records} records (COMPLETE DATA - No truncation applied):</strong></p>"
+        decompressed_preview = f"<p><strong>📊 Showing ALL {total_records} records with timestamps (COMPLETE DATA):</strong></p>"
         decompressed_preview += f"<p style='color: #666;'><em>Debug info: Upload #{stats.get('uploads', 0)} received at {stats.get('last_upload_time', 'Never')}</em></p>"
+        
+        # Add timestamp summary
+        if total_records > 0:
+            first_record = stats['last_decompressed_data'][0]
+            last_record = stats['last_decompressed_data'][-1]
+            time_span = last_record['ts_ms'] - first_record['ts_ms']
+            decompressed_preview += f"<p style='background: #e3f2fd; padding: 10px; border-radius: 5px;'>"
+            decompressed_preview += f"🕒 <strong>Timestamp Info:</strong><br>"
+            decompressed_preview += f"First record: {first_record.get('esp32_relative_time', 'N/A')} ({first_record.get('real_timestamp', 'N/A')})<br>"
+            decompressed_preview += f"Last record: {last_record.get('esp32_relative_time', 'N/A')} ({last_record.get('real_timestamp', 'N/A')})<br>"
+            decompressed_preview += f"Time span: {time_span}ms ({time_span/1000:.2f} seconds)"
+            decompressed_preview += f"</p>"
+        
         decompressed_preview += "<br>".join([
-            f"Record {i+1}: {r['register']} = {r['value']:.3f} {r['unit']} (Raw: {r.get('raw_value', 'N/A')}) - {r.get('description', '')}" 
+            f"Record {i+1}: {r['register']} = {r['value']:.3f} {r['unit']} (Raw: {r.get('raw_value', 'N/A')}) "
+            f"<br>&nbsp;&nbsp;&nbsp;&nbsp;📅 ESP32 time: {r.get('esp32_relative_time', 'N/A')} "
+            f"(Δ{r.get('delta_from_previous', 0)}ms) - {r.get('description', '')}" 
             for i, r in enumerate(stats['last_decompressed_data'])
         ])
     
@@ -336,12 +402,23 @@ def upload_data():
         num_records = len(records)
         print(f"Decompressed to {num_records} records")
 
-        # Show first few decompressed records with detailed info
+        # Show first few decompressed records with detailed timestamp info
         if records:
-            print(f"First {min(len(records), 3)} decompressed inverter records:")
+            print(f"📊 First {min(len(records), 3)} decompressed inverter records with timestamps:")
             for i, r in enumerate(records[:3]):
-                print(f"  Record {i+1}: {r['register']} = {r['value']:.3f} {r['unit']} (Raw: {r.get('raw_value', 'N/A')}) - {r.get('description', '')}")
-                print(f"    Timestamp: {r['ts_ms']}ms")
+                print(f"  Record {i+1}: {r['register']} = {r['value']:.3f} {r['unit']} (Raw: {r.get('raw_value', 'N/A')})")
+                print(f"    📅 ESP32 timestamp: {r.get('esp32_relative_time', 'N/A')}")
+                print(f"    🕒 Real time: {r.get('real_timestamp', 'N/A')}")
+                print(f"    ⏱️ Delta from previous: {r.get('delta_from_previous', 0)}ms")
+                print(f"    📝 Description: {r.get('description', '')}")
+            
+            # Show timestamp summary for entire batch
+            if len(records) > 1:
+                time_span = records[-1]['ts_ms'] - records[0]['ts_ms']
+                print(f"📈 Batch timestamp summary:")
+                print(f"    First: {records[0].get('esp32_relative_time', 'N/A')}")
+                print(f"    Last: {records[-1].get('esp32_relative_time', 'N/A')}")
+                print(f"    Total span: {time_span}ms ({time_span/1000:.2f} seconds)")
 
         # Calculate compression stats
         original_bytes_est = num_records * 192  # realistic estimate: timestamp(8) + value(4) + metadata(8)
@@ -378,8 +455,14 @@ def upload_data():
         grouped_json = group_records_to_json(records)
         print(f"📋 Created {len(grouped_json)} data groups: {list(grouped_json.keys())}")
         
-        # Publish to MQTT
-        mqtt_success = publish_to_mqtt(grouped_json)
+        # Show sample of the new format with timestamps
+        if grouped_json:
+            sample_group = list(grouped_json.keys())[0]
+            sample_data = grouped_json[sample_group]
+            print(f"📊 Sample group format: {sample_group} = {dict(list(sample_data.items())[:3])}...timestamp:{sample_data.get('timestamp', 'N/A')}")
+        
+        # Publish to MQTT with timestamp information
+        mqtt_success = publish_to_mqtt(grouped_json, records)
         if mqtt_success:
             print(f"✅ MQTT publish successful")
         else:

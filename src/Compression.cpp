@@ -5,6 +5,8 @@ std::vector<uint8_t> Compression::compressDelta(const std::vector<Record>& recor
     std::vector<uint8_t> out;
     if (records.empty()) return out;
     
+    Serial.printf("[COMPRESS] 🗜️ Starting delta compression of %d records\n", (int)records.size());
+    
     // Count total number of individual register entries
     size_t total_regs = 0;
     for (const auto& r : records) {
@@ -12,8 +14,14 @@ std::vector<uint8_t> Compression::compressDelta(const std::vector<Record>& recor
     }
     
     out.push_back((uint8_t)total_regs);  // Total number of register records
+    Serial.printf("[COMPRESS] Total registers to compress: %d\n", (int)total_regs);
     
     uint64_t prev_ts = records[0].ts_ms;
+    uint64_t first_ts = records[0].ts_ms;
+    uint64_t last_ts = records.back().ts_ms;
+    
+    Serial.printf("[COMPRESS] 📅 Timestamp range: %llu to %llu ms (span: %llu ms)\n", 
+                 first_ts, last_ts, (last_ts - first_ts));
     
     for (const auto& r : records) {
         // Create a separate compressed record for each register in this Record
@@ -29,6 +37,8 @@ std::vector<uint8_t> Compression::compressDelta(const std::vector<Record>& recor
             out.push_back(reg.raw & 0xFF);
         }
     }
+    
+    Serial.printf("[COMPRESS] ✅ Compressed to %d bytes (includes timestamps as deltas)\n", (int)out.size());
     return out;
 }
 

@@ -21,6 +21,10 @@
 #define BUFFER_CAPACITY    128         // number of samples to keep in RAM
 #define MAX_BATCH_BYTES    8192        // cap payload size per upload (approx)
 
+// ---------- Batch Collection Parameters ----------
+#define TARGET_BATCH_SIZE  10          // collect exactly 10 records before upload
+#define MAX_BATCH_TIME_MS  30000       // max wait time (30s) - upload whatever we have
+
 // Retry policy for failed uploads
 #define UPLOAD_MAX_RETRIES  2          // additional tries within a window
 #define RETRY_DELAY_MS      2000       // delay between retries
