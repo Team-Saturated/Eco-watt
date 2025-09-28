@@ -14,7 +14,7 @@ The ECO-WATT server processes compressed solar inverter data from ESP32 devices,
 
 2. **Start Server**: `python server.py`
 
-3. **Test System**: `python test/test_upload.py`## 📋 Quick Navigation
+3. **Test System**: `python test/server_upload_test.py`## 📋 Quick Navigation
 
 4. **Monitor MQTT**: `python mqtt_subscriber.py`
 
