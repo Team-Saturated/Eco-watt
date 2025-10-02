@@ -1,4 +1,5 @@
 #include "Uploader.h"
+#include "Mqtt.h"
 #if defined(ESP8266)
   #include <ESP8266HTTPClient.h>
 #else
@@ -28,6 +29,10 @@ bool Uploader::uploadBatch(std::vector<Record>& batch) {
 
   // --- Compress batch before upload ---
   std::vector<uint8_t> compressed = Compression::compressDelta(batch);
+  bool ok = client.publish(t_data.c_str(),
+                         compressed.data(),
+                         (unsigned int)compressed.size(),
+                         false); // retain=false
 
   // For benchmarking, you can compare compressed.size() vs. batch.size()*sizeof(Record)
   Serial.printf("[UPLOAD] Compressed batch size: %u bytes (includes timestamps)\n", (unsigned)compressed.size());
@@ -53,7 +58,7 @@ bool Uploader::uploadBatch(std::vector<Record>& batch) {
 
   int code = http.POST(payload);
   _last_http = code;
-  bool ok = (code >= 200 && code < 300);
+  ok = (code >= 200 && code < 300);
 
   Serial.printf("[UPLOAD] HTTP Response Code: %d\n", code);
   Serial.printf("[UPLOAD]  Payload sent: %u bytes with compressed timestamps\n", (unsigned)payload.length());

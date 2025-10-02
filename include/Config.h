@@ -5,7 +5,7 @@
 #define WIFI_PASSWORD "12345678"       // Replace with your WiFi password
 
 // ---------- Polling & request ----------
-#define POLL_PERIOD_MS  1000           // how often we poll the inverter
+extern uint16_t POLL_PERIOD_MS;           // how often we poll the inverter
 #define REQ_TIMEOUT_MS  5000           // HTTP/RS485 request timeout
 
 // ---------- RS-485 (ignored when SIMULATE=1) ----------
@@ -17,8 +17,8 @@
 #define QTY_REGS         10
 
 // ---------- Buffering & Upload schedule ----------
-#define UPLOAD_PERIOD_MS   14000      // send buffered data every 14 sec (before Poller flush at 15s)
-#define BUFFER_CAPACITY    128         // number of samples to keep in RAM
+extern uint16_t UPLOAD_PERIOD_MS;      // send buffered data every 14 sec (before Poller flush at 15s)
+extern uint8_t BUFFER_CAPACITY;        // number of samples to keep in RAM
 #define MAX_BATCH_BYTES    8192        // cap payload size per upload (approx)
 
 // ---------- Batch Collection Parameters ----------
@@ -40,3 +40,7 @@
 #define BACKOFF_STEP_MS  2000     // add per consecutive error
 #define BACKOFF_MAX_MS   30000    // cap backoff
 #define ERR_RESET_AFTER  1        // reset backoff after this many successes
+
+//Mqtt
+extern const char* MQTT_HOST; // or cloud host
+extern const uint16_t MQTT_PORT;
