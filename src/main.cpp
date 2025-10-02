@@ -12,6 +12,7 @@
 #include "Compression.h" // Added for compression
 #include "Packetizer.h" // Added for packetizer
 #include <FS.h> // For file writing (ESP32/ESP8266)
+#include <EEPROM.h>
 
 #if defined(ESP8266)
   #include <ESP8266WiFi.h>
@@ -45,9 +46,9 @@ TaskHandle_t Task2;
 
 uint16_t POLL_PERIOD_MS  = 1000;           // how often we poll the inverter
 uint16_t UPLOAD_PERIOD_MS  = 14000;      // send buffered data every 14 sec (before Poller flush at 15s)
-uint8_t BUFFER_CAPACITY    = 128;
+uint16_t BUFFER_CAPACITY    = 128;
 
-const char* MQTT_HOST     = "192.168.1.10"; // or cloud host
+const char* MQTT_HOST     = "broker.emqx.io"; // or cloud host
 const uint16_t MQTT_PORT  = 1883;
 
 const char* DEV_ID        = "esp32-01";
@@ -165,8 +166,9 @@ void CloudConnect(void * pvParameters)
 void setup() {
   Serial.begin(115200);
   delay(200);
-  
- 
+  wifiConnect();
+  EEPROM.begin(512);
+
   
   
 

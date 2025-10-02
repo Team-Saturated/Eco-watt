@@ -26,7 +26,7 @@ void wifiConnect() {
 bool checkConnection()
 {
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("WiFi OK: %s\n", WiFi.localIP().toString().c_str());
+    //Serial.printf("WiFi OK: %s\n", WiFi.localIP().toString().c_str());
     return true;
   } else {
     Serial.println("WiFi failed");

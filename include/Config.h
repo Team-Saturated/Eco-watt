@@ -1,4 +1,5 @@
 #pragma once
+#include <Arduino.h>
 
 // ---------- WiFi ----------
 #define WIFI_SSID     "LasithWifi"     // Replace with your WiFi name
@@ -18,7 +19,7 @@ extern uint16_t POLL_PERIOD_MS;           // how often we poll the inverter
 
 // ---------- Buffering & Upload schedule ----------
 extern uint16_t UPLOAD_PERIOD_MS;      // send buffered data every 14 sec (before Poller flush at 15s)
-extern uint8_t BUFFER_CAPACITY;        // number of samples to keep in RAM
+extern uint16_t BUFFER_CAPACITY;        // number of samples to keep in RAM
 #define MAX_BATCH_BYTES    8192        // cap payload size per upload (approx)
 
 // ---------- Batch Collection Parameters ----------

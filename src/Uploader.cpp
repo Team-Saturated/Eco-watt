@@ -29,21 +29,50 @@ bool Uploader::uploadBatch(std::vector<Record>& batch) {
 
   // --- Compress batch before upload ---
   std::vector<uint8_t> compressed = Compression::compressDelta(batch);
-  bool ok = client.publish(t_data.c_str(),
-                         compressed.data(),
-                         (unsigned int)compressed.size(),
-                         false); // retain=false
-
-  // For benchmarking, you can compare compressed.size() vs. batch.size()*sizeof(Record)
-  Serial.printf("[UPLOAD] Compressed batch size: %u bytes (includes timestamps)\n", (unsigned)compressed.size());
-
-  // Upload compressed data as a binary payload (for demo, send as base64 string)
-  String payload;
+  
+  // Build hex once (for MQTT JSON only)
+  String hex;
+  hex.reserve(compressed.size() * 2);
   for (uint8_t b : compressed) {
     char buf[3];
     snprintf(buf, sizeof(buf), "%02X", b);
-    payload += buf;
+    hex += buf;
   }
+
+  // Build JSON payload for MQTT so subscribers (e.g., MQTTX) can parse it
+  String mqttJson;
+  mqttJson.reserve(hex.length() + 256);
+  mqttJson += "{";
+  mqttJson += "\"type\":\"delta_v1_hex\",";
+  mqttJson += "\"timestamp\":"; 
+  {
+    char tsbuf[32];
+    snprintf(tsbuf, sizeof(tsbuf), "%llu", (unsigned long long)last_ts);
+    mqttJson += tsbuf;
+  }
+  mqttJson += ",";
+  mqttJson += "\"records\":"; mqttJson += String((int)batch.size()); mqttJson += ",";
+  mqttJson += "\"compressed_bytes\":"; mqttJson += String((int)compressed.size()); mqttJson += ",";
+  mqttJson += "\"payload_hex\":\""; mqttJson += hex; mqttJson += "\"";
+  mqttJson += "}";
+
+  // Ensure PubSubClient buffer is large enough, then publish JSON
+  if (mqttJson.length() > 0) {
+    client.setBufferSize((uint16_t)(mqttJson.length() + 64));
+  }
+  bool ok_mqtt = client.publish(t_data.c_str(), mqttJson.c_str(), false); // retain=false
+  
+  // Serial.printf(compressed.data()); // Removed: unsafe to print raw binary as string
+  // Optionally, print first few bytes as hex for debugging:
+  Serial.print("[UPLOAD] Compressed data (first 8 bytes): ");
+  for (size_t i = 0; i < compressed.size() && i < 8; ++i) {
+    Serial.printf("%02X ", compressed[i]);
+  }
+  Serial.println();
+
+  // For benchmarking, you can compare compressed.size() vs. batch.size()*sizeof(Record)
+  Serial.printf("[UPLOAD] Compressed batch size: %u bytes (includes timestamps)\n", (unsigned)compressed.size());
+  Serial.printf("[UPLOAD] MQTT JSON length: %u bytes\n", (unsigned)mqttJson.length());
 
   HTTPClient http;
 #if defined(ESP8266)
@@ -56,16 +85,17 @@ bool Uploader::uploadBatch(std::vector<Record>& batch) {
   http.addHeader("Content-Type", "application/octet-stream");
   if (_auth.length()) http.addHeader("Authorization", _auth);
 
-  int code = http.POST(payload);
+  // Send hex string for HTTP (server expects hex text in octet-stream)
+  int code = http.POST(hex);
   _last_http = code;
-  ok = (code >= 200 && code < 300);
+  bool ok_http = (code >= 200 && code < 300);
 
   Serial.printf("[UPLOAD] HTTP Response Code: %d\n", code);
-  Serial.printf("[UPLOAD]  Payload sent: %u bytes with compressed timestamps\n", (unsigned)payload.length());
+  Serial.printf("[UPLOAD]  Hex payload sent: %u chars (represents %u bytes)\n", (unsigned)hex.length(), (unsigned)compressed.size());
 
   // --- Handle server feedback (ACK/config/commands) ---
   String response;
-  if (ok) {
+  if (ok_http) {
     response = http.getString();
     Serial.println("=== SERVER RESPONSE ===");
     if (response.length()) {
@@ -97,6 +127,7 @@ bool Uploader::uploadBatch(std::vector<Record>& batch) {
   }
   http.end();
 
+  bool ok = ok_mqtt && ok_http;
   if (ok) { _uploads_ok++; batch.clear(); }
   else    { _uploads_err++; }
   return ok;

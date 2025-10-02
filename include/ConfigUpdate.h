@@ -3,22 +3,23 @@
 
 
 typedef struct {
-    uint8_t poll_period_ms_addr = 0x00;
-    uint8_t upload_period_ms_addr = 0x01;
-    uint8_t buffer_capacity_addr = 0x02;
-    uint8_t reg_req_id_1_addr = 0x03;//reserve fourth address
-    //0b 0000_0000_0000_0000: id1
+    uint8_t poll_period_ms_addr = 0x00;      // 0x00-0x01 (2 bytes)
+    uint8_t upload_period_ms_addr = 0x02;    // 0x02-0x03 (2 bytes)  
+    uint8_t buffer_capacity_addr = 0x04;     // 0x04-0x05 (2 bytes)
+    uint8_t reg_req_id_1_addr = 0x06;        // 0x06-0x07 (2 bytes)
 } ParamAddress;
 
 
 extern bool config_changed;
 
 
-static void updateConfig(uint8_t poll_period_ms, uint8_t upload_period_ms, uint8_t buffer_capacity, uint16_t reg_req_id_1);
+static void updateConfig(uint16_t poll_period_ms, uint16_t upload_period_ms, uint16_t buffer_capacity, uint16_t reg_req_id_1);
 
 uint8_t retrieveConfig(uint8_t addr);
 
-static bool validateConfig(uint8_t poll_period_ms, uint8_t upload_period_ms, uint8_t buffer_capacity, uint16_t reg_req_id_1);
+void InitializeConfig();
+
+static bool validateConfig(uint16_t poll_period_ms, uint16_t upload_period_ms, uint16_t buffer_capacity, uint16_t reg_req_id_1);
 
 bool SaveConfig(byte* payload, unsigned int len);
 
