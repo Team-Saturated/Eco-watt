@@ -38,24 +38,24 @@ uint8_t retrieveConfig(uint8_t addr) {
 }
 
 
-static bool validateConfig(uint16_t poll_period_ms, uint16_t upload_period_ms, uint16_t buffer_capacity, uint16_t reg_req_id_1) {
+static ErrorCode validateConfig(uint16_t poll_period_ms, uint16_t upload_period_ms, uint16_t buffer_capacity, uint16_t reg_req_id_1) {
     // Example validation rules
-    if (poll_period_ms < 100 || poll_period_ms > 30000) return false;
-    if (upload_period_ms < 1000 || upload_period_ms > 300000) return false;
-    if (buffer_capacity < 10 || buffer_capacity > 1000) return false;
+    if (poll_period_ms < 100 || poll_period_ms > 30000) return ERR_POLL_MS_FAILED;
+    if (upload_period_ms < 1000 || upload_period_ms > 300000) return ERR_UPLOAD_MS_FAILED;
+    if (buffer_capacity < 10 || buffer_capacity > 1000) return ERR_BUFFER_CAPACITY_FAILED;
     // reg_req_id_1 can be any 16-bit value
-    
-    return true;
-}   
 
-bool SaveConfig(byte* payload, unsigned int len) 
+    return ERR_OK;
+}
+
+ErrorCode SaveConfig(byte* payload, unsigned int len) 
 {
     StaticJsonDocument<1024> doc;
     DeserializationError error = deserializeJson(doc, payload, len);
     Serial.println("Deserialize Json: " + String(error.c_str()));
     if (error) 
     {
-        return false;
+        return ERR_DESERIALIZE_FAILED;
     }
     if (doc.containsKey("poll_period_ms") && doc.containsKey("upload_period_ms") &&
         doc.containsKey("buffer_capacity") && doc.containsKey("reg_req_id_1")) 
@@ -71,22 +71,22 @@ bool SaveConfig(byte* payload, unsigned int len)
         Serial.printf("Buffer Capacity: %u\n", new_buffer_capacity);
         Serial.printf("Reg Req ID 1: %u\n", new_reg_req_id_1);
 
-
-        if (!validateConfig(new_poll_period_ms, new_upload_period_ms, new_buffer_capacity, new_reg_req_id_1)) 
+        ErrorCode validationResult = validateConfig(new_poll_period_ms, new_upload_period_ms, new_buffer_capacity, new_reg_req_id_1);
+        if (validationResult != ERR_OK) 
         {
             Serial.println("Config validation failed!");
-            return false;
+            return validationResult;
         }else
         {
             Serial.println("Config validation passed, updating EEPROM...");
             updateConfig(new_poll_period_ms, new_upload_period_ms, new_buffer_capacity, new_reg_req_id_1);
             //update the flag to indicate config has changed
             config_changed = true;
-            return true;
+            return ERR_OK;
         }
     } else {
         Serial.println("Missing required JSON keys in config!");
-        return false;
+        return ERR_UNKNOWN;
     }
 }
 

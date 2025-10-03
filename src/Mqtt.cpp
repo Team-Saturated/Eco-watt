@@ -18,11 +18,47 @@ void ensureMqtt() {
 
 void handleCmd(char* topic, byte* payload, unsigned int len) {
   if(strcmp(topic, t_config.c_str()) == 0) {
-    if(SaveConfig(payload,len)) {
-        client.publish(t_ack.c_str(), "Config updated", true);
-        } else {
-        client.publish(t_ack.c_str(), "Config update failed", true);
-        }
+
+    ErrorCode result = SaveConfig(payload,len);
+    String ackMsg;
+    switch (result)
+    {
+      case ERR_OK:
+        Serial.println("Config saved successfully");
+        ackMsg = "Config saved successfully";
+        break;
+
+      case ERR_DESERIALIZE_FAILED:
+        Serial.println("Config deserialization failed");
+        ackMsg = "Config deserialization failed";
+        break;
+
+      case ERR_POLL_MS_FAILED:
+        Serial.println("Polling period update failed");
+        ackMsg = "Polling period update failed";
+        break;
+
+      case ERR_UPLOAD_MS_FAILED:
+        Serial.println("Upload period update failed");
+        ackMsg = "Upload period update failed";
+        break;
+
+      case ERR_BUFFER_CAPACITY_FAILED:
+        Serial.println("Buffer capacity update failed");
+        ackMsg = "Buffer capacity update failed";
+        break;
+
+      case ERR_REG_REQ_ID_1_FAILED:
+        Serial.println("Reg request ID 1 update failed");
+        ackMsg = "Reg request ID 1 update failed";
+        break;
+
+      default:
+        break;
+    }
+    
+    client.publish(t_ack.c_str(), ackMsg.c_str(), true);
+    
     return;
     
   } else if(strcmp(topic, t_ack.c_str()) == 0) {

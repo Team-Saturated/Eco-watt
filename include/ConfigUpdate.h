@@ -10,6 +10,18 @@ typedef struct {
 } ParamAddress;
 
 
+enum ErrorCode {
+    ERR_OK = 0,                // No error
+    ERR_POLL_MS_FAILED,        // Polling period update failed
+    ERR_UPLOAD_MS_FAILED,      // Upload period update failed
+    ERR_BUFFER_CAPACITY_FAILED, // Buffer capacity update failed
+    ERR_REG_REQ_ID_1_FAILED,  // Reg request ID 1 update failed
+    ERR_DESERIALIZE_FAILED,    // JSON deserialization failed
+    ERR_UNKNOWN                // Unknown/unspecified error
+};
+
+
+
 extern bool config_changed;
 
 
@@ -21,6 +33,6 @@ uint8_t retrieveConfig(uint8_t addr);
 
 //static bool validateConfig(uint16_t poll_period_ms, uint16_t upload_period_ms, uint16_t buffer_capacity, uint16_t reg_req_id_1);
 
-bool SaveConfig(byte* payload, unsigned int len);
+ErrorCode SaveConfig(byte* payload, unsigned int len);
 
 void ApplyConfig();
