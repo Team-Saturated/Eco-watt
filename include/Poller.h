@@ -9,7 +9,7 @@ public:
   : _c(c), _period(periodMs), _buf(buf) {}
 
   void loop(uint8_t slave, uint16_t addr, uint16_t qty);
-
+  void changePeriod(uint32_t newPeriod);
 private:
   InverterClient& _c;
   uint32_t _period;

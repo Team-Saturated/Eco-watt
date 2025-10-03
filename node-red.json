@@ -1,0 +1,1092 @@
+[
+    {
+        "id": "flow1",
+        "type": "tab",
+        "label": "EcoWatt Dashboard",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "dc40770c38823bec",
+        "type": "mqtt in",
+        "z": "flow1",
+        "name": "",
+        "topic": "devices/esp32-01/ack",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "034ffacc85f96e04",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 220,
+        "y": 280,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "7a667e918061abec",
+        "type": "mqtt in",
+        "z": "flow1",
+        "name": "",
+        "topic": "devices/esp32-01/telemetry",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "034ffacc85f96e04",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 240,
+        "y": 360,
+        "wires": [
+            [
+                "ca63419032f544c3"
+            ]
+        ]
+    },
+    {
+        "id": "ca63419032f544c3",
+        "type": "function",
+        "z": "flow1",
+        "name": "function 1",
+        "func": "// Node-RED Function Node: Delta Decompression Decoder with Register Mapping\n// Decodes compressed delta records and applies scaling based on register addresses\n\n// Register mapping with scaling factors\nconst REGISTER_MAP = {\n    0: { name: 'Vac1_L1_Phase_voltage', gain: 10, unit: 'V' },\n    1: { name: 'Iac1_L1_Phase_current', gain: 10, unit: 'A' },\n    2: { name: 'Fac1_L1_Phase_frequency', gain: 100, unit: 'Hz' },\n    3: { name: 'Vpv1_PV1_input_voltage', gain: 10, unit: 'V' },\n    4: { name: 'Vpv2_PV2_input_voltage', gain: 10, unit: 'V' },\n    5: { name: 'Ipv1_PV1_input_current', gain: 10, unit: 'A' },\n    6: { name: 'Ipv2_PV2_input_current', gain: 10, unit: 'A' },\n    7: { name: 'Inverter_internal_temperature', gain: 10, unit: '°C' },\n    8: { name: 'Set_export_power_percentage', gain: 1, unit: '%' },\n    9: { name: 'Pac_L_Inverter_current_output_power', gain: 1, unit: 'W' }\n};\n\nfunction get16_le(buffer, index) {\n    if (index + 2 > buffer.length) return null;\n    return buffer[index] | (buffer[index + 1] << 8);\n}\n\nfunction get32_le(buffer, index) {\n    if (index + 4 > buffer.length) return null;\n    return (buffer[index] |\n        (buffer[index + 1] << 8) |\n        (buffer[index + 2] << 16) |\n        (buffer[index + 3] << 24)) >>> 0;\n}\n\nfunction get64_le(buffer, index) {\n    if (index + 8 > buffer.length) return null;\n    let low = get32_le(buffer, index);\n    let high = get32_le(buffer, index + 4);\n    return low + (high * 0x100000000);\n}\n\nfunction decodeRegister(address, rawValue) {\n    const reg = REGISTER_MAP[address];\n\n    if (!reg) {\n        return {\n            address: address,\n            name: `Unknown_Register_${address}`,\n            raw_value: rawValue,\n            scaled_value: rawValue,\n            unit: 'unknown'\n        };\n    }\n\n    return {\n        address: address,\n        name: reg.name,\n        raw_value: rawValue,\n        scaled_value: rawValue / reg.gain,\n        unit: reg.unit\n    };\n}\n\nfunction decompressDelta(hexString) {\n    const buffer = Buffer.from(hexString, 'hex');\n    let i = 0;\n\n    // Read header\n    const base_ts = get64_le(buffer, i);\n    if (base_ts === null) return null;\n    i += 8;\n\n    const nrecs = get16_le(buffer, i);\n    if (nrecs === null) return null;\n    i += 2;\n\n    const records = [];\n    let prev_ts = base_ts;\n\n    // Process each record\n    for (let r = 0; r < nrecs; r++) {\n        const dt_ms = get32_le(buffer, i);\n        if (dt_ms === null) return null;\n        i += 4;\n\n        const qty = get16_le(buffer, i);\n        if (qty === null) return null;\n        i += 2;\n\n        const need = qty * 4;\n        if (i + need > buffer.length) return null;\n\n        const ts_ms = prev_ts + dt_ms;\n\n        // Extract and decode register pairs\n        const registers = {};\n        for (let q = 0; q < qty; q++) {\n            const addr = get16_le(buffer, i);\n            const data = get16_le(buffer, i + 2);\n\n            const decoded = decodeRegister(addr, data);\n            registers[decoded.name] = {\n                address: decoded.address,\n                raw_value: decoded.raw_value,\n                value: decoded.scaled_value,\n                unit: decoded.unit\n            };\n\n            i += 4;\n        }\n\n        records.push({\n            timestamp: ts_ms,\n            register_count: qty,\n            registers: registers\n        });\n\n        prev_ts = ts_ms;\n    }\n\n    return records;\n}\n\n// Main execution\ntry {\n    const payload_hex = msg.payload.payload_hex;\n\n    if (!payload_hex) {\n        node.error(\"No payload_hex found in message\");\n        return null;\n    }\n\n    const decoded = decompressDelta(payload_hex);\n\n    if (!decoded) {\n        node.error(\"Failed to decompress delta data\");\n        return null;\n    }\n\n    // Create single output object with all data\n    msg.payload = {\n        type: msg.payload.type || 'delta_v1',\n        total_records: decoded.length,\n        compressed_bytes: msg.payload.compressed_bytes,\n        records: decoded\n    };\n\n    return msg;\n\n} catch (error) {\n    node.error(\"Decoding error: \" + error.message);\n    return null;\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 420,
+        "wires": [
+            [
+                "d3194939a221dafa",
+                "c8c832bae0bcab6e",
+                "6de3e8f9c4a876d7",
+                "b5e0059a28eabe7e",
+                "5e12ee062a78e3db",
+                "e07335c13c6895df",
+                "7d372aeece49d747",
+                "7b967601361e2fc7",
+                "c44d1b344135542a",
+                "3442fecd3e5ab225",
+                "677f39c193307a44"
+            ]
+        ]
+    },
+    {
+        "id": "d3194939a221dafa",
+        "type": "function",
+        "z": "flow1",
+        "name": "Vac1",
+        "func": "// =============================================================================\n// CONFIGURATION: Set which register to extract\n// =============================================================================\n// Available options: 'Vac1', 'Iac1', 'Fac1', 'Vpv1', 'Vpv2', \n//                    'Ipv1', 'Ipv2', 'Temp', 'Export', 'Pac'\nconst REGISTER_TO_EXTRACT = 'Vac1';\n// =============================================================================\n\n// Register name mapping\nconst REGISTER_NAMES = {\n    'Vac1': 'Vac1_L1_Phase_voltage',\n    'Iac1': 'Iac1_L1_Phase_current',\n    'Fac1': 'Fac1_L1_Phase_frequency',\n    'Vpv1': 'Vpv1_PV1_input_voltage',\n    'Vpv2': 'Vpv2_PV2_input_voltage',\n    'Ipv1': 'Ipv1_PV1_input_current',\n    'Ipv2': 'Ipv2_PV2_input_current',\n    'Temp': 'Inverter_internal_temperature',\n    'Export': 'Set_export_power_percentage',\n    'Pac': 'Pac_L_Inverter_current_output_power'\n};\n\n// =============================================================================\n// EXTRACTOR FUNCTIONS\n// =============================================================================\n\n/**\n * Extract Vac1 - L1 Phase Voltage\n */\nfunction extractVac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vac1_L1_Phase_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vac1_L1_Phase_voltage', data };\n}\n\n/**\n * Extract Iac1 - L1 Phase Current\n */\nfunction extractIac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Iac1_L1_Phase_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Iac1_L1_Phase_current', data };\n}\n\n/**\n * Extract Fac1 - L1 Phase Frequency\n */\nfunction extractFac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Fac1_L1_Phase_frequency'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Fac1_L1_Phase_frequency', data };\n}\n\n/**\n * Extract Vpv1 - PV1 Input Voltage\n */\nfunction extractVpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv1_PV1_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv1_PV1_input_voltage', data };\n}\n\n/**\n * Extract Vpv2 - PV2 Input Voltage\n */\nfunction extractVpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv2_PV2_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv2_PV2_input_voltage', data };\n}\n\n/**\n * Extract Ipv1 - PV1 Input Current\n */\nfunction extractIpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv1_PV1_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv1_PV1_input_current', data };\n}\n\n/**\n * Extract Ipv2 - PV2 Input Current\n */\nfunction extractIpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv2_PV2_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv2_PV2_input_current', data };\n}\n\n/**\n * Extract Temp - Inverter Internal Temperature\n */\nfunction extractTemp(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Inverter_internal_temperature'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Inverter_internal_temperature', data };\n}\n\n/**\n * Extract Export - Set Export Power Percentage\n */\nfunction extractExport(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Set_export_power_percentage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Set_export_power_percentage', data };\n}\n\n/**\n * Extract Pac - Inverter Current Output Power\n */\nfunction extractPac(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Pac_L_Inverter_current_output_power'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Pac_L_Inverter_current_output_power', data };\n}\n\n// =============================================================================\n// MAIN EXECUTION\n// =============================================================================\n\ntry {\n    // Check if we have decoded records\n    if (!msg.payload || !msg.payload.records) {\n        node.error(\"No records found in message payload\");\n        return null;\n    }\n\n    const records = msg.payload.records;\n\n    // Map of extraction functions\n    const extractors = {\n        'Vac1': extractVac1,\n        'Iac1': extractIac1,\n        'Fac1': extractFac1,\n        'Vpv1': extractVpv1,\n        'Vpv2': extractVpv2,\n        'Ipv1': extractIpv1,\n        'Ipv2': extractIpv2,\n        'Temp': extractTemp,\n        'Export': extractExport,\n        'Pac': extractPac\n    };\n\n    // Get the configured extractor function\n    const extractorFn = extractors[REGISTER_TO_EXTRACT];\n\n    if (!extractorFn) {\n        node.error(`Invalid REGISTER_TO_EXTRACT: ${REGISTER_TO_EXTRACT}`);\n        return null;\n    }\n\n    // Extract the data\n    const result = extractorFn(records);\n\n    // Create array of output messages (one per data point)\n    const messages = result.data.map(point => ({\n        payload: {\n            x: point.timestamp,\n            y: point.value\n        },\n        topic: REGISTER_TO_EXTRACT,\n        register: result.name,\n        unit: point.unit,\n        time: point.time\n    }));\n\n    // Return array of messages - Node-RED will send each separately\n    return [messages];\n\n} catch (error) {\n    node.error(\"Extraction error: \" + error.message);\n    return null;\n}\n\n// =============================================================================\n// USAGE EXAMPLES\n// =============================================================================\n/*\n\n1. To extract Vac1 voltage data:\n   Set: REGISTER_TO_EXTRACT = 'Vac1';\n\n2. To extract PV1 current:\n   Set: REGISTER_TO_EXTRACT = 'Ipv1';\n\n3. To extract output power:\n   Set: REGISTER_TO_EXTRACT = 'Pac';\n\nOutput format for plotting:\n{\n    register: 'Vac1',\n    full_name: 'Vac1_L1_Phase_voltage',\n    total_points: 150,\n    data: [\n        { timestamp: 1234567890, time: '2024-01-01T10:00:00.000Z', value: 230.5, unit: 'V' },\n        { timestamp: 1234567891, time: '2024-01-01T10:00:01.000Z', value: 231.2, unit: 'V' },\n        ...\n    ]\n}\n\n*/",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 650,
+        "y": 420,
+        "wires": [
+            [
+                "41261fa53e30cf96"
+            ]
+        ]
+    },
+    {
+        "id": "41261fa53e30cf96",
+        "type": "ui-chart",
+        "z": "flow1",
+        "group": "2d71719a883722ba",
+        "name": "Vac1",
+        "label": "chart",
+        "order": 1,
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "",
+        "xAxisProperty": "payload.x",
+        "xAxisPropertyType": "msg",
+        "xAxisType": "linear",
+        "xAxisFormat": "",
+        "xAxisFormatType": "auto",
+        "xmin": "",
+        "xmax": "",
+        "yAxisLabel": "",
+        "yAxisProperty": "payload.y",
+        "yAxisPropertyType": "msg",
+        "ymin": "228",
+        "ymax": "232",
+        "bins": 10,
+        "action": "append",
+        "stackSeries": false,
+        "pointShape": "circle",
+        "pointRadius": 4,
+        "showLegend": true,
+        "removeOlder": "",
+        "removeOlderUnit": "1",
+        "removeOlderPoints": "1000",
+        "colors": [
+            "#0095ff",
+            "#ff0000",
+            "#ff7f0e",
+            "#2ca02c",
+            "#a347e1",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "textColor": [
+            "#666666"
+        ],
+        "textColorDefault": true,
+        "gridColor": [
+            "#e5e5e5"
+        ],
+        "gridColorDefault": true,
+        "width": 6,
+        "height": 8,
+        "className": "",
+        "interpolation": "linear",
+        "x": 830,
+        "y": 420,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "c8c832bae0bcab6e",
+        "type": "function",
+        "z": "flow1",
+        "name": "Iac1",
+        "func": "// =============================================================================\n// CONFIGURATION: Set which register to extract\n// =============================================================================\n// Available options: 'Vac1', 'Iac1', 'Fac1', 'Vpv1', 'Vpv2', \n//                    'Ipv1', 'Ipv2', 'Temp', 'Export', 'Pac'\nconst REGISTER_TO_EXTRACT = 'Iac1';\n// =============================================================================\n\n// Register name mapping\nconst REGISTER_NAMES = {\n    'Vac1': 'Vac1_L1_Phase_voltage',\n    'Iac1': 'Iac1_L1_Phase_current',\n    'Fac1': 'Fac1_L1_Phase_frequency',\n    'Vpv1': 'Vpv1_PV1_input_voltage',\n    'Vpv2': 'Vpv2_PV2_input_voltage',\n    'Ipv1': 'Ipv1_PV1_input_current',\n    'Ipv2': 'Ipv2_PV2_input_current',\n    'Temp': 'Inverter_internal_temperature',\n    'Export': 'Set_export_power_percentage',\n    'Pac': 'Pac_L_Inverter_current_output_power'\n};\n\n// =============================================================================\n// EXTRACTOR FUNCTIONS\n// =============================================================================\n\n/**\n * Extract Vac1 - L1 Phase Voltage\n */\nfunction extractVac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vac1_L1_Phase_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vac1_L1_Phase_voltage', data };\n}\n\n/**\n * Extract Iac1 - L1 Phase Current\n */\nfunction extractIac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Iac1_L1_Phase_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Iac1_L1_Phase_current', data };\n}\n\n/**\n * Extract Fac1 - L1 Phase Frequency\n */\nfunction extractFac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Fac1_L1_Phase_frequency'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Fac1_L1_Phase_frequency', data };\n}\n\n/**\n * Extract Vpv1 - PV1 Input Voltage\n */\nfunction extractVpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv1_PV1_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv1_PV1_input_voltage', data };\n}\n\n/**\n * Extract Vpv2 - PV2 Input Voltage\n */\nfunction extractVpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv2_PV2_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv2_PV2_input_voltage', data };\n}\n\n/**\n * Extract Ipv1 - PV1 Input Current\n */\nfunction extractIpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv1_PV1_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv1_PV1_input_current', data };\n}\n\n/**\n * Extract Ipv2 - PV2 Input Current\n */\nfunction extractIpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv2_PV2_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv2_PV2_input_current', data };\n}\n\n/**\n * Extract Temp - Inverter Internal Temperature\n */\nfunction extractTemp(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Inverter_internal_temperature'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Inverter_internal_temperature', data };\n}\n\n/**\n * Extract Export - Set Export Power Percentage\n */\nfunction extractExport(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Set_export_power_percentage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Set_export_power_percentage', data };\n}\n\n/**\n * Extract Pac - Inverter Current Output Power\n */\nfunction extractPac(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Pac_L_Inverter_current_output_power'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Pac_L_Inverter_current_output_power', data };\n}\n\n// =============================================================================\n// MAIN EXECUTION\n// =============================================================================\n\ntry {\n    // Check if we have decoded records\n    if (!msg.payload || !msg.payload.records) {\n        node.error(\"No records found in message payload\");\n        return null;\n    }\n\n    const records = msg.payload.records;\n\n    // Map of extraction functions\n    const extractors = {\n        'Vac1': extractVac1,\n        'Iac1': extractIac1,\n        'Fac1': extractFac1,\n        'Vpv1': extractVpv1,\n        'Vpv2': extractVpv2,\n        'Ipv1': extractIpv1,\n        'Ipv2': extractIpv2,\n        'Temp': extractTemp,\n        'Export': extractExport,\n        'Pac': extractPac\n    };\n\n    // Get the configured extractor function\n    const extractorFn = extractors[REGISTER_TO_EXTRACT];\n\n    if (!extractorFn) {\n        node.error(`Invalid REGISTER_TO_EXTRACT: ${REGISTER_TO_EXTRACT}`);\n        return null;\n    }\n\n    // Extract the data\n    const result = extractorFn(records);\n\n    // Create array of output messages (one per data point)\n    const messages = result.data.map(point => ({\n        payload: {\n            x: point.timestamp,\n            y: point.value\n        },\n        topic: REGISTER_TO_EXTRACT,\n        register: result.name,\n        unit: point.unit,\n        time: point.time\n    }));\n\n    // Return array of messages - Node-RED will send each separately\n    return [messages];\n\n} catch (error) {\n    node.error(\"Extraction error: \" + error.message);\n    return null;\n}\n\n// =============================================================================\n// USAGE EXAMPLES\n// =============================================================================\n/*\n\n1. To extract Vac1 voltage data:\n   Set: REGISTER_TO_EXTRACT = 'Vac1';\n\n2. To extract PV1 current:\n   Set: REGISTER_TO_EXTRACT = 'Ipv1';\n\n3. To extract output power:\n   Set: REGISTER_TO_EXTRACT = 'Pac';\n\nOutput format for plotting:\n{\n    register: 'Vac1',\n    full_name: 'Vac1_L1_Phase_voltage',\n    total_points: 150,\n    data: [\n        { timestamp: 1234567890, time: '2024-01-01T10:00:00.000Z', value: 230.5, unit: 'V' },\n        { timestamp: 1234567891, time: '2024-01-01T10:00:01.000Z', value: 231.2, unit: 'V' },\n        ...\n    ]\n}\n\n*/",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 650,
+        "y": 500,
+        "wires": [
+            [
+                "d70f4b67f5689928"
+            ]
+        ]
+    },
+    {
+        "id": "d70f4b67f5689928",
+        "type": "ui-chart",
+        "z": "flow1",
+        "group": "2d71719a883722ba",
+        "name": "Iac1",
+        "label": "chart",
+        "order": 2,
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "",
+        "xAxisProperty": "payload.x",
+        "xAxisPropertyType": "msg",
+        "xAxisType": "linear",
+        "xAxisFormat": "",
+        "xAxisFormatType": "auto",
+        "xmin": "",
+        "xmax": "",
+        "yAxisLabel": "",
+        "yAxisProperty": "payload.y",
+        "yAxisPropertyType": "msg",
+        "ymin": "0",
+        "ymax": "10",
+        "bins": 10,
+        "action": "append",
+        "stackSeries": false,
+        "pointShape": "circle",
+        "pointRadius": 4,
+        "showLegend": true,
+        "removeOlder": "",
+        "removeOlderUnit": "1",
+        "removeOlderPoints": "1000",
+        "colors": [
+            "#0095ff",
+            "#ff0000",
+            "#ff7f0e",
+            "#2ca02c",
+            "#a347e1",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "textColor": [
+            "#666666"
+        ],
+        "textColorDefault": true,
+        "gridColor": [
+            "#e5e5e5"
+        ],
+        "gridColorDefault": true,
+        "width": 6,
+        "height": 8,
+        "className": "",
+        "interpolation": "linear",
+        "x": 830,
+        "y": 500,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "6de3e8f9c4a876d7",
+        "type": "function",
+        "z": "flow1",
+        "name": "Fac1",
+        "func": "// =============================================================================\n// CONFIGURATION: Set which register to extract\n// =============================================================================\n// Available options: 'Vac1', 'Iac1', 'Fac1', 'Vpv1', 'Vpv2', \n//                    'Ipv1', 'Ipv2', 'Temp', 'Export', 'Pac'\nconst REGISTER_TO_EXTRACT = 'Fac1';\n// =============================================================================\n\n// Register name mapping\nconst REGISTER_NAMES = {\n    'Vac1': 'Vac1_L1_Phase_voltage',\n    'Iac1': 'Iac1_L1_Phase_current',\n    'Fac1': 'Fac1_L1_Phase_frequency',\n    'Vpv1': 'Vpv1_PV1_input_voltage',\n    'Vpv2': 'Vpv2_PV2_input_voltage',\n    'Ipv1': 'Ipv1_PV1_input_current',\n    'Ipv2': 'Ipv2_PV2_input_current',\n    'Temp': 'Inverter_internal_temperature',\n    'Export': 'Set_export_power_percentage',\n    'Pac': 'Pac_L_Inverter_current_output_power'\n};\n\n// =============================================================================\n// EXTRACTOR FUNCTIONS\n// =============================================================================\n\n/**\n * Extract Vac1 - L1 Phase Voltage\n */\nfunction extractVac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vac1_L1_Phase_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vac1_L1_Phase_voltage', data };\n}\n\n/**\n * Extract Iac1 - L1 Phase Current\n */\nfunction extractIac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Iac1_L1_Phase_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Iac1_L1_Phase_current', data };\n}\n\n/**\n * Extract Fac1 - L1 Phase Frequency\n */\nfunction extractFac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Fac1_L1_Phase_frequency'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Fac1_L1_Phase_frequency', data };\n}\n\n/**\n * Extract Vpv1 - PV1 Input Voltage\n */\nfunction extractVpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv1_PV1_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv1_PV1_input_voltage', data };\n}\n\n/**\n * Extract Vpv2 - PV2 Input Voltage\n */\nfunction extractVpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv2_PV2_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv2_PV2_input_voltage', data };\n}\n\n/**\n * Extract Ipv1 - PV1 Input Current\n */\nfunction extractIpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv1_PV1_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv1_PV1_input_current', data };\n}\n\n/**\n * Extract Ipv2 - PV2 Input Current\n */\nfunction extractIpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv2_PV2_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv2_PV2_input_current', data };\n}\n\n/**\n * Extract Temp - Inverter Internal Temperature\n */\nfunction extractTemp(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Inverter_internal_temperature'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Inverter_internal_temperature', data };\n}\n\n/**\n * Extract Export - Set Export Power Percentage\n */\nfunction extractExport(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Set_export_power_percentage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Set_export_power_percentage', data };\n}\n\n/**\n * Extract Pac - Inverter Current Output Power\n */\nfunction extractPac(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Pac_L_Inverter_current_output_power'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Pac_L_Inverter_current_output_power', data };\n}\n\n// =============================================================================\n// MAIN EXECUTION\n// =============================================================================\n\ntry {\n    // Check if we have decoded records\n    if (!msg.payload || !msg.payload.records) {\n        node.error(\"No records found in message payload\");\n        return null;\n    }\n\n    const records = msg.payload.records;\n\n    // Map of extraction functions\n    const extractors = {\n        'Vac1': extractVac1,\n        'Iac1': extractIac1,\n        'Fac1': extractFac1,\n        'Vpv1': extractVpv1,\n        'Vpv2': extractVpv2,\n        'Ipv1': extractIpv1,\n        'Ipv2': extractIpv2,\n        'Temp': extractTemp,\n        'Export': extractExport,\n        'Pac': extractPac\n    };\n\n    // Get the configured extractor function\n    const extractorFn = extractors[REGISTER_TO_EXTRACT];\n\n    if (!extractorFn) {\n        node.error(`Invalid REGISTER_TO_EXTRACT: ${REGISTER_TO_EXTRACT}`);\n        return null;\n    }\n\n    // Extract the data\n    const result = extractorFn(records);\n\n    // Create array of output messages (one per data point)\n    const messages = result.data.map(point => ({\n        payload: {\n            x: point.timestamp,\n            y: point.value\n        },\n        topic: REGISTER_TO_EXTRACT,\n        register: result.name,\n        unit: point.unit,\n        time: point.time\n    }));\n\n    // Return array of messages - Node-RED will send each separately\n    return [messages];\n\n} catch (error) {\n    node.error(\"Extraction error: \" + error.message);\n    return null;\n}\n\n// =============================================================================\n// USAGE EXAMPLES\n// =============================================================================\n/*\n\n1. To extract Vac1 voltage data:\n   Set: REGISTER_TO_EXTRACT = 'Vac1';\n\n2. To extract PV1 current:\n   Set: REGISTER_TO_EXTRACT = 'Ipv1';\n\n3. To extract output power:\n   Set: REGISTER_TO_EXTRACT = 'Pac';\n\nOutput format for plotting:\n{\n    register: 'Vac1',\n    full_name: 'Vac1_L1_Phase_voltage',\n    total_points: 150,\n    data: [\n        { timestamp: 1234567890, time: '2024-01-01T10:00:00.000Z', value: 230.5, unit: 'V' },\n        { timestamp: 1234567891, time: '2024-01-01T10:00:01.000Z', value: 231.2, unit: 'V' },\n        ...\n    ]\n}\n\n*/",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 650,
+        "y": 560,
+        "wires": [
+            [
+                "bed04cfc917e140d"
+            ]
+        ]
+    },
+    {
+        "id": "bed04cfc917e140d",
+        "type": "ui-chart",
+        "z": "flow1",
+        "group": "2d71719a883722ba",
+        "name": "Fac1",
+        "label": "chart",
+        "order": 8,
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "",
+        "xAxisProperty": "payload.x",
+        "xAxisPropertyType": "msg",
+        "xAxisType": "linear",
+        "xAxisFormat": "",
+        "xAxisFormatType": "auto",
+        "xmin": "",
+        "xmax": "",
+        "yAxisLabel": "",
+        "yAxisProperty": "payload.y",
+        "yAxisPropertyType": "msg",
+        "ymin": "228",
+        "ymax": "232",
+        "bins": 10,
+        "action": "append",
+        "stackSeries": false,
+        "pointShape": "circle",
+        "pointRadius": 4,
+        "showLegend": true,
+        "removeOlder": "",
+        "removeOlderUnit": "1",
+        "removeOlderPoints": "1000",
+        "colors": [
+            "#0095ff",
+            "#ff0000",
+            "#ff7f0e",
+            "#2ca02c",
+            "#a347e1",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "textColor": [
+            "#666666"
+        ],
+        "textColorDefault": true,
+        "gridColor": [
+            "#e5e5e5"
+        ],
+        "gridColorDefault": true,
+        "width": 6,
+        "height": 8,
+        "className": "",
+        "interpolation": "linear",
+        "x": 830,
+        "y": 560,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "b5e0059a28eabe7e",
+        "type": "function",
+        "z": "flow1",
+        "name": "Vpv1",
+        "func": "// =============================================================================\n// CONFIGURATION: Set which register to extract\n// =============================================================================\n// Available options: 'Vac1', 'Iac1', 'Fac1', 'Vpv1', 'Vpv2', \n//                    'Ipv1', 'Ipv2', 'Temp', 'Export', 'Pac'\nconst REGISTER_TO_EXTRACT = 'Vpv1';\n// =============================================================================\n\n// Register name mapping\nconst REGISTER_NAMES = {\n    'Vac1': 'Vac1_L1_Phase_voltage',\n    'Iac1': 'Iac1_L1_Phase_current',\n    'Fac1': 'Fac1_L1_Phase_frequency',\n    'Vpv1': 'Vpv1_PV1_input_voltage',\n    'Vpv2': 'Vpv2_PV2_input_voltage',\n    'Ipv1': 'Ipv1_PV1_input_current',\n    'Ipv2': 'Ipv2_PV2_input_current',\n    'Temp': 'Inverter_internal_temperature',\n    'Export': 'Set_export_power_percentage',\n    'Pac': 'Pac_L_Inverter_current_output_power'\n};\n\n// =============================================================================\n// EXTRACTOR FUNCTIONS\n// =============================================================================\n\n/**\n * Extract Vac1 - L1 Phase Voltage\n */\nfunction extractVac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vac1_L1_Phase_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vac1_L1_Phase_voltage', data };\n}\n\n/**\n * Extract Iac1 - L1 Phase Current\n */\nfunction extractIac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Iac1_L1_Phase_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Iac1_L1_Phase_current', data };\n}\n\n/**\n * Extract Fac1 - L1 Phase Frequency\n */\nfunction extractFac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Fac1_L1_Phase_frequency'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Fac1_L1_Phase_frequency', data };\n}\n\n/**\n * Extract Vpv1 - PV1 Input Voltage\n */\nfunction extractVpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv1_PV1_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv1_PV1_input_voltage', data };\n}\n\n/**\n * Extract Vpv2 - PV2 Input Voltage\n */\nfunction extractVpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv2_PV2_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv2_PV2_input_voltage', data };\n}\n\n/**\n * Extract Ipv1 - PV1 Input Current\n */\nfunction extractIpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv1_PV1_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv1_PV1_input_current', data };\n}\n\n/**\n * Extract Ipv2 - PV2 Input Current\n */\nfunction extractIpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv2_PV2_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv2_PV2_input_current', data };\n}\n\n/**\n * Extract Temp - Inverter Internal Temperature\n */\nfunction extractTemp(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Inverter_internal_temperature'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Inverter_internal_temperature', data };\n}\n\n/**\n * Extract Export - Set Export Power Percentage\n */\nfunction extractExport(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Set_export_power_percentage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Set_export_power_percentage', data };\n}\n\n/**\n * Extract Pac - Inverter Current Output Power\n */\nfunction extractPac(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Pac_L_Inverter_current_output_power'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Pac_L_Inverter_current_output_power', data };\n}\n\n// =============================================================================\n// MAIN EXECUTION\n// =============================================================================\n\ntry {\n    // Check if we have decoded records\n    if (!msg.payload || !msg.payload.records) {\n        node.error(\"No records found in message payload\");\n        return null;\n    }\n\n    const records = msg.payload.records;\n\n    // Map of extraction functions\n    const extractors = {\n        'Vac1': extractVac1,\n        'Iac1': extractIac1,\n        'Fac1': extractFac1,\n        'Vpv1': extractVpv1,\n        'Vpv2': extractVpv2,\n        'Ipv1': extractIpv1,\n        'Ipv2': extractIpv2,\n        'Temp': extractTemp,\n        'Export': extractExport,\n        'Pac': extractPac\n    };\n\n    // Get the configured extractor function\n    const extractorFn = extractors[REGISTER_TO_EXTRACT];\n\n    if (!extractorFn) {\n        node.error(`Invalid REGISTER_TO_EXTRACT: ${REGISTER_TO_EXTRACT}`);\n        return null;\n    }\n\n    // Extract the data\n    const result = extractorFn(records);\n\n    // Create array of output messages (one per data point)\n    const messages = result.data.map(point => ({\n        payload: {\n            x: point.timestamp,\n            y: point.value\n        },\n        topic: REGISTER_TO_EXTRACT,\n        register: result.name,\n        unit: point.unit,\n        time: point.time\n    }));\n\n    // Return array of messages - Node-RED will send each separately\n    return [messages];\n\n} catch (error) {\n    node.error(\"Extraction error: \" + error.message);\n    return null;\n}\n\n// =============================================================================\n// USAGE EXAMPLES\n// =============================================================================\n/*\n\n1. To extract Vac1 voltage data:\n   Set: REGISTER_TO_EXTRACT = 'Vac1';\n\n2. To extract PV1 current:\n   Set: REGISTER_TO_EXTRACT = 'Ipv1';\n\n3. To extract output power:\n   Set: REGISTER_TO_EXTRACT = 'Pac';\n\nOutput format for plotting:\n{\n    register: 'Vac1',\n    full_name: 'Vac1_L1_Phase_voltage',\n    total_points: 150,\n    data: [\n        { timestamp: 1234567890, time: '2024-01-01T10:00:00.000Z', value: 230.5, unit: 'V' },\n        { timestamp: 1234567891, time: '2024-01-01T10:00:01.000Z', value: 231.2, unit: 'V' },\n        ...\n    ]\n}\n\n*/",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 650,
+        "y": 620,
+        "wires": [
+            [
+                "f03205b7d4f4549c"
+            ]
+        ]
+    },
+    {
+        "id": "f03205b7d4f4549c",
+        "type": "ui-chart",
+        "z": "flow1",
+        "group": "2d71719a883722ba",
+        "name": "Vpv1",
+        "label": "chart",
+        "order": 7,
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "",
+        "xAxisProperty": "payload.x",
+        "xAxisPropertyType": "msg",
+        "xAxisType": "linear",
+        "xAxisFormat": "",
+        "xAxisFormatType": "auto",
+        "xmin": "",
+        "xmax": "",
+        "yAxisLabel": "",
+        "yAxisProperty": "payload.y",
+        "yAxisPropertyType": "msg",
+        "ymin": "228",
+        "ymax": "232",
+        "bins": 10,
+        "action": "append",
+        "stackSeries": false,
+        "pointShape": "circle",
+        "pointRadius": 4,
+        "showLegend": true,
+        "removeOlder": "",
+        "removeOlderUnit": "1",
+        "removeOlderPoints": "1000",
+        "colors": [
+            "#0095ff",
+            "#ff0000",
+            "#ff7f0e",
+            "#2ca02c",
+            "#a347e1",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "textColor": [
+            "#666666"
+        ],
+        "textColorDefault": true,
+        "gridColor": [
+            "#e5e5e5"
+        ],
+        "gridColorDefault": true,
+        "width": 6,
+        "height": 8,
+        "className": "",
+        "interpolation": "linear",
+        "x": 830,
+        "y": 620,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "5e12ee062a78e3db",
+        "type": "function",
+        "z": "flow1",
+        "name": "Vpv2",
+        "func": "// =============================================================================\n// CONFIGURATION: Set which register to extract\n// =============================================================================\n// Available options: 'Vac1', 'Iac1', 'Fac1', 'Vpv1', 'Vpv2', \n//                    'Ipv1', 'Ipv2', 'Temp', 'Export', 'Pac'\nconst REGISTER_TO_EXTRACT = 'Vpv2';\n// =============================================================================\n\n// Register name mapping\nconst REGISTER_NAMES = {\n    'Vac1': 'Vac1_L1_Phase_voltage',\n    'Iac1': 'Iac1_L1_Phase_current',\n    'Fac1': 'Fac1_L1_Phase_frequency',\n    'Vpv1': 'Vpv1_PV1_input_voltage',\n    'Vpv2': 'Vpv2_PV2_input_voltage',\n    'Ipv1': 'Ipv1_PV1_input_current',\n    'Ipv2': 'Ipv2_PV2_input_current',\n    'Temp': 'Inverter_internal_temperature',\n    'Export': 'Set_export_power_percentage',\n    'Pac': 'Pac_L_Inverter_current_output_power'\n};\n\n// =============================================================================\n// EXTRACTOR FUNCTIONS\n// =============================================================================\n\n/**\n * Extract Vac1 - L1 Phase Voltage\n */\nfunction extractVac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vac1_L1_Phase_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vac1_L1_Phase_voltage', data };\n}\n\n/**\n * Extract Iac1 - L1 Phase Current\n */\nfunction extractIac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Iac1_L1_Phase_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Iac1_L1_Phase_current', data };\n}\n\n/**\n * Extract Fac1 - L1 Phase Frequency\n */\nfunction extractFac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Fac1_L1_Phase_frequency'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Fac1_L1_Phase_frequency', data };\n}\n\n/**\n * Extract Vpv1 - PV1 Input Voltage\n */\nfunction extractVpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv1_PV1_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv1_PV1_input_voltage', data };\n}\n\n/**\n * Extract Vpv2 - PV2 Input Voltage\n */\nfunction extractVpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv2_PV2_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv2_PV2_input_voltage', data };\n}\n\n/**\n * Extract Ipv1 - PV1 Input Current\n */\nfunction extractIpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv1_PV1_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv1_PV1_input_current', data };\n}\n\n/**\n * Extract Ipv2 - PV2 Input Current\n */\nfunction extractIpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv2_PV2_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv2_PV2_input_current', data };\n}\n\n/**\n * Extract Temp - Inverter Internal Temperature\n */\nfunction extractTemp(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Inverter_internal_temperature'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Inverter_internal_temperature', data };\n}\n\n/**\n * Extract Export - Set Export Power Percentage\n */\nfunction extractExport(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Set_export_power_percentage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Set_export_power_percentage', data };\n}\n\n/**\n * Extract Pac - Inverter Current Output Power\n */\nfunction extractPac(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Pac_L_Inverter_current_output_power'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Pac_L_Inverter_current_output_power', data };\n}\n\n// =============================================================================\n// MAIN EXECUTION\n// =============================================================================\n\ntry {\n    // Check if we have decoded records\n    if (!msg.payload || !msg.payload.records) {\n        node.error(\"No records found in message payload\");\n        return null;\n    }\n\n    const records = msg.payload.records;\n\n    // Map of extraction functions\n    const extractors = {\n        'Vac1': extractVac1,\n        'Iac1': extractIac1,\n        'Fac1': extractFac1,\n        'Vpv1': extractVpv1,\n        'Vpv2': extractVpv2,\n        'Ipv1': extractIpv1,\n        'Ipv2': extractIpv2,\n        'Temp': extractTemp,\n        'Export': extractExport,\n        'Pac': extractPac\n    };\n\n    // Get the configured extractor function\n    const extractorFn = extractors[REGISTER_TO_EXTRACT];\n\n    if (!extractorFn) {\n        node.error(`Invalid REGISTER_TO_EXTRACT: ${REGISTER_TO_EXTRACT}`);\n        return null;\n    }\n\n    // Extract the data\n    const result = extractorFn(records);\n\n    // Create array of output messages (one per data point)\n    const messages = result.data.map(point => ({\n        payload: {\n            x: point.timestamp,\n            y: point.value\n        },\n        topic: REGISTER_TO_EXTRACT,\n        register: result.name,\n        unit: point.unit,\n        time: point.time\n    }));\n\n    // Return array of messages - Node-RED will send each separately\n    return [messages];\n\n} catch (error) {\n    node.error(\"Extraction error: \" + error.message);\n    return null;\n}\n\n// =============================================================================\n// USAGE EXAMPLES\n// =============================================================================\n/*\n\n1. To extract Vac1 voltage data:\n   Set: REGISTER_TO_EXTRACT = 'Vac1';\n\n2. To extract PV1 current:\n   Set: REGISTER_TO_EXTRACT = 'Ipv1';\n\n3. To extract output power:\n   Set: REGISTER_TO_EXTRACT = 'Pac';\n\nOutput format for plotting:\n{\n    register: 'Vac1',\n    full_name: 'Vac1_L1_Phase_voltage',\n    total_points: 150,\n    data: [\n        { timestamp: 1234567890, time: '2024-01-01T10:00:00.000Z', value: 230.5, unit: 'V' },\n        { timestamp: 1234567891, time: '2024-01-01T10:00:01.000Z', value: 231.2, unit: 'V' },\n        ...\n    ]\n}\n\n*/",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 650,
+        "y": 680,
+        "wires": [
+            [
+                "d7e0abb870dae59e"
+            ]
+        ]
+    },
+    {
+        "id": "d7e0abb870dae59e",
+        "type": "ui-chart",
+        "z": "flow1",
+        "group": "4f7d518aae8ac0cc",
+        "name": "Vpv2",
+        "label": "chart",
+        "order": 1,
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "",
+        "xAxisProperty": "payload.x",
+        "xAxisPropertyType": "msg",
+        "xAxisType": "linear",
+        "xAxisFormat": "",
+        "xAxisFormatType": "auto",
+        "xmin": "",
+        "xmax": "",
+        "yAxisLabel": "",
+        "yAxisProperty": "payload.y",
+        "yAxisPropertyType": "msg",
+        "ymin": "228",
+        "ymax": "232",
+        "bins": 10,
+        "action": "append",
+        "stackSeries": false,
+        "pointShape": "circle",
+        "pointRadius": 4,
+        "showLegend": true,
+        "removeOlder": "",
+        "removeOlderUnit": "1",
+        "removeOlderPoints": "1000",
+        "colors": [
+            "#0095ff",
+            "#ff0000",
+            "#ff7f0e",
+            "#2ca02c",
+            "#a347e1",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "textColor": [
+            "#666666"
+        ],
+        "textColorDefault": true,
+        "gridColor": [
+            "#e5e5e5"
+        ],
+        "gridColorDefault": true,
+        "width": 6,
+        "height": 8,
+        "className": "",
+        "interpolation": "linear",
+        "x": 830,
+        "y": 680,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "e07335c13c6895df",
+        "type": "function",
+        "z": "flow1",
+        "name": "Temp",
+        "func": "// =============================================================================\n// CONFIGURATION: Set which register to extract\n// =============================================================================\n// Available options: 'Vac1', 'Iac1', 'Fac1', 'Vpv1', 'Vpv2', \n//                    'Ipv1', 'Ipv2', 'Temp', 'Export', 'Pac'\nconst REGISTER_TO_EXTRACT = 'Temp';\n// =============================================================================\n\n// Register name mapping\nconst REGISTER_NAMES = {\n    'Vac1': 'Vac1_L1_Phase_voltage',\n    'Iac1': 'Iac1_L1_Phase_current',\n    'Fac1': 'Fac1_L1_Phase_frequency',\n    'Vpv1': 'Vpv1_PV1_input_voltage',\n    'Vpv2': 'Vpv2_PV2_input_voltage',\n    'Ipv1': 'Ipv1_PV1_input_current',\n    'Ipv2': 'Ipv2_PV2_input_current',\n    'Temp': 'Inverter_internal_temperature',\n    'Export': 'Set_export_power_percentage',\n    'Pac': 'Pac_L_Inverter_current_output_power'\n};\n\n// =============================================================================\n// EXTRACTOR FUNCTIONS\n// =============================================================================\n\n/**\n * Extract Vac1 - L1 Phase Voltage\n */\nfunction extractVac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vac1_L1_Phase_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vac1_L1_Phase_voltage', data };\n}\n\n/**\n * Extract Iac1 - L1 Phase Current\n */\nfunction extractIac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Iac1_L1_Phase_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Iac1_L1_Phase_current', data };\n}\n\n/**\n * Extract Fac1 - L1 Phase Frequency\n */\nfunction extractFac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Fac1_L1_Phase_frequency'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Fac1_L1_Phase_frequency', data };\n}\n\n/**\n * Extract Vpv1 - PV1 Input Voltage\n */\nfunction extractVpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv1_PV1_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv1_PV1_input_voltage', data };\n}\n\n/**\n * Extract Vpv2 - PV2 Input Voltage\n */\nfunction extractVpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv2_PV2_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv2_PV2_input_voltage', data };\n}\n\n/**\n * Extract Ipv1 - PV1 Input Current\n */\nfunction extractIpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv1_PV1_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv1_PV1_input_current', data };\n}\n\n/**\n * Extract Ipv2 - PV2 Input Current\n */\nfunction extractIpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv2_PV2_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv2_PV2_input_current', data };\n}\n\n/**\n * Extract Temp - Inverter Internal Temperature\n */\nfunction extractTemp(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Inverter_internal_temperature'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Inverter_internal_temperature', data };\n}\n\n/**\n * Extract Export - Set Export Power Percentage\n */\nfunction extractExport(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Set_export_power_percentage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Set_export_power_percentage', data };\n}\n\n/**\n * Extract Pac - Inverter Current Output Power\n */\nfunction extractPac(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Pac_L_Inverter_current_output_power'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Pac_L_Inverter_current_output_power', data };\n}\n\n// =============================================================================\n// MAIN EXECUTION\n// =============================================================================\n\ntry {\n    // Check if we have decoded records\n    if (!msg.payload || !msg.payload.records) {\n        node.error(\"No records found in message payload\");\n        return null;\n    }\n\n    const records = msg.payload.records;\n\n    // Map of extraction functions\n    const extractors = {\n        'Vac1': extractVac1,\n        'Iac1': extractIac1,\n        'Fac1': extractFac1,\n        'Vpv1': extractVpv1,\n        'Vpv2': extractVpv2,\n        'Ipv1': extractIpv1,\n        'Ipv2': extractIpv2,\n        'Temp': extractTemp,\n        'Export': extractExport,\n        'Pac': extractPac\n    };\n\n    // Get the configured extractor function\n    const extractorFn = extractors[REGISTER_TO_EXTRACT];\n\n    if (!extractorFn) {\n        node.error(`Invalid REGISTER_TO_EXTRACT: ${REGISTER_TO_EXTRACT}`);\n        return null;\n    }\n\n    // Extract the data\n    const result = extractorFn(records);\n\n    // Create array of output messages (one per data point)\n    const messages = result.data.map(point => ({\n        payload: {\n            x: point.timestamp,\n            y: point.value\n        },\n        topic: REGISTER_TO_EXTRACT,\n        register: result.name,\n        unit: point.unit,\n        time: point.time\n    }));\n\n    // Return array of messages - Node-RED will send each separately\n    return [messages];\n\n} catch (error) {\n    node.error(\"Extraction error: \" + error.message);\n    return null;\n}\n\n// =============================================================================\n// USAGE EXAMPLES\n// =============================================================================\n/*\n\n1. To extract Vac1 voltage data:\n   Set: REGISTER_TO_EXTRACT = 'Vac1';\n\n2. To extract PV1 current:\n   Set: REGISTER_TO_EXTRACT = 'Ipv1';\n\n3. To extract output power:\n   Set: REGISTER_TO_EXTRACT = 'Pac';\n\nOutput format for plotting:\n{\n    register: 'Vac1',\n    full_name: 'Vac1_L1_Phase_voltage',\n    total_points: 150,\n    data: [\n        { timestamp: 1234567890, time: '2024-01-01T10:00:00.000Z', value: 230.5, unit: 'V' },\n        { timestamp: 1234567891, time: '2024-01-01T10:00:01.000Z', value: 231.2, unit: 'V' },\n        ...\n    ]\n}\n\n*/",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 630,
+        "y": 740,
+        "wires": [
+            [
+                "132aa4f370dbeb21"
+            ]
+        ]
+    },
+    {
+        "id": "132aa4f370dbeb21",
+        "type": "ui-chart",
+        "z": "flow1",
+        "group": "2d71719a883722ba",
+        "name": "Temp",
+        "label": "Temp",
+        "order": 6,
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "",
+        "xAxisProperty": "payload.x",
+        "xAxisPropertyType": "msg",
+        "xAxisType": "linear",
+        "xAxisFormat": "",
+        "xAxisFormatType": "auto",
+        "xmin": "",
+        "xmax": "",
+        "yAxisLabel": "",
+        "yAxisProperty": "payload.y",
+        "yAxisPropertyType": "msg",
+        "ymin": "20",
+        "ymax": "40",
+        "bins": 10,
+        "action": "append",
+        "stackSeries": false,
+        "pointShape": "circle",
+        "pointRadius": 4,
+        "showLegend": true,
+        "removeOlder": "",
+        "removeOlderUnit": "1",
+        "removeOlderPoints": "1000",
+        "colors": [
+            "#0095ff",
+            "#ff0000",
+            "#ff7f0e",
+            "#2ca02c",
+            "#a347e1",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "textColor": [
+            "#666666"
+        ],
+        "textColorDefault": true,
+        "gridColor": [
+            "#e5e5e5"
+        ],
+        "gridColorDefault": true,
+        "width": 6,
+        "height": 8,
+        "className": "",
+        "interpolation": "linear",
+        "x": 810,
+        "y": 740,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "7d372aeece49d747",
+        "type": "function",
+        "z": "flow1",
+        "name": "Ipv1",
+        "func": "// =============================================================================\n// CONFIGURATION: Set which register to extract\n// =============================================================================\n// Available options: 'Vac1', 'Iac1', 'Fac1', 'Vpv1', 'Vpv2', \n//                    'Ipv1', 'Ipv2', 'Temp', 'Export', 'Pac'\nconst REGISTER_TO_EXTRACT = 'Ipv1';\n// =============================================================================\n\n// Register name mapping\nconst REGISTER_NAMES = {\n    'Vac1': 'Vac1_L1_Phase_voltage',\n    'Iac1': 'Iac1_L1_Phase_current',\n    'Fac1': 'Fac1_L1_Phase_frequency',\n    'Vpv1': 'Vpv1_PV1_input_voltage',\n    'Vpv2': 'Vpv2_PV2_input_voltage',\n    'Ipv1': 'Ipv1_PV1_input_current',\n    'Ipv2': 'Ipv2_PV2_input_current',\n    'Temp': 'Inverter_internal_temperature',\n    'Export': 'Set_export_power_percentage',\n    'Pac': 'Pac_L_Inverter_current_output_power'\n};\n\n// =============================================================================\n// EXTRACTOR FUNCTIONS\n// =============================================================================\n\n/**\n * Extract Vac1 - L1 Phase Voltage\n */\nfunction extractVac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vac1_L1_Phase_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vac1_L1_Phase_voltage', data };\n}\n\n/**\n * Extract Iac1 - L1 Phase Current\n */\nfunction extractIac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Iac1_L1_Phase_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Iac1_L1_Phase_current', data };\n}\n\n/**\n * Extract Fac1 - L1 Phase Frequency\n */\nfunction extractFac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Fac1_L1_Phase_frequency'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Fac1_L1_Phase_frequency', data };\n}\n\n/**\n * Extract Vpv1 - PV1 Input Voltage\n */\nfunction extractVpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv1_PV1_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv1_PV1_input_voltage', data };\n}\n\n/**\n * Extract Vpv2 - PV2 Input Voltage\n */\nfunction extractVpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv2_PV2_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv2_PV2_input_voltage', data };\n}\n\n/**\n * Extract Ipv1 - PV1 Input Current\n */\nfunction extractIpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv1_PV1_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv1_PV1_input_current', data };\n}\n\n/**\n * Extract Ipv2 - PV2 Input Current\n */\nfunction extractIpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv2_PV2_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv2_PV2_input_current', data };\n}\n\n/**\n * Extract Temp - Inverter Internal Temperature\n */\nfunction extractTemp(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Inverter_internal_temperature'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Inverter_internal_temperature', data };\n}\n\n/**\n * Extract Export - Set Export Power Percentage\n */\nfunction extractExport(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Set_export_power_percentage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Set_export_power_percentage', data };\n}\n\n/**\n * Extract Pac - Inverter Current Output Power\n */\nfunction extractPac(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Pac_L_Inverter_current_output_power'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Pac_L_Inverter_current_output_power', data };\n}\n\n// =============================================================================\n// MAIN EXECUTION\n// =============================================================================\n\ntry {\n    // Check if we have decoded records\n    if (!msg.payload || !msg.payload.records) {\n        node.error(\"No records found in message payload\");\n        return null;\n    }\n\n    const records = msg.payload.records;\n\n    // Map of extraction functions\n    const extractors = {\n        'Vac1': extractVac1,\n        'Iac1': extractIac1,\n        'Fac1': extractFac1,\n        'Vpv1': extractVpv1,\n        'Vpv2': extractVpv2,\n        'Ipv1': extractIpv1,\n        'Ipv2': extractIpv2,\n        'Temp': extractTemp,\n        'Export': extractExport,\n        'Pac': extractPac\n    };\n\n    // Get the configured extractor function\n    const extractorFn = extractors[REGISTER_TO_EXTRACT];\n\n    if (!extractorFn) {\n        node.error(`Invalid REGISTER_TO_EXTRACT: ${REGISTER_TO_EXTRACT}`);\n        return null;\n    }\n\n    // Extract the data\n    const result = extractorFn(records);\n\n    // Create array of output messages (one per data point)\n    const messages = result.data.map(point => ({\n        payload: {\n            x: point.timestamp,\n            y: point.value\n        },\n        topic: REGISTER_TO_EXTRACT,\n        register: result.name,\n        unit: point.unit,\n        time: point.time\n    }));\n\n    // Return array of messages - Node-RED will send each separately\n    return [messages];\n\n} catch (error) {\n    node.error(\"Extraction error: \" + error.message);\n    return null;\n}\n\n// =============================================================================\n// USAGE EXAMPLES\n// =============================================================================\n/*\n\n1. To extract Vac1 voltage data:\n   Set: REGISTER_TO_EXTRACT = 'Vac1';\n\n2. To extract PV1 current:\n   Set: REGISTER_TO_EXTRACT = 'Ipv1';\n\n3. To extract output power:\n   Set: REGISTER_TO_EXTRACT = 'Pac';\n\nOutput format for plotting:\n{\n    register: 'Vac1',\n    full_name: 'Vac1_L1_Phase_voltage',\n    total_points: 150,\n    data: [\n        { timestamp: 1234567890, time: '2024-01-01T10:00:00.000Z', value: 230.5, unit: 'V' },\n        { timestamp: 1234567891, time: '2024-01-01T10:00:01.000Z', value: 231.2, unit: 'V' },\n        ...\n    ]\n}\n\n*/",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 650,
+        "y": 800,
+        "wires": [
+            [
+                "8f2de380b6255cc1"
+            ]
+        ]
+    },
+    {
+        "id": "8f2de380b6255cc1",
+        "type": "ui-chart",
+        "z": "flow1",
+        "group": "2d71719a883722ba",
+        "name": "Ipv1",
+        "label": "chart",
+        "order": 5,
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "",
+        "xAxisProperty": "payload.x",
+        "xAxisPropertyType": "msg",
+        "xAxisType": "linear",
+        "xAxisFormat": "",
+        "xAxisFormatType": "auto",
+        "xmin": "",
+        "xmax": "",
+        "yAxisLabel": "",
+        "yAxisProperty": "payload.y",
+        "yAxisPropertyType": "msg",
+        "ymin": "228",
+        "ymax": "232",
+        "bins": 10,
+        "action": "append",
+        "stackSeries": false,
+        "pointShape": "circle",
+        "pointRadius": 4,
+        "showLegend": true,
+        "removeOlder": "60",
+        "removeOlderUnit": "1",
+        "removeOlderPoints": "1000",
+        "colors": [
+            "#0095ff",
+            "#ff0000",
+            "#ff7f0e",
+            "#2ca02c",
+            "#a347e1",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "textColor": [
+            "#666666"
+        ],
+        "textColorDefault": true,
+        "gridColor": [
+            "#e5e5e5"
+        ],
+        "gridColorDefault": true,
+        "width": 6,
+        "height": 8,
+        "className": "",
+        "interpolation": "linear",
+        "x": 830,
+        "y": 800,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "7b967601361e2fc7",
+        "type": "function",
+        "z": "flow1",
+        "name": "Ipv2",
+        "func": "// =============================================================================\n// CONFIGURATION: Set which register to extract\n// =============================================================================\n// Available options: 'Vac1', 'Iac1', 'Fac1', 'Vpv1', 'Vpv2', \n//                    'Ipv1', 'Ipv2', 'Temp', 'Export', 'Pac'\nconst REGISTER_TO_EXTRACT = 'Ipv2';\n// =============================================================================\n\n// Register name mapping\nconst REGISTER_NAMES = {\n    'Vac1': 'Vac1_L1_Phase_voltage',\n    'Iac1': 'Iac1_L1_Phase_current',\n    'Fac1': 'Fac1_L1_Phase_frequency',\n    'Vpv1': 'Vpv1_PV1_input_voltage',\n    'Vpv2': 'Vpv2_PV2_input_voltage',\n    'Ipv1': 'Ipv1_PV1_input_current',\n    'Ipv2': 'Ipv2_PV2_input_current',\n    'Temp': 'Inverter_internal_temperature',\n    'Export': 'Set_export_power_percentage',\n    'Pac': 'Pac_L_Inverter_current_output_power'\n};\n\n// =============================================================================\n// EXTRACTOR FUNCTIONS\n// =============================================================================\n\n/**\n * Extract Vac1 - L1 Phase Voltage\n */\nfunction extractVac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vac1_L1_Phase_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vac1_L1_Phase_voltage', data };\n}\n\n/**\n * Extract Iac1 - L1 Phase Current\n */\nfunction extractIac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Iac1_L1_Phase_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Iac1_L1_Phase_current', data };\n}\n\n/**\n * Extract Fac1 - L1 Phase Frequency\n */\nfunction extractFac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Fac1_L1_Phase_frequency'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Fac1_L1_Phase_frequency', data };\n}\n\n/**\n * Extract Vpv1 - PV1 Input Voltage\n */\nfunction extractVpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv1_PV1_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv1_PV1_input_voltage', data };\n}\n\n/**\n * Extract Vpv2 - PV2 Input Voltage\n */\nfunction extractVpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv2_PV2_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv2_PV2_input_voltage', data };\n}\n\n/**\n * Extract Ipv1 - PV1 Input Current\n */\nfunction extractIpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv1_PV1_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv1_PV1_input_current', data };\n}\n\n/**\n * Extract Ipv2 - PV2 Input Current\n */\nfunction extractIpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv2_PV2_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv2_PV2_input_current', data };\n}\n\n/**\n * Extract Temp - Inverter Internal Temperature\n */\nfunction extractTemp(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Inverter_internal_temperature'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Inverter_internal_temperature', data };\n}\n\n/**\n * Extract Export - Set Export Power Percentage\n */\nfunction extractExport(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Set_export_power_percentage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Set_export_power_percentage', data };\n}\n\n/**\n * Extract Pac - Inverter Current Output Power\n */\nfunction extractPac(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Pac_L_Inverter_current_output_power'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Pac_L_Inverter_current_output_power', data };\n}\n\n// =============================================================================\n// MAIN EXECUTION\n// =============================================================================\n\ntry {\n    // Check if we have decoded records\n    if (!msg.payload || !msg.payload.records) {\n        node.error(\"No records found in message payload\");\n        return null;\n    }\n\n    const records = msg.payload.records;\n\n    // Map of extraction functions\n    const extractors = {\n        'Vac1': extractVac1,\n        'Iac1': extractIac1,\n        'Fac1': extractFac1,\n        'Vpv1': extractVpv1,\n        'Vpv2': extractVpv2,\n        'Ipv1': extractIpv1,\n        'Ipv2': extractIpv2,\n        'Temp': extractTemp,\n        'Export': extractExport,\n        'Pac': extractPac\n    };\n\n    // Get the configured extractor function\n    const extractorFn = extractors[REGISTER_TO_EXTRACT];\n\n    if (!extractorFn) {\n        node.error(`Invalid REGISTER_TO_EXTRACT: ${REGISTER_TO_EXTRACT}`);\n        return null;\n    }\n\n    // Extract the data\n    const result = extractorFn(records);\n\n    // Create array of output messages (one per data point)\n    const messages = result.data.map(point => ({\n        payload: {\n            x: point.timestamp,\n            y: point.value\n        },\n        topic: REGISTER_TO_EXTRACT,\n        register: result.name,\n        unit: point.unit,\n        time: point.time\n    }));\n\n    // Return array of messages - Node-RED will send each separately\n    return [messages];\n\n} catch (error) {\n    node.error(\"Extraction error: \" + error.message);\n    return null;\n}\n\n// =============================================================================\n// USAGE EXAMPLES\n// =============================================================================\n/*\n\n1. To extract Vac1 voltage data:\n   Set: REGISTER_TO_EXTRACT = 'Vac1';\n\n2. To extract PV1 current:\n   Set: REGISTER_TO_EXTRACT = 'Ipv1';\n\n3. To extract output power:\n   Set: REGISTER_TO_EXTRACT = 'Pac';\n\nOutput format for plotting:\n{\n    register: 'Vac1',\n    full_name: 'Vac1_L1_Phase_voltage',\n    total_points: 150,\n    data: [\n        { timestamp: 1234567890, time: '2024-01-01T10:00:00.000Z', value: 230.5, unit: 'V' },\n        { timestamp: 1234567891, time: '2024-01-01T10:00:01.000Z', value: 231.2, unit: 'V' },\n        ...\n    ]\n}\n\n*/",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 650,
+        "y": 860,
+        "wires": [
+            [
+                "f79e7a265bd8be2c"
+            ]
+        ]
+    },
+    {
+        "id": "f79e7a265bd8be2c",
+        "type": "ui-chart",
+        "z": "flow1",
+        "group": "4f7d518aae8ac0cc",
+        "name": "Ipv2",
+        "label": "chart",
+        "order": 2,
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "",
+        "xAxisProperty": "payload.x",
+        "xAxisPropertyType": "msg",
+        "xAxisType": "linear",
+        "xAxisFormat": "",
+        "xAxisFormatType": "auto",
+        "xmin": "",
+        "xmax": "",
+        "yAxisLabel": "",
+        "yAxisProperty": "payload.y",
+        "yAxisPropertyType": "msg",
+        "ymin": "228",
+        "ymax": "232",
+        "bins": 10,
+        "action": "append",
+        "stackSeries": false,
+        "pointShape": "circle",
+        "pointRadius": 4,
+        "showLegend": true,
+        "removeOlder": "30",
+        "removeOlderUnit": "1",
+        "removeOlderPoints": "1000",
+        "colors": [
+            "#0095ff",
+            "#ff0000",
+            "#ff7f0e",
+            "#2ca02c",
+            "#a347e1",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "textColor": [
+            "#666666"
+        ],
+        "textColorDefault": true,
+        "gridColor": [
+            "#e5e5e5"
+        ],
+        "gridColorDefault": true,
+        "width": 6,
+        "height": 8,
+        "className": "",
+        "interpolation": "linear",
+        "x": 830,
+        "y": 860,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "c44d1b344135542a",
+        "type": "function",
+        "z": "flow1",
+        "name": "Export",
+        "func": "// =============================================================================\n// CONFIGURATION: Set which register to extract\n// =============================================================================\n// Available options: 'Vac1', 'Iac1', 'Fac1', 'Vpv1', 'Vpv2', \n//                    'Ipv1', 'Ipv2', 'Temp', 'Export', 'Pac'\nconst REGISTER_TO_EXTRACT = 'Export';\n// =============================================================================\n\n// Register name mapping\nconst REGISTER_NAMES = {\n    'Vac1': 'Vac1_L1_Phase_voltage',\n    'Iac1': 'Iac1_L1_Phase_current',\n    'Fac1': 'Fac1_L1_Phase_frequency',\n    'Vpv1': 'Vpv1_PV1_input_voltage',\n    'Vpv2': 'Vpv2_PV2_input_voltage',\n    'Ipv1': 'Ipv1_PV1_input_current',\n    'Ipv2': 'Ipv2_PV2_input_current',\n    'Temp': 'Inverter_internal_temperature',\n    'Export': 'Set_export_power_percentage',\n    'Pac': 'Pac_L_Inverter_current_output_power'\n};\n\n// =============================================================================\n// EXTRACTOR FUNCTIONS\n// =============================================================================\n\n/**\n * Extract Vac1 - L1 Phase Voltage\n */\nfunction extractVac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vac1_L1_Phase_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vac1_L1_Phase_voltage', data };\n}\n\n/**\n * Extract Iac1 - L1 Phase Current\n */\nfunction extractIac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Iac1_L1_Phase_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Iac1_L1_Phase_current', data };\n}\n\n/**\n * Extract Fac1 - L1 Phase Frequency\n */\nfunction extractFac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Fac1_L1_Phase_frequency'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Fac1_L1_Phase_frequency', data };\n}\n\n/**\n * Extract Vpv1 - PV1 Input Voltage\n */\nfunction extractVpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv1_PV1_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv1_PV1_input_voltage', data };\n}\n\n/**\n * Extract Vpv2 - PV2 Input Voltage\n */\nfunction extractVpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv2_PV2_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv2_PV2_input_voltage', data };\n}\n\n/**\n * Extract Ipv1 - PV1 Input Current\n */\nfunction extractIpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv1_PV1_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv1_PV1_input_current', data };\n}\n\n/**\n * Extract Ipv2 - PV2 Input Current\n */\nfunction extractIpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv2_PV2_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv2_PV2_input_current', data };\n}\n\n/**\n * Extract Temp - Inverter Internal Temperature\n */\nfunction extractTemp(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Inverter_internal_temperature'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Inverter_internal_temperature', data };\n}\n\n/**\n * Extract Export - Set Export Power Percentage\n */\nfunction extractExport(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Set_export_power_percentage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Set_export_power_percentage', data };\n}\n\n/**\n * Extract Pac - Inverter Current Output Power\n */\nfunction extractPac(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Pac_L_Inverter_current_output_power'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Pac_L_Inverter_current_output_power', data };\n}\n\n// =============================================================================\n// MAIN EXECUTION\n// =============================================================================\n\ntry {\n    // Check if we have decoded records\n    if (!msg.payload || !msg.payload.records) {\n        node.error(\"No records found in message payload\");\n        return null;\n    }\n\n    const records = msg.payload.records;\n\n    // Map of extraction functions\n    const extractors = {\n        'Vac1': extractVac1,\n        'Iac1': extractIac1,\n        'Fac1': extractFac1,\n        'Vpv1': extractVpv1,\n        'Vpv2': extractVpv2,\n        'Ipv1': extractIpv1,\n        'Ipv2': extractIpv2,\n        'Temp': extractTemp,\n        'Export': extractExport,\n        'Pac': extractPac\n    };\n\n    // Get the configured extractor function\n    const extractorFn = extractors[REGISTER_TO_EXTRACT];\n\n    if (!extractorFn) {\n        node.error(`Invalid REGISTER_TO_EXTRACT: ${REGISTER_TO_EXTRACT}`);\n        return null;\n    }\n\n    // Extract the data\n    const result = extractorFn(records);\n\n    // Create array of output messages (one per data point)\n    const messages = result.data.map(point => ({\n        payload: {\n            x: point.timestamp,\n            y: point.value\n        },\n        topic: REGISTER_TO_EXTRACT,\n        register: result.name,\n        unit: point.unit,\n        time: point.time\n    }));\n\n    // Return array of messages - Node-RED will send each separately\n    return [messages];\n\n} catch (error) {\n    node.error(\"Extraction error: \" + error.message);\n    return null;\n}\n\n// =============================================================================\n// USAGE EXAMPLES\n// =============================================================================\n/*\n\n1. To extract Vac1 voltage data:\n   Set: REGISTER_TO_EXTRACT = 'Vac1';\n\n2. To extract PV1 current:\n   Set: REGISTER_TO_EXTRACT = 'Ipv1';\n\n3. To extract output power:\n   Set: REGISTER_TO_EXTRACT = 'Pac';\n\nOutput format for plotting:\n{\n    register: 'Vac1',\n    full_name: 'Vac1_L1_Phase_voltage',\n    total_points: 150,\n    data: [\n        { timestamp: 1234567890, time: '2024-01-01T10:00:00.000Z', value: 230.5, unit: 'V' },\n        { timestamp: 1234567891, time: '2024-01-01T10:00:01.000Z', value: 231.2, unit: 'V' },\n        ...\n    ]\n}\n\n*/",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 630,
+        "y": 920,
+        "wires": [
+            [
+                "45072ed3acdf68a1"
+            ]
+        ]
+    },
+    {
+        "id": "45072ed3acdf68a1",
+        "type": "ui-chart",
+        "z": "flow1",
+        "group": "2d71719a883722ba",
+        "name": "Export",
+        "label": "chart",
+        "order": 4,
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "",
+        "xAxisProperty": "payload.x",
+        "xAxisPropertyType": "msg",
+        "xAxisType": "linear",
+        "xAxisFormat": "",
+        "xAxisFormatType": "auto",
+        "xmin": "",
+        "xmax": "",
+        "yAxisLabel": "",
+        "yAxisProperty": "payload.y",
+        "yAxisPropertyType": "msg",
+        "ymin": "228",
+        "ymax": "232",
+        "bins": 10,
+        "action": "append",
+        "stackSeries": false,
+        "pointShape": "circle",
+        "pointRadius": 4,
+        "showLegend": false,
+        "removeOlder": "",
+        "removeOlderUnit": "1",
+        "removeOlderPoints": "1000",
+        "colors": [
+            "#0095ff",
+            "#ff0000",
+            "#ff7f0e",
+            "#2ca02c",
+            "#a347e1",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "textColor": [
+            "#666666"
+        ],
+        "textColorDefault": true,
+        "gridColor": [
+            "#e5e5e5"
+        ],
+        "gridColorDefault": true,
+        "width": 6,
+        "height": 8,
+        "className": "",
+        "interpolation": "linear",
+        "x": 820,
+        "y": 920,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "3442fecd3e5ab225",
+        "type": "function",
+        "z": "flow1",
+        "name": "Pac",
+        "func": "// =============================================================================\n// CONFIGURATION: Set which register to extract\n// =============================================================================\n// Available options: 'Vac1', 'Iac1', 'Fac1', 'Vpv1', 'Vpv2', \n//                    'Ipv1', 'Ipv2', 'Temp', 'Export', 'Pac'\nconst REGISTER_TO_EXTRACT = 'Pac';\n// =============================================================================\n\n// Register name mapping\nconst REGISTER_NAMES = {\n    'Vac1': 'Vac1_L1_Phase_voltage',\n    'Iac1': 'Iac1_L1_Phase_current',\n    'Fac1': 'Fac1_L1_Phase_frequency',\n    'Vpv1': 'Vpv1_PV1_input_voltage',\n    'Vpv2': 'Vpv2_PV2_input_voltage',\n    'Ipv1': 'Ipv1_PV1_input_current',\n    'Ipv2': 'Ipv2_PV2_input_current',\n    'Temp': 'Inverter_internal_temperature',\n    'Export': 'Set_export_power_percentage',\n    'Pac': 'Pac_L_Inverter_current_output_power'\n};\n\n// =============================================================================\n// EXTRACTOR FUNCTIONS\n// =============================================================================\n\n/**\n * Extract Vac1 - L1 Phase Voltage\n */\nfunction extractVac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vac1_L1_Phase_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vac1_L1_Phase_voltage', data };\n}\n\n/**\n * Extract Iac1 - L1 Phase Current\n */\nfunction extractIac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Iac1_L1_Phase_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Iac1_L1_Phase_current', data };\n}\n\n/**\n * Extract Fac1 - L1 Phase Frequency\n */\nfunction extractFac1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Fac1_L1_Phase_frequency'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Fac1_L1_Phase_frequency', data };\n}\n\n/**\n * Extract Vpv1 - PV1 Input Voltage\n */\nfunction extractVpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv1_PV1_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv1_PV1_input_voltage', data };\n}\n\n/**\n * Extract Vpv2 - PV2 Input Voltage\n */\nfunction extractVpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Vpv2_PV2_input_voltage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Vpv2_PV2_input_voltage', data };\n}\n\n/**\n * Extract Ipv1 - PV1 Input Current\n */\nfunction extractIpv1(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv1_PV1_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv1_PV1_input_current', data };\n}\n\n/**\n * Extract Ipv2 - PV2 Input Current\n */\nfunction extractIpv2(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Ipv2_PV2_input_current'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Ipv2_PV2_input_current', data };\n}\n\n/**\n * Extract Temp - Inverter Internal Temperature\n */\nfunction extractTemp(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Inverter_internal_temperature'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Inverter_internal_temperature', data };\n}\n\n/**\n * Extract Export - Set Export Power Percentage\n */\nfunction extractExport(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Set_export_power_percentage'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Set_export_power_percentage', data };\n}\n\n/**\n * Extract Pac - Inverter Current Output Power\n */\nfunction extractPac(records) {\n    const data = [];\n    records.forEach(record => {\n        const reg = record.registers['Pac_L_Inverter_current_output_power'];\n        if (reg) {\n            data.push({\n                timestamp: record.timestamp,\n                time: new Date(record.timestamp).toISOString(),\n                value: reg.value,\n                unit: reg.unit\n            });\n        }\n    });\n    return { name: 'Pac_L_Inverter_current_output_power', data };\n}\n\n// =============================================================================\n// MAIN EXECUTION\n// =============================================================================\n\ntry {\n    // Check if we have decoded records\n    if (!msg.payload || !msg.payload.records) {\n        node.error(\"No records found in message payload\");\n        return null;\n    }\n\n    const records = msg.payload.records;\n\n    // Map of extraction functions\n    const extractors = {\n        'Vac1': extractVac1,\n        'Iac1': extractIac1,\n        'Fac1': extractFac1,\n        'Vpv1': extractVpv1,\n        'Vpv2': extractVpv2,\n        'Ipv1': extractIpv1,\n        'Ipv2': extractIpv2,\n        'Temp': extractTemp,\n        'Export': extractExport,\n        'Pac': extractPac\n    };\n\n    // Get the configured extractor function\n    const extractorFn = extractors[REGISTER_TO_EXTRACT];\n\n    if (!extractorFn) {\n        node.error(`Invalid REGISTER_TO_EXTRACT: ${REGISTER_TO_EXTRACT}`);\n        return null;\n    }\n\n    // Extract the data\n    const result = extractorFn(records);\n\n    // Create array of output messages (one per data point)\n    const messages = result.data.map(point => ({\n        payload: {\n            x: point.timestamp,\n            y: point.value\n        },\n        topic: REGISTER_TO_EXTRACT,\n        register: result.name,\n        unit: point.unit,\n        time: point.time\n    }));\n\n    // Return array of messages - Node-RED will send each separately\n    return [messages];\n\n} catch (error) {\n    node.error(\"Extraction error: \" + error.message);\n    return null;\n}\n\n// =============================================================================\n// USAGE EXAMPLES\n// =============================================================================\n/*\n\n1. To extract Vac1 voltage data:\n   Set: REGISTER_TO_EXTRACT = 'Vac1';\n\n2. To extract PV1 current:\n   Set: REGISTER_TO_EXTRACT = 'Ipv1';\n\n3. To extract output power:\n   Set: REGISTER_TO_EXTRACT = 'Pac';\n\nOutput format for plotting:\n{\n    register: 'Vac1',\n    full_name: 'Vac1_L1_Phase_voltage',\n    total_points: 150,\n    data: [\n        { timestamp: 1234567890, time: '2024-01-01T10:00:00.000Z', value: 230.5, unit: 'V' },\n        { timestamp: 1234567891, time: '2024-01-01T10:00:01.000Z', value: 231.2, unit: 'V' },\n        ...\n    ]\n}\n\n*/",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 630,
+        "y": 980,
+        "wires": [
+            [
+                "25b76de9aa5a35ed"
+            ]
+        ]
+    },
+    {
+        "id": "25b76de9aa5a35ed",
+        "type": "ui-chart",
+        "z": "flow1",
+        "group": "2d71719a883722ba",
+        "name": "Pac",
+        "label": "chart",
+        "order": 3,
+        "chartType": "line",
+        "category": "topic",
+        "categoryType": "msg",
+        "xAxisLabel": "",
+        "xAxisProperty": "payload.x",
+        "xAxisPropertyType": "msg",
+        "xAxisType": "linear",
+        "xAxisFormat": "",
+        "xAxisFormatType": "auto",
+        "xmin": "",
+        "xmax": "",
+        "yAxisLabel": "",
+        "yAxisProperty": "payload.y",
+        "yAxisPropertyType": "msg",
+        "ymin": "228",
+        "ymax": "232",
+        "bins": 10,
+        "action": "append",
+        "stackSeries": false,
+        "pointShape": "circle",
+        "pointRadius": 4,
+        "showLegend": true,
+        "removeOlder": "",
+        "removeOlderUnit": "1",
+        "removeOlderPoints": "1000",
+        "colors": [
+            "#0095ff",
+            "#ff0000",
+            "#ff7f0e",
+            "#2ca02c",
+            "#a347e1",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "textColor": [
+            "#666666"
+        ],
+        "textColorDefault": true,
+        "gridColor": [
+            "#e5e5e5"
+        ],
+        "gridColorDefault": true,
+        "width": 6,
+        "height": 8,
+        "className": "",
+        "interpolation": "linear",
+        "x": 820,
+        "y": 980,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "a151c96118f9c089",
+        "type": "mqtt out",
+        "z": "flow1",
+        "name": "",
+        "topic": "devices/esp32-01/config",
+        "qos": "0",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "034ffacc85f96e04",
+        "x": 450,
+        "y": 660,
+        "wires": []
+    },
+    {
+        "id": "32c2e41c356503a6",
+        "type": "inject",
+        "z": "flow1",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"poll_period_ms\":1000,\"upload_period_ms\":10000,\"buffer_capacity\":256,\"reg_req_id_1\":3}",
+        "payloadType": "json",
+        "x": 170,
+        "y": 660,
+        "wires": [
+            [
+                "a151c96118f9c089"
+            ]
+        ]
+    },
+    {
+        "id": "677f39c193307a44",
+        "type": "debug",
+        "z": "flow1",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 660,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "034ffacc85f96e04",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "broker.emqx.io",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "5",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "2d71719a883722ba",
+        "type": "ui-group",
+        "name": "Group 1",
+        "page": "685178f6b67c4701",
+        "width": 6,
+        "height": 1,
+        "order": 1,
+        "showTitle": true,
+        "className": "",
+        "visible": true,
+        "disabled": false,
+        "groupType": "default"
+    },
+    {
+        "id": "4f7d518aae8ac0cc",
+        "type": "ui-group",
+        "name": "Group 2",
+        "page": "685178f6b67c4701",
+        "width": 6,
+        "height": 1,
+        "order": 2,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "685178f6b67c4701",
+        "type": "ui-page",
+        "name": "Page 1",
+        "ui": "78c6daee97c6c7da",
+        "path": "/page1",
+        "icon": "home",
+        "layout": "grid",
+        "theme": "d8baeea26b550f57",
+        "breakpoints": [
+            {
+                "name": "Default",
+                "px": 0,
+                "cols": 3
+            },
+            {
+                "name": "Tablet",
+                "px": 576,
+                "cols": 6
+            },
+            {
+                "name": "Small Desktop",
+                "px": 768,
+                "cols": 9
+            },
+            {
+                "name": "Desktop",
+                "px": 1024,
+                "cols": 12
+            }
+        ],
+        "order": 1,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "78c6daee97c6c7da",
+        "type": "ui-base",
+        "name": "My Dashboard",
+        "path": "/dashboard",
+        "appIcon": "",
+        "includeClientData": true,
+        "acceptsClientConfig": [
+            "ui-notification",
+            "ui-control"
+        ],
+        "showPathInSidebar": false,
+        "headerContent": "page",
+        "navigationStyle": "default",
+        "titleBarStyle": "default",
+        "showReconnectNotification": true,
+        "notificationDisplayTime": 1,
+        "showDisconnectNotification": true,
+        "allowInstall": false
+    },
+    {
+        "id": "d8baeea26b550f57",
+        "type": "ui-theme",
+        "name": "Default Theme",
+        "colors": {
+            "surface": "#ffffff",
+            "primary": "#0094CE",
+            "bgPage": "#eeeeee",
+            "groupBg": "#ffffff",
+            "groupOutline": "#cccccc"
+        },
+        "sizes": {
+            "density": "default",
+            "pagePadding": "12px",
+            "groupGap": "12px",
+            "groupBorderRadius": "4px",
+            "widgetGap": "12px"
+        }
+    }
+]

@@ -2,8 +2,8 @@
 #include <Arduino.h>
 
 // ---------- WiFi ----------
-#define WIFI_SSID     "LasithWifi"     // Replace with your WiFi name
-#define WIFI_PASSWORD "12345678"       // Replace with your WiFi password
+#define WIFI_SSID     "SLT-Fiber-TsS7z-2.4G"     // Replace with your WiFi name
+#define WIFI_PASSWORD "ktGHS269"       // Replace with your WiFi password
 
 // ---------- Polling & request ----------
 extern uint16_t POLL_PERIOD_MS;           // how often we poll the inverter
@@ -19,7 +19,8 @@ extern uint16_t POLL_PERIOD_MS;           // how often we poll the inverter
 
 // ---------- Buffering & Upload schedule ----------
 extern uint16_t UPLOAD_PERIOD_MS;      // send buffered data every 14 sec (before Poller flush at 15s)
-extern uint16_t BUFFER_CAPACITY;        // number of samples to keep in RAM
+extern uint16_t BUFFER_CAPACITY;
+extern uint16_t REG_REQ_ID_1;        // number of samples to keep in RAM
 #define MAX_BATCH_BYTES    8192        // cap payload size per upload (approx)
 
 // ---------- Batch Collection Parameters ----------
@@ -45,3 +46,4 @@ extern uint16_t BUFFER_CAPACITY;        // number of samples to keep in RAM
 //Mqtt
 extern const char* MQTT_HOST; // or cloud host
 extern const uint16_t MQTT_PORT;
+#define CONNECTION_CHECK_PERIOD_MS  2000   // how often we check connection status

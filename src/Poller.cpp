@@ -45,22 +45,16 @@ void Poller::loop(uint8_t slave, uint16_t addr, uint16_t qty) {
 
     // --- buffer the successful sample as a Record ---
     Record rec;
-    rec.ts_ms = now;
-    rec.start = addr;
-    rec.qty   = qty;
-    rec.regs  = res.regs;   // if CloudTransport decoded for us
-    if (!res.bytes.empty()) {
-      rec.rawFrameHex = bytesToHex(res.bytes);
-    } else if (!res.body.isEmpty()) {
-      // optional: keep raw JSON if you like
-      rec.rawFrameHex = res.body; // or leave empty
-    }
-
-    const bool kept = _buf.push(rec);
-    if (!kept) {
+    if (rec.buildFromRTU_Select_NoCRC(millis(), addr, res.bytes,REG_REQ_ID_1)) {
+      bool kept = _buf.push(rec);   // record contains NO CRC; only [ts][qty][addr/data...]
+      if (!kept) {
       // we overwrote oldest; optional log
       // Serial.println("[BUF] Dropped oldest record to make room");
+      }
+
     }
+     
+    
 
 #if SIMULATE
     // concise immediate feedback (unchanged)
@@ -134,4 +128,10 @@ void Poller::loop(uint8_t slave, uint16_t addr, uint16_t qty) {
       applyBackoff();
       break;
   }
+}
+
+void Poller::changePeriod(uint32_t newPeriod) {
+  if (newPeriod == 0) return; // ignore invalid
+  _period = newPeriod;
+  Serial.printf("[POLL] Changed polling period to %u ms\n", (unsigned)_period);
 }

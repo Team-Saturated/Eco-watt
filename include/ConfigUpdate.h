@@ -13,13 +13,13 @@ typedef struct {
 extern bool config_changed;
 
 
-static void updateConfig(uint16_t poll_period_ms, uint16_t upload_period_ms, uint16_t buffer_capacity, uint16_t reg_req_id_1);
+//static void updateConfig(uint16_t poll_period_ms, uint16_t upload_period_ms, uint16_t buffer_capacity, uint16_t reg_req_id_1);
 
 uint8_t retrieveConfig(uint8_t addr);
 
-void InitializeConfig();
 
-static bool validateConfig(uint16_t poll_period_ms, uint16_t upload_period_ms, uint16_t buffer_capacity, uint16_t reg_req_id_1);
+
+//static bool validateConfig(uint16_t poll_period_ms, uint16_t upload_period_ms, uint16_t buffer_capacity, uint16_t reg_req_id_1);
 
 bool SaveConfig(byte* payload, unsigned int len);
 
