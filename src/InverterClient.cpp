@@ -3,5 +3,10 @@
 
 TransportResult InverterClient::readHolding(uint8_t slave, uint16_t addr, uint16_t qty) {
   std::vector<uint8_t> frame = Modbus::buildRead03(slave, addr, qty);
-  return _t.exchange(frame);
+  return _t.exchange(frame, READ);
+}
+
+TransportResult InverterClient::writeSingle(uint8_t slave, uint16_t addr, uint16_t value) {
+  std::vector<uint8_t> frame = Modbus::buildWrite05(slave, addr, value);
+  return _t.exchange(frame, WRITE);
 }

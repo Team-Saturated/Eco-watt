@@ -23,7 +23,7 @@ enum ErrorCode {
 
 
 extern bool config_changed;
-
+extern bool writecommandreceived;
 
 //static void updateConfig(uint16_t poll_period_ms, uint16_t upload_period_ms, uint16_t buffer_capacity, uint16_t reg_req_id_1);
 

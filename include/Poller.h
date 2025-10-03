@@ -8,7 +8,8 @@ public:
   Poller(InverterClient& c, uint32_t periodMs, RingBuffer& buf)
   : _c(c), _period(periodMs), _buf(buf) {}
 
-  void loop(uint8_t slave, uint16_t addr, uint16_t qty);
+  void read(uint8_t slave, uint16_t addr, uint16_t qty);
+  void write(uint8_t slave, uint16_t addr, uint16_t value);
   void changePeriod(uint32_t newPeriod);
 private:
   InverterClient& _c;

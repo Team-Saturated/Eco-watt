@@ -44,24 +44,25 @@ uint32_t g_batchStartTime = 0;
 TaskHandle_t Task1;
 TaskHandle_t Task2;
 
-uint16_t POLL_PERIOD_MS = 1000;    // how often we poll the inverter
-uint16_t UPLOAD_PERIOD_MS = 14000; // send buffered data every 14 sec (before Poller flush at 15s)
+uint16_t POLL_PERIOD_MS = 10000;    // how often we poll the inverter
+uint16_t UPLOAD_PERIOD_MS = 20000; // send buffered data every 14 sec (before Poller flush at 15s)
 uint16_t BUFFER_CAPACITY = 128;
-uint16_t REG_REQ_ID_1 = 0b0000000000001111;
+uint16_t REG_REQ_ID_1 = 0b0000001111111111;
 const char *MQTT_HOST = "broker.emqx.io"; // or cloud host
 const uint16_t MQTT_PORT = 1883;
 
 const char *DEV_ID = "esp32-01";
-String t_data = String("devices/") + DEV_ID + "/telemetry";
+String t_data = String("devices/") + DEV_ID + "/data";
 String t_status = String("devices/") + DEV_ID + "/status";
 String t_config = String("devices/") + DEV_ID + "/config";
 String t_ack = String("devices/") + DEV_ID + "/ack";
+String t_write = String("devices/") + DEV_ID + "/write";
 
 const char *MQTT_USER = ""; // optional
 const char *MQTT_PASS = ""; // optional
 
 bool config_changed = false;
-
+bool writecommandreceived = false;
 WiFiClient espClient;
 PubSubClient client(espClient);
 
@@ -70,7 +71,12 @@ void main_task(void *pvParameters)
   for (;;)
   {
     
-    g_poller->loop(SLAVE_ID, START_ADDR, QTY_REGS);
+    g_poller->read(SLAVE_ID, START_ADDR, QTY_REGS);
+    if (writecommandreceived)
+    {
+      g_poller->write(SLAVE_ID, 0x0008, 0x0010); // Example value to write
+      writecommandreceived = false;
+    }
     static uint32_t last = 0;
     uint32_t now = millis();
 
@@ -139,6 +145,7 @@ void main_task(void *pvParameters)
 
       ApplyConfig();
     }
+    //if write cmd received process it
     
   }
 }
@@ -186,7 +193,7 @@ void setup()
   try
   {
 #if SIMULATE
-    g_transport = new CloudTransport(String(API_URL), String(AUTH_HEADER), REQ_TIMEOUT_MS);
+    g_transport = new CloudTransport(String(API_READ_URL), String(API_WRITE_URL), String(AUTH_HEADER), REQ_TIMEOUT_MS);
 #else
     g_transport = new Rs485Transport(RS485_SERIAL, RS485_BAUD, RS485_DE_RE_PIN, REQ_TIMEOUT_MS);
 #endif

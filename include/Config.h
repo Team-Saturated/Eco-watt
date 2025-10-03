@@ -47,3 +47,6 @@ extern uint16_t REG_REQ_ID_1;        // number of samples to keep in RAM
 extern const char* MQTT_HOST; // or cloud host
 extern const uint16_t MQTT_PORT;
 #define CONNECTION_CHECK_PERIOD_MS  2000   // how often we check connection status
+
+#define WRITE 1
+#define READ 0

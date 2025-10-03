@@ -48,6 +48,20 @@ std::vector<uint8_t> buildRead03(uint8_t slave, uint16_t addr, uint16_t qty) {
   return f;
 }
 
+std::vector<uint8_t> buildWrite05(uint8_t slave, uint16_t addr, uint16_t value) {
+  std::vector<uint8_t> f = {
+    slave, 0x06,  // Function code 0x05 = Write Single Coil
+    (uint8_t)(addr >> 8), (uint8_t)(addr & 0xFF),  // Coil address
+    (uint8_t)(value >> 8),  (uint8_t)(value & 0xFF) // Value to write (0x0000 or 0xFF00)
+  };
+
+  // Calculate and append CRC
+  auto crc = crc16((uint8_t*)f.data(), f.size());
+  f.push_back((uint8_t)(crc & 0xFF));   // LSB first
+  f.push_back((uint8_t)(crc >> 8));     // MSB second
+  return f;
+}
+
 std::string toHex(const std::vector<uint8_t>& v) {
   std::string s;
   s.reserve(v.size() * 2);

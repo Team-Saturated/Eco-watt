@@ -32,7 +32,7 @@
         "type": "mqtt in",
         "z": "flow1",
         "name": "",
-        "topic": "devices/esp32-01/telemetry",
+        "topic": "devices/esp32-01/data",
         "qos": "0",
         "datatype": "auto-detect",
         "broker": "034ffacc85f96e04",
@@ -40,7 +40,7 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 240,
+        "x": 220,
         "y": 360,
         "wires": [
             [
@@ -760,7 +760,7 @@
         "z": "flow1",
         "group": "2d71719a883722ba",
         "name": "Export",
-        "label": "chart",
+        "label": "Export",
         "order": 4,
         "chartType": "line",
         "category": "topic",
@@ -777,7 +777,7 @@
         "yAxisProperty": "payload.y",
         "yAxisPropertyType": "msg",
         "ymin": "0",
-        "ymax": "232",
+        "ymax": "8",
         "bins": 10,
         "action": "append",
         "stackSeries": false,
@@ -931,7 +931,7 @@
         "once": false,
         "onceDelay": 0.1,
         "topic": "",
-        "payload": "{\"poll_period_ms\":1000,\"upload_period_ms\":10000,\"buffer_capacity\":256,\"reg_req_id_1\":1023}",
+        "payload": "{\"poll_period_ms\":1000,\"upload_period_ms\":5000,\"buffer_capacity\":256,\"reg_req_id_1\":1023}",
         "payloadType": "json",
         "x": 210,
         "y": 1060,
@@ -972,6 +972,49 @@
         "x": 520,
         "y": 280,
         "wires": []
+    },
+    {
+        "id": "2b8a0b5b70e5f1d3",
+        "type": "mqtt out",
+        "z": "flow1",
+        "name": "",
+        "topic": "devices/esp32-01/write",
+        "qos": "0",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "034ffacc85f96e04",
+        "x": 480,
+        "y": 1140,
+        "wires": []
+    },
+    {
+        "id": "8ac0376ab79545a0",
+        "type": "inject",
+        "z": "flow1",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "WRITE",
+        "payloadType": "str",
+        "x": 210,
+        "y": 1140,
+        "wires": [
+            [
+                "2b8a0b5b70e5f1d3"
+            ]
+        ]
     },
     {
         "id": "034ffacc85f96e04",

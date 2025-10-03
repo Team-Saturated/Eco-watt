@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 #include <vector>
-
+#include "config.h"
 // ---- Error classification for actionable handling ----
 enum class ErrType : uint8_t {
   NONE = 0,
@@ -48,5 +48,5 @@ public:
   virtual ~ITransport() = default;
 
   // Send a Modbus request frame (bytes) and return response/result.
-  virtual TransportResult exchange(const std::vector<uint8_t>& request) = 0;
+  virtual TransportResult exchange(const std::vector<uint8_t>& request, const bool isWrite) = 0;
 };

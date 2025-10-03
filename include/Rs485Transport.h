@@ -4,7 +4,7 @@
 class Rs485Transport : public ITransport {
 public:
   Rs485Transport(HardwareSerial& ser, uint32_t baud, int deRePin, uint32_t timeoutMs);
-  TransportResult exchange(const std::vector<uint8_t>& request) override;
+  TransportResult exchange(const std::vector<uint8_t>& request,bool isWrite) override;
 
 private:
   HardwareSerial& _ser;

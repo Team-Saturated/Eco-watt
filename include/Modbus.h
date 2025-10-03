@@ -13,6 +13,8 @@ namespace Modbus {
   // @param qty: Quantity of registers to read (1-125)
   std::vector<uint8_t> buildRead03(uint8_t slave, uint16_t addr, uint16_t qty);
   
+  std::vector<uint8_t> buildWrite05(uint8_t slave, uint16_t addr, uint16_t value);
+
   // Convert byte vector to hexadecimal string
   std::string toHex(const std::vector<uint8_t>& v);
 

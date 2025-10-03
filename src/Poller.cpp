@@ -5,16 +5,16 @@
 #include <vector>
 
 
-static String bytesToHex(const std::vector<uint8_t>& v) {
-  String s;
-  s.reserve(v.size() * 2);
-  for (uint8_t b : v) {
-    char buf[3];
-    snprintf(buf, sizeof(buf), "%02X", b);
-    s += buf;
-  }
-  return s;
-}
+//static String bytesToHex(const std::vector<uint8_t>& v) {
+//  String s;
+//  s.reserve(v.size() * 2);
+//  for (uint8_t b : v) {
+//    char buf[3];
+//    snprintf(buf, sizeof(buf), "%02X", b);
+//    s += buf;
+//  }
+//  return s;
+//}
 
 void Poller::applyBackoff() {
   if (_backoffMs == 0) _backoffMs = BACKOFF_MIN_MS;
@@ -30,7 +30,7 @@ void Poller::clearBackoff() {
   _backoffMs = 0;
 }
 
-void Poller::loop(uint8_t slave, uint16_t addr, uint16_t qty) {
+void Poller::read(uint8_t slave, uint16_t addr, uint16_t qty) {
   const uint32_t now = millis();
   if (now < _next) return;
 
@@ -109,6 +109,17 @@ void Poller::loop(uint8_t slave, uint16_t addr, uint16_t qty) {
   }
 }
 
+void Poller::write(uint8_t slave, uint16_t addr, uint16_t value) {
+  
+  auto res = _c.writeSingle(slave, addr, value);
+
+  if (res.ok) {
+    Serial.print("Write works");
+    }
+  else {
+    Serial.print("Write failed");
+  }
+}
 void Poller::changePeriod(uint32_t newPeriod) {
   if (newPeriod == 0) return; // ignore invalid
   _period = newPeriod;

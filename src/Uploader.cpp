@@ -9,7 +9,7 @@
 #include "Compression.h" // Added for compression
 
 #ifndef API_BULK_URL
-
+// Optional: define in platformio.ini as -DAPI_BULK_URL="\"http://<host>/api/inverter/bulk\""
 #define API_BULK_URL ""
 #endif
 
@@ -62,7 +62,7 @@ bool Uploader::uploadBatch(std::vector<Record>& batch) {
   }
   bool ok_mqtt = client.publish(t_data.c_str(), mqttJson.c_str(), false); // retain=false
   
-  
+  // Serial.printf(compressed.data()); // Removed: unsafe to print raw binary as string
   // Optionally, print first few bytes as hex for debugging:
   Serial.print("[UPLOAD] Compressed data (first 8 bytes): ");
   for (size_t i = 0; i < compressed.size() && i < 8; ++i) {

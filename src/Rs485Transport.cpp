@@ -16,7 +16,7 @@ void Rs485Transport::setTx(bool en) {
   digitalWrite(_deRe, en ? HIGH : LOW); // DE/RE active-high
 }
 
-TransportResult Rs485Transport::exchange(const std::vector<uint8_t>& req) {
+TransportResult Rs485Transport::exchange(const std::vector<uint8_t>& req, bool isWrite) {
   TransportResult r;
 
   // Write

@@ -10,6 +10,7 @@ void ensureMqtt() {
 
       client.subscribe(t_config.c_str(), 0);
       client.subscribe(t_ack.c_str(), 0);
+      client.subscribe(t_write.c_str(), 0);
     } else {
       delay(2000);
     }
@@ -56,7 +57,7 @@ void handleCmd(char* topic, byte* payload, unsigned int len) {
       default:
         break;
     }
-    
+
     client.publish(t_ack.c_str(), ackMsg.c_str(), true);
     
     return;
@@ -68,5 +69,20 @@ void handleCmd(char* topic, byte* payload, unsigned int len) {
       ackMsg += (char)payload[i];
     }
     Serial.printf("Received ACK: %s\n", ackMsg.c_str());
+  }else if(strcmp(topic, t_write.c_str()) == 0) {
+    // Handle write commands here
+    String writeCmd;
+    for (unsigned int i = 0; i < len; i++) {
+      writeCmd += (char)payload[i];
+    }
+    Serial.printf("Received Write Command: %s\n", writeCmd.c_str());
+    // validate the write command.
+    //set a flag to indicate command received.
+    // process in main loop.
+    if(writeCmd.equals("WRITE")) 
+    {
+      writecommandreceived = true;
+      Serial.println("Write command flag set to true.");
+    }
   }
 }
