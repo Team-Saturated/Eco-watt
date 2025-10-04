@@ -23,4 +23,10 @@ namespace Modbus {
   // @param out: vector<uint8_t> to fill
   // @return true if successful, false on invalid input
   bool fromHex(const char* hex, std::vector<uint8_t>& out);
+
+
+
+
+  String getModbusErrorMessage(const std::vector<uint8_t>& rx);
+
 }

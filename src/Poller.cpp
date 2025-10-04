@@ -3,7 +3,7 @@
 #include "Config.h"
 #include "Modbus.h"      
 #include <vector>
-
+#include "Mqtt.h"
 
 //static String bytesToHex(const std::vector<uint8_t>& v) {
 //  String s;
@@ -117,7 +117,8 @@ void Poller::write(uint8_t slave, uint16_t addr, uint16_t value) {
     Serial.print("Write works");
     }
   else {
-    Serial.print("Write failed");
+    client.publish(t_ack.c_str(), res.error.c_str(), true);
+    
   }
 }
 void Poller::changePeriod(uint32_t newPeriod) {

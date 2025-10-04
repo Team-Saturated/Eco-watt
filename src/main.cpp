@@ -74,7 +74,7 @@ void main_task(void *pvParameters)
     g_poller->read(SLAVE_ID, START_ADDR, QTY_REGS);
     if (writecommandreceived)
     {
-      g_poller->write(SLAVE_ID, 0x0008, 0x0010); // Example value to write
+      g_poller->write(SLAVE_ID, 0x0008, 0x1110); // Example value to write
       writecommandreceived = false;
     }
     static uint32_t last = 0;
@@ -144,6 +144,7 @@ void main_task(void *pvParameters)
       // getconfig from server
 
       ApplyConfig();
+      
     }
     //if write cmd received process it
     

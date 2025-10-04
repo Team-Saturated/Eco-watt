@@ -204,7 +204,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
   {
     if (!http.begin(_write_url)) {
       res.ok = false; res.type = ErrType::OTHER;
-      res.error = F("begin failed");
+      res.error = F("Write Request Didnot Initiated Due To HTTP Begin Failed");
       return res;
     }
 
@@ -227,7 +227,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
       res.ok = (code >= 200 && code < 300);
       if (!res.ok) {
         res.type = ErrType::HTTP;
-        res.error = "HTTP " + String(code);
+        res.error = "Write Request Sent. Received HTTP " + String(code);
         Serial.println("[CloudTransport] HTTP code: " + String(code));
         Serial.println("[CloudTransport] Raw response: " + res.body);
         http.end();
@@ -242,7 +242,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
       DeserializationError jerr = deserializeJson(doc, res.body);
       if (jerr || !doc.containsKey("frame")) {
         res.ok = false; res.type = ErrType::JSON;
-        res.error = F("json parse/missing 'frame'");
+        res.error = F("Write Request Sent. Received Response JSON parse/missing 'frame'");
         Serial.println("[CloudTransport] JSON parse error or missing 'frame'");
         http.end();
         return res;
@@ -255,7 +255,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
       std::vector<uint8_t> rx;
       if (!Modbus::fromHex(rxHex.c_str(), rx) || rx.size() < 5) {
         res.ok = false; res.type = ErrType::OTHER;
-        res.error = F("bad hex or short frame");
+        res.error = F("Write Request Sent. Received Response bad hex or short frame");
         Serial.println("[CloudTransport] Bad hex or too short frame");
         http.end();
         return res;
@@ -280,12 +280,14 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
         return res;
       }
       Serial.println("[CloudTransport] CRC OK");
-
+      
       //match the received frame to sent one
       if (rx != request) 
       {
         res.ok = false; res.type = ErrType::OTHER;
-        res.error = F("mismatched frame");
+        //res.error = F("mismatched frame");
+        //decode the received frame reporting errors
+        res.error = Modbus::getModbusErrorMessage(rx);
         Serial.println("[CloudTransport] Mismatched frame");
         http.end();
         return res;

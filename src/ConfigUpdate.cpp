@@ -102,6 +102,7 @@ void ApplyConfig()
     UPLOAD_PERIOD_MS = upload_period_ms;
     BUFFER_CAPACITY = buffer_capacity;
     REG_REQ_ID_1 = reg_req_id_1;
+    g_poller->changePeriod(POLL_PERIOD_MS);
     Serial.printf("Applied Config - Poll Period: %u ms, Upload Period: %u ms, Buffer Capacity: %u, Reg Req ID 1: %u\n",
                   POLL_PERIOD_MS, UPLOAD_PERIOD_MS, BUFFER_CAPACITY, REG_REQ_ID_1);
 

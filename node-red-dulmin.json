@@ -23,7 +23,8 @@
         "y": 280,
         "wires": [
             [
-                "d71619810eee963d"
+                "d71619810eee963d",
+                "ce7069abc5a39bda"
             ]
         ]
     },
@@ -53,7 +54,7 @@
         "type": "function",
         "z": "flow1",
         "name": "function 1",
-        "func": "// Node-RED Function Node: Delta Decompression Decoder with Register Mapping\n// Decodes compressed delta records and applies scaling based on register addresses\n\n// Register mapping with scaling factors\nconst REGISTER_MAP = {\n    0: { name: 'Vac1_L1_Phase_voltage', gain: 10, unit: 'V' },\n    1: { name: 'Iac1_L1_Phase_current', gain: 10, unit: 'A' },\n    2: { name: 'Fac1_L1_Phase_frequency', gain: 100, unit: 'Hz' },\n    3: { name: 'Vpv1_PV1_input_voltage', gain: 10, unit: 'V' },\n    4: { name: 'Vpv2_PV2_input_voltage', gain: 10, unit: 'V' },\n    5: { name: 'Ipv1_PV1_input_current', gain: 10, unit: 'A' },\n    6: { name: 'Ipv2_PV2_input_current', gain: 10, unit: 'A' },\n    7: { name: 'Inverter_internal_temperature', gain: 10, unit: '°C' },\n    8: { name: 'Set_export_power_percentage', gain: 1, unit: '%' },\n    9: { name: 'Pac_L_Inverter_current_output_power', gain: 1, unit: 'W' }\n};\n\nfunction get16_le(buffer, index) {\n    if (index + 2 > buffer.length) return null;\n    return buffer[index] | (buffer[index + 1] << 8);\n}\n\nfunction get32_le(buffer, index) {\n    if (index + 4 > buffer.length) return null;\n    return (buffer[index] |\n        (buffer[index + 1] << 8) |\n        (buffer[index + 2] << 16) |\n        (buffer[index + 3] << 24)) >>> 0;\n}\n\nfunction get64_le(buffer, index) {\n    if (index + 8 > buffer.length) return null;\n    let low = get32_le(buffer, index);\n    let high = get32_le(buffer, index + 4);\n    return low + (high * 0x100000000);\n}\n\nfunction decodeRegister(address, rawValue) {\n    const reg = REGISTER_MAP[address];\n\n    if (!reg) {\n        return {\n            address: address,\n            name: `Unknown_Register_${address}`,\n            raw_value: rawValue,\n            scaled_value: rawValue,\n            unit: 'unknown'\n        };\n    }\n\n    return {\n        address: address,\n        name: reg.name,\n        raw_value: rawValue,\n        scaled_value: rawValue / reg.gain,\n        unit: reg.unit\n    };\n}\n\nfunction decompressDelta(hexString) {\n    const buffer = Buffer.from(hexString, 'hex');\n    let i = 0;\n\n    // Read header\n    const base_ts = get64_le(buffer, i);\n    if (base_ts === null) return null;\n    i += 8;\n\n    const nrecs = get16_le(buffer, i);\n    if (nrecs === null) return null;\n    i += 2;\n\n    const records = [];\n    let prev_ts = base_ts;\n\n    // Process each record\n    for (let r = 0; r < nrecs; r++) {\n        const dt_ms = get32_le(buffer, i);\n        if (dt_ms === null) return null;\n        i += 4;\n\n        const qty = get16_le(buffer, i);\n        if (qty === null) return null;\n        i += 2;\n\n        const need = qty * 4;\n        if (i + need > buffer.length) return null;\n\n        const ts_ms = prev_ts + dt_ms;\n\n        // Extract and decode register pairs\n        const registers = {};\n        for (let q = 0; q < qty; q++) {\n            const addr = get16_le(buffer, i);\n            const data = get16_le(buffer, i + 2);\n\n            const decoded = decodeRegister(addr, data);\n            registers[decoded.name] = {\n                address: decoded.address,\n                raw_value: decoded.raw_value,\n                value: decoded.scaled_value,\n                unit: decoded.unit\n            };\n\n            i += 4;\n        }\n\n        records.push({\n            timestamp: ts_ms,\n            register_count: qty,\n            registers: registers\n        });\n\n        prev_ts = ts_ms;\n    }\n\n    return records;\n}\n\n// Main execution\ntry {\n    const payload_hex = msg.payload.payload_hex;\n\n    if (!payload_hex) {\n        node.error(\"No payload_hex found in message\");\n        return null;\n    }\n\n    const decoded = decompressDelta(payload_hex);\n\n    if (!decoded) {\n        node.error(\"Failed to decompress delta data\");\n        return null;\n    }\n\n    // Create single output object with all data\n    msg.payload = {\n        type: msg.payload.type || 'delta_v1',\n        total_records: decoded.length,\n        compressed_bytes: msg.payload.compressed_bytes,\n        records: decoded\n    };\n\n    return msg;\n\n} catch (error) {\n    node.error(\"Decoding error: \" + error.message);\n    return null;\n}",
+        "func": "// Node-RED Function Node: Delta Decompression Decoder with Register Mapping\n// Decodes compressed delta records and applies scaling based on register addresses\n\n// Register mapping with scaling factors\nconst REGISTER_MAP = {\n    0: { name: 'Vac1_L1_Phase_voltage', gain: 10, unit: 'V' },\n    1: { name: 'Iac1_L1_Phase_current', gain: 10, unit: 'A' },\n    2: { name: 'Fac1_L1_Phase_frequency', gain: 100, unit: 'Hz' },\n    3: { name: 'Vpv1_PV1_input_voltage', gain: 10, unit: 'V' },\n    4: { name: 'Vpv2_PV2_input_voltage', gain: 10, unit: 'V' },\n    5: { name: 'Ipv1_PV1_input_current', gain: 10, unit: 'A' },\n    6: { name: 'Ipv2_PV2_input_current', gain: 10, unit: 'A' },\n    7: { name: 'Inverter_internal_temperature', gain: 10, unit: '°C' },\n    8: { name: 'Set_export_power_percentage', gain: 1, unit: '%' },\n    9: { name: 'Pac_L_Inverter_current_output_power', gain: 1, unit: 'W' }\n};\n\nfunction get16_le(buffer, index) {\n    if (index + 2 > buffer.length) return null;\n    return buffer[index] | (buffer[index + 1] << 8);\n}\n\nfunction get32_le(buffer, index) {\n    if (index + 4 > buffer.length) return null;\n    return (buffer[index] |\n        (buffer[index + 1] << 8) |\n        (buffer[index + 2] << 16) |\n        (buffer[index + 3] << 24)) >>> 0;\n}\n\nfunction get64_le(buffer, index) {\n    if (index + 8 > buffer.length) return null;\n    let low = get32_le(buffer, index);\n    let high = get32_le(buffer, index + 4);\n    return low + (high * 0x100000000);\n}\n\nfunction decodeRegister(address, rawValue) {\n    const reg = REGISTER_MAP[address];\n\n    if (!reg) {\n        return {\n            address: address,\n            name: `Unknown_Register_${address}`,\n            raw_value: rawValue,\n            scaled_value: rawValue,\n            unit: 'unknown'\n        };\n    }\n\n    return {\n        address: address,\n        name: reg.name,\n        raw_value: rawValue,\n        scaled_value: rawValue / reg.gain,\n        unit: reg.unit\n    };\n}\n\nfunction decompressDelta(hexString) {\n    const buffer = Buffer.from(hexString, 'hex');\n    let i = 0;\n\n    // Read header\n    const base_ts = get64_le(buffer, i);\n    if (base_ts === null) return null;\n    i += 8;\n\n    const nrecs = get16_le(buffer, i);\n    if (nrecs === null) return null;\n    i += 2;\n\n    const records = [];\n    let prev_ts = base_ts;\n\n    // Process each record\n    for (let r = 0; r < nrecs; r++) {\n        const dt_ms = get32_le(buffer, i);\n        if (dt_ms === null) return null;\n        i += 4;\n\n        const qty = get16_le(buffer, i);\n        if (qty === null) return null;\n        i += 2;\n\n        const need = qty * 4;\n        if (i + need > buffer.length) return null;\n\n        const ts_ms = prev_ts + dt_ms;\n\n        // Extract and decode register pairs\n        const registers = {};\n        for (let q = 0; q < qty; q++) {\n            const addr = get16_le(buffer, i);\n            const data = get16_le(buffer, i + 2);\n\n            const decoded = decodeRegister(addr, data);\n            registers[decoded.name] = {\n                address: decoded.address,\n                raw_value: decoded.raw_value,\n                value: decoded.scaled_value,\n                unit: decoded.unit\n            };\n\n            i += 4;\n        }\n\n        records.push({\n            timestamp: ts_ms,\n            register_count: qty,\n            registers: registers\n        });\n\n        prev_ts = ts_ms;\n    }\n\n    return records;\n}\n\n// Main execution\ntry {\n    const payload_hex = msg.payload.payload_hex;\n\n    if (!payload_hex) {\n        //node.error(\"No payload_hex found in message\");\n        return null;\n    }\n\n    const decoded = decompressDelta(payload_hex);\n\n    if (!decoded) {\n        node.error(\"Failed to decompress delta data\");\n        return null;\n    }\n\n    // Create single output object with all data\n    msg.payload = {\n        type: msg.payload.type || 'delta_v1',\n        total_records: decoded.length,\n        compressed_bytes: msg.payload.compressed_bytes,\n        records: decoded\n    };\n\n    return msg;\n\n} catch (error) {\n    node.error(\"Decoding error: \" + error.message);\n    return ;\n}",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -931,7 +932,7 @@
         "once": false,
         "onceDelay": 0.1,
         "topic": "",
-        "payload": "{\"poll_period_ms\":1000,\"upload_period_ms\":5000,\"buffer_capacity\":256,\"reg_req_id_1\":1023}",
+        "payload": "{\"poll_period_ms\":10000,\"upload_period_ms\":20000,\"buffer_capacity\":256,\"reg_req_id_1\":1023}",
         "payloadType": "json",
         "x": 210,
         "y": 1060,
@@ -1017,6 +1018,30 @@
         ]
     },
     {
+        "id": "ce7069abc5a39bda",
+        "type": "ui-text",
+        "z": "flow1",
+        "group": "7efe37614d4a26ea",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "name": "Errors",
+        "label": "Eco-Watt Reply:",
+        "format": "{{msg.payload}}",
+        "layout": "row-left",
+        "style": true,
+        "font": "Times New Roman,Times,serif",
+        "fontSize": 16,
+        "color": "#717171",
+        "wrapText": false,
+        "className": "",
+        "value": "payload",
+        "valueType": "msg",
+        "x": 570,
+        "y": 160,
+        "wires": []
+    },
+    {
         "id": "034ffacc85f96e04",
         "type": "mqtt-broker",
         "name": "",
@@ -1054,7 +1079,7 @@
         "page": "685178f6b67c4701",
         "width": 6,
         "height": 1,
-        "order": 1,
+        "order": 2,
         "showTitle": true,
         "className": "",
         "visible": true,
@@ -1068,7 +1093,21 @@
         "page": "685178f6b67c4701",
         "width": 6,
         "height": 1,
-        "order": 2,
+        "order": 3,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false",
+        "groupType": "default"
+    },
+    {
+        "id": "7efe37614d4a26ea",
+        "type": "ui-group",
+        "name": "Main text",
+        "page": "685178f6b67c4701",
+        "width": 6,
+        "height": 1,
+        "order": 1,
         "showTitle": true,
         "className": "",
         "visible": "true",

@@ -1,6 +1,8 @@
 #pragma once
 #include <Arduino.h>
+#include "Poller.h"
 
+extern Poller *g_poller;
 
 typedef struct {
     uint8_t poll_period_ms_addr = 0x00;      // 0x00-0x01 (2 bytes)
