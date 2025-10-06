@@ -33,7 +33,7 @@
         "type": "mqtt in",
         "z": "flow1",
         "name": "",
-        "topic": "devices/esp32-01/data",
+        "topic": "devices/esp32-01/data/dulmin",
         "qos": "0",
         "datatype": "auto-detect",
         "broker": "034ffacc85f96e04",
@@ -41,11 +41,12 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 220,
+        "x": 240,
         "y": 360,
         "wires": [
             [
-                "ca63419032f544c3"
+                "67d2ce3291b1a10a",
+                "4f0b3802b830f073"
             ]
         ]
     },
@@ -95,7 +96,8 @@
         "y": 420,
         "wires": [
             [
-                "41261fa53e30cf96"
+                "41261fa53e30cf96",
+                "ec9129e4a756723d"
             ]
         ]
     },
@@ -1039,6 +1041,75 @@
         "valueType": "msg",
         "x": 570,
         "y": 160,
+        "wires": []
+    },
+    {
+        "id": "67d2ce3291b1a10a",
+        "type": "debug",
+        "z": "flow1",
+        "name": "debug 3",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 460,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "4f0b3802b830f073",
+        "type": "function",
+        "z": "flow1",
+        "name": "function 2",
+        "func": "// Verify + Decrypt ESP32 \"SecureLink\" payloads\n// Topic shape: devices/<deviceId>/data\n// settings.js must have: functionGlobalContext: { crypto: require('crypto') }\n\nconst crypto = global.get('crypto');\n\n// ---- PSK (32 bytes) you provisioned on the ESP32 ----\nconst PSK = Buffer.from(\n  \"4968A7E8835BC6EC5BDBE15AA9E7C478E5616E33AA0CC4CADB53A81AA20FA727\",\n  \"hex\"\n);\n\n// Header layout (matches SecureLink.h)\nconst HDR_LEN = 1 + 1 + 2 + 8 + 8 + 12; // 32\nconst MAC_LEN = 32;\nconst INFO = Buffer.from(\"EcoWatt\");\nconst OFF_VER = 0, OFF_TYPE = 1, OFF_BOOT = 4, OFF_SEQ = 12, OFF_IV = 20;\n\nfunction hkdf48(ikm, salt, info) {\n  const prk = crypto.createHmac(\"sha256\", salt).update(ikm).digest();\n  let T = Buffer.alloc(0), okm = Buffer.alloc(0), ctr = 0;\n  while (okm.length < 48) { ctr++; T = crypto.createHmac(\"sha256\", prk).update(Buffer.concat([T, info, Buffer.from([ctr])])).digest(); okm = Buffer.concat([okm, T]); }\n  return okm.slice(0, 48);\n}\nfunction deriveKeys(deviceId) {\n  const salt = crypto.createHash(\"sha256\").update(deviceId).digest();\n  const okm = hkdf48(PSK, salt, INFO);\n  return { K_enc: okm.slice(0, 16), K_mac: okm.slice(16, 48) };\n}\nfunction timingSafeEq(a, b) { if (a.length !== b.length) return false; return crypto.timingSafeEqual(a, b); }\nfunction parseHeader(buf) {\n  if (buf.length < HDR_LEN + MAC_LEN) throw Error(`short packet (${buf.length})`);\n  const hdr = buf.slice(0, HDR_LEN);\n  const ct = buf.slice(HDR_LEN, buf.length - MAC_LEN);\n  const mac = buf.slice(buf.length - MAC_LEN);\n  return {\n    hdr, ct, mac,\n    ver: hdr.readUInt8(OFF_VER),\n    type: hdr.readUInt8(OFF_TYPE),\n    boot: hdr.readBigUInt64LE(OFF_BOOT),\n    seq: hdr.readBigUInt64LE(OFF_SEQ),\n    iv12: hdr.slice(OFF_IV, OFF_IV + 12)\n  };\n}\nfunction verifyHmac(K_mac, hdr, ct, mac) {\n  const tag = crypto.createHmac(\"sha256\", K_mac).update(hdr).update(ct).digest();\n  if (!timingSafeEq(tag, mac)) throw Error(\"bad hmac\");\n}\nfunction antiReplayOK(deviceId, boot, seq) {\n  const key = `replay:${deviceId}`;\n  const st = context.get(key) || { lastBoot: 0n, lastSeq: 0n };\n  const ok = (boot > st.lastBoot) || (boot === st.lastBoot && seq > st.lastSeq);\n  if (ok) context.set(key, { lastBoot: boot, lastSeq: seq });\n  return ok;\n}\nfunction decryptAesCtr(K_enc, iv12, ct) {\n  const iv16 = Buffer.concat([iv12, Buffer.from([0, 0, 0, 0])]); // 12B IV + 4B ctr\n  const dec = crypto.createDecipheriv(\"aes-128-ctr\", K_enc, iv16);\n  return Buffer.concat([dec.update(ct), dec.final()]);\n}\nfunction hexHead(buf, n = 16) { return Array.from(buf.slice(0, n)).map(b => b.toString(16).padStart(2, \"0\")).join(\"\"); }\n\ntry {\n  // Expect: devices/<deviceId>/data\n  const parts = (msg.topic || \"\").split(\"/\");\n  if (parts.length < 3 || parts[0] !== \"devices\" || parts[2] !== \"data\")\n    throw Error(`unexpected topic: ${msg.topic}`);\n  const deviceId = parts[1];\n\n  // Base64 input (string or Buffer containing base64 text)\n  let b64;\n  if (Buffer.isBuffer(msg.payload)) b64 = msg.payload.toString(\"utf8\").trim();\n  else if (typeof msg.payload === \"string\") b64 = msg.payload.trim();\n  else throw Error(\"payload must be base64 string or Buffer\");\n  const buf = Buffer.from(b64, \"base64\");\n\n  node.status({ fill: \"blue\", shape: \"dot\", text: `rx ${buf.length}B head:${hexHead(buf)}` });\n\n  // Guard: if first byte looks like '{' → you sent plaintext JSON by mistake\n  if (buf.length && (buf[0] === 0x7B || buf[0] === 0x5B)) {\n    node.warn(\"[SEC] plaintext JSON received; device likely not sealing this message.\");\n    try { msg.payload = JSON.parse(buf.toString(\"utf8\")); } catch { msg.payload = buf.toString(\"utf8\"); }\n    msg.secure = { deviceId, note: \"plaintext_received\" };\n    return msg; // or return null to drop\n  }\n\n  const { K_enc, K_mac } = deriveKeys(deviceId);\n  const { hdr, ct, mac, ver, type, boot, seq, iv12 } = parseHeader(buf);\n  if (ver !== 1) { node.warn(`[SEC] version ${ver} not supported. head:${hexHead(buf, 8)}`); return null; }\n\n  verifyHmac(K_mac, hdr, ct, mac);\n  if (!antiReplayOK(deviceId, boot, seq)) throw Error(\"replay\");\n\n  const plain = decryptAesCtr(K_enc, iv12, ct);\n  let obj;\n  try { obj = JSON.parse(plain.toString(\"utf8\")); }\n  catch { throw Error(\"plaintext is not valid JSON\"); }\n\n  msg.payload = obj;\n  msg.secure = { deviceId, type, boot: boot.toString(), seq: seq.toString() };\n  return msg;\n\n} catch (e) {\n  node.status({ fill: \"red\", shape: \"ring\", text: e.message });\n  node.warn(`[SEC] drop: ${e.message}`);\n  return null;\n}\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 900,
+        "y": 240,
+        "wires": [
+            [
+                "0b2e3d6668fc5be4",
+                "ca63419032f544c3"
+            ]
+        ]
+    },
+    {
+        "id": "0b2e3d6668fc5be4",
+        "type": "debug",
+        "z": "flow1",
+        "name": "debug 4",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1100,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "ec9129e4a756723d",
+        "type": "debug",
+        "z": "flow1",
+        "name": "debug 5",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1000,
+        "y": 380,
         "wires": []
     },
     {

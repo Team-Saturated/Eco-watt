@@ -5,6 +5,7 @@
 #include "../include/ConfigUpdate.h"
 #include "../include/WiFiConn.h"
 #include "../include/Mqtt.h"
+#include "../include/SecureLink.h"
 // NEW:
 #include "Acquisition.h"
 #include "Buffer.h"
@@ -52,7 +53,7 @@ const char *MQTT_HOST = "broker.emqx.io"; // or cloud host
 const uint16_t MQTT_PORT = 1883;
 
 const char *DEV_ID = "esp32-01";
-String t_data = String("devices/") + DEV_ID + "/data";
+String t_data = String("devices/") + DEV_ID + "/data/dulmin";
 String t_status = String("devices/") + DEV_ID + "/status";
 String t_config = String("devices/") + DEV_ID + "/config";
 String t_ack = String("devices/") + DEV_ID + "/ack";
@@ -65,6 +66,7 @@ bool config_changed = false;
 bool writecommandreceived = false;
 WiFiClient espClient;
 PubSubClient client(espClient);
+SecureLink sec;
 
 void main_task(void *pvParameters)
 {
@@ -184,12 +186,29 @@ void CloudConnect(void *pvParameters)
   // validate config changes.
 }
 
+
+// (Run once to set PSK; then comment it out)
+void first_time_provision() {
+  uint8_t myPSK[32] = {
+    0x49, 0x68, 0xA7, 0xE8, 0x83, 0x5B, 0xC6, 0xEC,
+    0x5B, 0xDB, 0xE1, 0x5A, 0xA9, 0xE7, 0xC4, 0x78,
+    0xE5, 0x61, 0x6E, 0x33, 0xAA, 0x0C, 0xC4, 0xCA,
+    0xDB, 0x53, 0xA8, 0x1A, 0xA2, 0x0F, 0xA7, 0x27
+  };
+  sec.provisionPSK(myPSK);
+}
+
 void setup()
 {
   Serial.begin(115200);
   delay(200);
   wifiConnect();
   EEPROM.begin(512);
+  //first_time_provision(); // only ONCE
+  if (!sec.begin(DEV_ID)) {
+    Serial.println("SecureLink init failed (PSK missing?)");
+    while(1) delay(1000);
+  }
 
   try
   {
