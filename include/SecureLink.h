@@ -6,7 +6,7 @@
 #include <mbedtls/aes.h>
 #include <esp_system.h>   // esp_fill_random
 #include <vector>
-
+#include <mbedtls/base64.h>
 // ---- Tuning ----
 #define SECURELINK_NAMESPACE  "sec"
 #define SECURELINK_KEY_PSK    "psk"        // 32-byte PSK
@@ -224,3 +224,4 @@ private:
     return hmac_sha256(key,klen,data,dlen,nullptr,0,out);
   }
 };
+

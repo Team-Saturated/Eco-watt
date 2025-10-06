@@ -76,7 +76,7 @@ void main_task(void *pvParameters)
     g_poller->read(SLAVE_ID, START_ADDR, QTY_REGS);
     if (writecommandreceived)
     {
-      g_poller->write(SLAVE_ID, 0x0008, 0x1110); // Example value to write
+      g_poller->write(SLAVE_ID, 0x0009, 0x0010); // Example value to write
       writecommandreceived = false;
     }
     static uint32_t last = 0;
@@ -158,6 +158,7 @@ void CloudConnect(void *pvParameters)
 
   wifiConnect();
   client.setServer(MQTT_HOST, MQTT_PORT);
+  client.setBufferSize(4096);  
   client.setCallback(handleCmd);
   // error logging
   uint32_t last = 0;

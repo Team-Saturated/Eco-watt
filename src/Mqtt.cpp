@@ -18,9 +18,20 @@ void ensureMqtt() {
 }
 
 void handleCmd(char* topic, byte* payload, unsigned int len) {
+
+  uint8_t mtype = 0;
+  std::vector<uint8_t> plain;
+  Serial.printf("Message arrived [%s] len=%d: ", topic, len);
+  Serial.println();
+  
+  Serial.println((char*)payload);
+  if (!mqttDecrypt(payload, len, mtype, plain)) {
+    Serial.println("[SEC] dropping: decrypt/verify failed");
+    return;
+  }
   if(strcmp(topic, t_config.c_str()) == 0) {
 
-    ErrorCode result = SaveConfig(payload,len);
+    ErrorCode result = SaveConfig(plain.data(), plain.size());
     String ackMsg;
     switch (result)
     {
@@ -72,8 +83,8 @@ void handleCmd(char* topic, byte* payload, unsigned int len) {
   }else if(strcmp(topic, t_write.c_str()) == 0) {
     // Handle write commands here
     String writeCmd;
-    for (unsigned int i = 0; i < len; i++) {
-      writeCmd += (char)payload[i];
+    for (unsigned int i = 0; i < plain.size(); i++) {
+      writeCmd += (char)plain[i];
     }
     Serial.printf("Received Write Command: %s\n", writeCmd.c_str());
     // validate the write command.

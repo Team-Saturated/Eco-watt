@@ -923,24 +923,28 @@
         "id": "32c2e41c356503a6",
         "type": "inject",
         "z": "flow1",
-        "name": "",
+        "name": "devices/esp32-01/config",
         "props": [
             {
                 "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
             }
         ],
         "repeat": "",
         "crontab": "",
         "once": false,
         "onceDelay": 0.1,
-        "topic": "",
+        "topic": "devices/esp32-01/config",
         "payload": "{\"poll_period_ms\":10000,\"upload_period_ms\":20000,\"buffer_capacity\":256,\"reg_req_id_1\":1023}",
         "payloadType": "json",
         "x": 210,
         "y": 1060,
         "wires": [
             [
-                "a151c96118f9c089"
+                "2e2c6172cedd9228"
             ]
         ]
     },
@@ -1002,20 +1006,24 @@
         "props": [
             {
                 "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
             }
         ],
         "repeat": "",
         "crontab": "",
         "once": false,
         "onceDelay": 0.1,
-        "topic": "",
+        "topic": "devices/esp32-01/write",
         "payload": "WRITE",
         "payloadType": "str",
-        "x": 210,
-        "y": 1140,
+        "x": 170,
+        "y": 1180,
         "wires": [
             [
-                "2b8a0b5b70e5f1d3"
+                "25a579e24b4dbe44"
             ]
         ]
     },
@@ -1111,6 +1119,88 @@
         "x": 1000,
         "y": 380,
         "wires": []
+    },
+    {
+        "id": "4f0f6860c0904ff1",
+        "type": "inject",
+        "z": "flow1",
+        "name": "hello",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "AQEAABEAAAAAAAAAVwEAAAAAAABHBCumMNMUV9JzoW9RzqlU++oizNb8n+cH20vxGfavFsQVO4IYffALE6v+Ie3SHn6WiCt3n9ImzeQ8b64LL9IPxk5+/MTrxpdJ69AaDERcgyJSCz2apQtD0s0UBNEP+nZZsL+cke/xSi8f2bk7S98MT0m/9jdI2zQhwsSugHc95WkBLbhD2DZS56AEiRUTu439vnlE4E7LZNilgymiq0w6yCZyHkNI+rWdnYy45k+F7wKt29NWrZqUfNtbRY+NhbKg2iiGbXkt+AzM9ZEBvXlMCh2DyZ5WVwEV49TDlLlnbxBkMYJps7PiXx//olRROUGLrR0RxdQ4Zak+2LgNupkIO9WchPMlznsVbSKC5SwiyoxFJOZ6DcU+cYOi6V3PLHbaTyYzfkhSelMYBnLvf1Oyw+9EfR0NcKQL/8RgEGShLe+0RptQw+6Al6BzcTtP7CLdKn0tH9k=",
+        "payloadType": "str",
+        "x": 170,
+        "y": 900,
+        "wires": [
+            [
+                "a151c96118f9c089"
+            ]
+        ]
+    },
+    {
+        "id": "25a579e24b4dbe44",
+        "type": "function",
+        "z": "flow1",
+        "name": "function 3",
+        "func": "// Downlink encryptor for ESP32 SecureLink\n// Topic shape: devices/<deviceId>/write\n// Input:  msg.payload = object or string (plaintext to send)\n// Output: msg.payload = base64(sealed), msg.secure metadata preserved\n\nconst crypto = global.get('crypto');\n\n// ---- PSK (32 bytes) must match the ESP32 ----\nconst PSK = Buffer.from(\n  \"4968A7E8835BC6EC5BDBE15AA9E7C478E5616E33AA0CC4CADB53A81AA20FA727\",\n  \"hex\"\n);\n\n// ---- SecureLink header layout ----\nconst HDR_LEN = 1 + 1 + 2 + 8 + 8 + 12; // 32\nconst INFO    = Buffer.from(\"EcoWatt\");\nconst OFF_VER = 0, OFF_TYPE = 1, OFF_BOOT = 4, OFF_SEQ = 12, OFF_IV = 20;\n\nfunction hkdf48(ikm, salt, info){\n  const prk = crypto.createHmac(\"sha256\", salt).update(ikm).digest();\n  let T = Buffer.alloc(0), okm = Buffer.alloc(0), ctr = 0;\n  while (okm.length < 48) {\n    ctr++;\n    T = crypto.createHmac(\"sha256\", prk).update(Buffer.concat([T, info, Buffer.from([ctr])])).digest();\n    okm = Buffer.concat([okm, T]);\n  }\n  return okm.slice(0,48);\n}\nfunction deriveKeys(deviceId){\n  const salt = crypto.createHash(\"sha256\").update(deviceId).digest();\n  const okm  = hkdf48(PSK, salt, INFO);\n  return { K_enc: okm.slice(0,16), K_mac: okm.slice(16,48) };\n}\nfunction u64le(bn){\n  const b = Buffer.alloc(8); b.writeBigUInt64LE(bn); return b;\n}\n\ntry {\n  // Expect: devices/<deviceId>/write\n  const parts = (msg.topic || \"\").split(\"/\");\n  if (parts.length < 3 || parts[0] !== \"devices\" || parts[2] !== \"write\") {\n    throw Error(`unexpected topic: ${msg.topic}`);\n  }\n  const deviceId = parts[1];\n\n  // Serialize plaintext\n  let plain;\n  if (typeof msg.payload === \"string\") plain = Buffer.from(msg.payload, \"utf8\");\n  else plain = Buffer.from(JSON.stringify(msg.payload ?? {}), \"utf8\");\n\n  // Derive keys\n  const { K_enc, K_mac } = deriveKeys(deviceId);\n\n  // Per-device counters for downlink (anti-replay at device side)\n  const ck = `down:${deviceId}`;\n  let st = context.get(ck) || { boot: 0n, seq: 0n };\n  if (st.boot === 0n) { st.boot = BigInt(Date.now()); st.seq = 0n; }\n  st.seq += 1n; context.set(ck, st);\n\n  // Build header\n  const hdr = Buffer.alloc(HDR_LEN, 0);\n  hdr.writeUInt8(1, OFF_VER);                        // version\n  hdr.writeUInt8((msg.secureType ?? 2) & 0xFF, OFF_TYPE); // type: 2=command by default\n  u64le(st.boot).copy(hdr, OFF_BOOT);\n  u64le(st.seq).copy(hdr, OFF_SEQ);\n  const iv12 = crypto.randomBytes(12);\n  iv12.copy(hdr, OFF_IV);\n\n  // AES-128-CTR encrypt\n  const iv16 = Buffer.concat([iv12, Buffer.from([0,0,0,0])]);\n  const enc = crypto.createCipheriv(\"aes-128-ctr\", K_enc, iv16);\n  const ct  = Buffer.concat([enc.update(plain), enc.final()]);\n\n  // HMAC(header || ct)\n  const mac = crypto.createHmac(\"sha256\", K_mac).update(hdr).update(ct).digest();\n\n  // Assemble & base64\n  const sealed = Buffer.concat([hdr, ct, mac]);\n  msg.payload = sealed.toString(\"base64\");\n\n  // keep topic as-is (devices/<id>/write) for your MQTT out\n  msg.secure = { deviceId, type: (msg.secureType ?? 2), boot: st.boot.toString(), seq: st.seq.toString(), ct_len: ct.length };\n  return msg;\n\n} catch (e) {\n  node.status({fill:\"red\",shape:\"ring\",text:e.message});\n  node.warn(`[SEC] downlink error: ${e.message}`);\n  return null;\n}\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 1240,
+        "wires": [
+            [
+                "2b8a0b5b70e5f1d3",
+                "210da0956bb57ab5"
+            ]
+        ]
+    },
+    {
+        "id": "210da0956bb57ab5",
+        "type": "debug",
+        "z": "flow1",
+        "name": "debug 6",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 560,
+        "y": 1300,
+        "wires": []
+    },
+    {
+        "id": "2e2c6172cedd9228",
+        "type": "function",
+        "z": "flow1",
+        "name": "function 4",
+        "func": "// Downlink encryptor for ESP32 SecureLink\n// Topic shape: devices/<deviceId>/write\n// Input:  msg.payload = object or string (plaintext to send)\n// Output: msg.payload = base64(sealed), msg.secure metadata preserved\n\nconst crypto = global.get('crypto');\n\n// ---- PSK (32 bytes) must match the ESP32 ----\nconst PSK = Buffer.from(\n  \"4968A7E8835BC6EC5BDBE15AA9E7C478E5616E33AA0CC4CADB53A81AA20FA727\",\n  \"hex\"\n);\n\n// ---- SecureLink header layout ----\nconst HDR_LEN = 1 + 1 + 2 + 8 + 8 + 12; // 32\nconst INFO    = Buffer.from(\"EcoWatt\");\nconst OFF_VER = 0, OFF_TYPE = 1, OFF_BOOT = 4, OFF_SEQ = 12, OFF_IV = 20;\n\nfunction hkdf48(ikm, salt, info){\n  const prk = crypto.createHmac(\"sha256\", salt).update(ikm).digest();\n  let T = Buffer.alloc(0), okm = Buffer.alloc(0), ctr = 0;\n  while (okm.length < 48) {\n    ctr++;\n    T = crypto.createHmac(\"sha256\", prk).update(Buffer.concat([T, info, Buffer.from([ctr])])).digest();\n    okm = Buffer.concat([okm, T]);\n  }\n  return okm.slice(0,48);\n}\nfunction deriveKeys(deviceId){\n  const salt = crypto.createHash(\"sha256\").update(deviceId).digest();\n  const okm  = hkdf48(PSK, salt, INFO);\n  return { K_enc: okm.slice(0,16), K_mac: okm.slice(16,48) };\n}\nfunction u64le(bn){\n  const b = Buffer.alloc(8); b.writeBigUInt64LE(bn); return b;\n}\n\ntry {\n  // Expect: devices/<deviceId>/write\n  const parts = (msg.topic || \"\").split(\"/\");\n  if (parts.length < 3 || parts[0] !== \"devices\" || parts[2] !== \"config\") {\n    throw Error(`unexpected topic: ${msg.topic}`);\n  }\n  const deviceId = parts[1];\n\n  // Serialize plaintext\n  let plain;\n  if (typeof msg.payload === \"string\") plain = Buffer.from(msg.payload, \"utf8\");\n  else plain = Buffer.from(JSON.stringify(msg.payload ?? {}), \"utf8\");\n\n  // Derive keys\n  const { K_enc, K_mac } = deriveKeys(deviceId);\n\n  // Per-device counters for downlink (anti-replay at device side)\n  const ck = `down:${deviceId}`;\n  let st = context.get(ck) || { boot: 0n, seq: 0n };\n  if (st.boot === 0n) { st.boot = BigInt(Date.now()); st.seq = 0n; }\n  st.seq += 1n; context.set(ck, st);\n\n  // Build header\n  const hdr = Buffer.alloc(HDR_LEN, 0);\n  hdr.writeUInt8(1, OFF_VER);                        // version\n  hdr.writeUInt8((msg.secureType ?? 2) & 0xFF, OFF_TYPE); // type: 2=command by default\n  u64le(st.boot).copy(hdr, OFF_BOOT);\n  u64le(st.seq).copy(hdr, OFF_SEQ);\n  const iv12 = crypto.randomBytes(12);\n  iv12.copy(hdr, OFF_IV);\n\n  // AES-128-CTR encrypt\n  const iv16 = Buffer.concat([iv12, Buffer.from([0,0,0,0])]);\n  const enc = crypto.createCipheriv(\"aes-128-ctr\", K_enc, iv16);\n  const ct  = Buffer.concat([enc.update(plain), enc.final()]);\n\n  // HMAC(header || ct)\n  const mac = crypto.createHmac(\"sha256\", K_mac).update(hdr).update(ct).digest();\n\n  // Assemble & base64\n  const sealed = Buffer.concat([hdr, ct, mac]);\n  msg.payload = sealed.toString(\"base64\");\n\n  // keep topic as-is (devices/<id>/write) for your MQTT out\n  msg.secure = { deviceId, type: (msg.secureType ?? 2), boot: st.boot.toString(), seq: st.seq.toString(), ct_len: ct.length };\n  return msg;\n\n} catch (e) {\n  node.status({fill:\"red\",shape:\"ring\",text:e.message});\n  node.warn(`[SEC] downlink error: ${e.message}`);\n  return null;\n}\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 300,
+        "y": 1100,
+        "wires": [
+            [
+                "a151c96118f9c089"
+            ]
+        ]
     },
     {
         "id": "034ffacc85f96e04",
