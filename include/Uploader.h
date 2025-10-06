@@ -34,13 +34,6 @@ private:
   int _last_http = 0;
 };
 
-#include <mbedtls/base64.h>
 
-static String toBase64(const uint8_t* data, size_t len) {
-  size_t outLen = 0;
-  (void) mbedtls_base64_encode(nullptr, 0, &outLen, data, len); // get size
-  std::unique_ptr<uint8_t[]> out(new uint8_t[outLen + 1]);
-  if (mbedtls_base64_encode(out.get(), outLen, &outLen, data, len) != 0) return String();
-  out[outLen] = 0;
-  return String((char*)out.get());
-}
+
+

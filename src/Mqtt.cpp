@@ -1,6 +1,39 @@
 #include "Mqtt.h"
 #include <ArduinoJson.h>
 #include "ConfigUpdate.h"
+
+
+static bool mqttDecrypt(const uint8_t* in, size_t inLen,
+                        uint8_t& outType, std::vector<uint8_t>& outPlain) {
+  // Legacy plaintext guard (first byte '{' or '[')
+  if (inLen && (in[0] == '{' || in[0] == '[')) {
+    outPlain.assign(in, in + inLen);
+    outType = 0;
+    return true;
+  }
+
+  // Try base64 decode first
+  size_t need = 0;
+  int rc = mbedtls_base64_decode(nullptr, 0, &need, in, inLen);
+  std::vector<uint8_t> sealed;
+  if (rc == MBEDTLS_ERR_BASE64_INVALID_CHARACTER) {
+    // Not base64 → treat as raw sealed
+    sealed.assign(in, in + inLen);
+  } else {
+    sealed.resize(need);
+    size_t outLen = 0;
+    rc = mbedtls_base64_decode(sealed.data(), sealed.size(), &outLen, in, inLen);
+    if (rc != 0) { Serial.printf("[SEC] b64 decode rc=%d\n", rc); return false; }
+    sealed.resize(outLen);
+  }
+
+  if (!sec.open(sealed.data(), sealed.size(), outType, outPlain)) {
+    Serial.println("[SEC] open() failed (HMAC/replay/decrypt)");
+    return false;
+  }
+  return true;
+}
+
 void ensureMqtt() {
   while (!client.connected()) {
     String cid = String("esp32-") + String((uint32_t)ESP.getEfuseMac(), HEX);
@@ -97,3 +130,5 @@ void handleCmd(char* topic, byte* payload, unsigned int len) {
     }
   }
 }
+
+

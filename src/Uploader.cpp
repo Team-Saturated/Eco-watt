@@ -1,5 +1,6 @@
 #include "Uploader.h"
 #include "Mqtt.h"
+#include <mbedtls/base64.h>
 #if defined(ESP8266)
   #include <ESP8266HTTPClient.h>
 #else
@@ -12,6 +13,15 @@
 // Optional: define in platformio.ini as -DAPI_BULK_URL="\"http://<host>/api/inverter/bulk\""
 #define API_BULK_URL ""
 #endif
+
+static String toBase64(const uint8_t* data, size_t len) {
+  size_t outLen = 0;
+  (void) mbedtls_base64_encode(nullptr, 0, &outLen, data, len); // get size
+  std::unique_ptr<uint8_t[]> out(new uint8_t[outLen + 1]);
+  if (mbedtls_base64_encode(out.get(), outLen, &outLen, data, len) != 0) return String();
+  out[outLen] = 0;
+  return String((char*)out.get());
+}
 
 Uploader::Uploader(const String& apiUrl, const String& authHeader)
 : _apiUrl(apiUrl), _auth(authHeader) {}
@@ -74,6 +84,7 @@ bool Uploader::uploadBatch(std::vector<Record>& batch) {
   // Publish exactly as you do now
   if (!client.publish(t_data.c_str(), mqttJson.c_str(), false)) {
     Serial.println("[MQTT] publish failed");
+    return false;
   }
   // Serial.printf(compressed.data()); // Removed: unsafe to print raw binary as string
   // Optionally, print first few bytes as hex for debugging:
@@ -86,5 +97,7 @@ bool Uploader::uploadBatch(std::vector<Record>& batch) {
   // For benchmarking, you can compare compressed.size() vs. batch.size()*sizeof(Record)
   Serial.printf("[UPLOAD] Compressed batch size: %u bytes (includes timestamps)\n", (unsigned)compressed.size());
   Serial.printf("[UPLOAD] MQTT JSON length: %u bytes\n", (unsigned)mqttJson.length());
-
+  return true;
 }
+
+
