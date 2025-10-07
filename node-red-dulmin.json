@@ -943,9 +943,7 @@
         "x": 210,
         "y": 1060,
         "wires": [
-            [
-                "2e2c6172cedd9228"
-            ]
+            []
         ]
     },
     {
@@ -1022,9 +1020,7 @@
         "x": 170,
         "y": 1180,
         "wires": [
-            [
-                "25a579e24b4dbe44"
-            ]
+            []
         ]
     },
     {
@@ -1199,6 +1195,398 @@
         "wires": [
             [
                 "a151c96118f9c089"
+            ]
+        ]
+    },
+    {
+        "id": "88e3e1be6f9d61fa",
+        "type": "function",
+        "z": "flow1",
+        "name": "FotaStart",
+        "func": "// Function: Send FOTA Manifest\n// Input: msg.payload = { firmwareFile, version }\n// Reads firmware binary and sends manifest to ESP32\nconst firmwareBuffer = msg.payload;\nlet crypto = global.get('crypto'); \nif (!crypto && typeof global.crypto !== 'undefined') { crypto = global.crypto; } \nif (!crypto) { node.status({fill:\"red\", shape:\"ring\", text:\"No crypto available\"}); \n    node.error(\"Crypto not available. Add to settings.js: functionGlobalContext: { crypto: require('crypto') }\"); \n    return null; }\nif (!Buffer.isBuffer(firmwareBuffer)) {\n    node.error(\"Input must be a Buffer from file-in node\");\n    return null;\n}\n\n// Calculate SHA256\nconst sha256Hash = crypto.createHash('sha256').update(firmwareBuffer).digest();\nconst sha256Hex = sha256Hash.toString('hex');\n\n// Generate 16-byte nonce\nconst nonce = crypto.randomBytes(16);\nconst nonceB64 = nonce.toString('base64');\n\n// Store in flow context for chunking\nflow.set('firmwareBuffer', firmwareBuffer);\nflow.set('firmwareSize', firmwareBuffer.length);\nflow.set('chunkSize', 4096); // 4KB chunks\nflow.set('version', msg.fotaVersion || 'v1.0.0');\n\n// Build manifest message\nconst manifest = {\n    op: \"manifest\",\n    version: msg.fotaVersion || 'v1.0.0',\n    size: firmwareBuffer.length,\n    chunk: 128,\n    sha256_hex: sha256Hex,\n    nonce_b64: nonceB64\n};\n\n// Send to encryption node\nmsg.payload = JSON.stringify(manifest);\nmsg.topic = \"devices/esp32-01/fota/cmd\"; // Replace DEV_ID\n\nnode.status({\n    fill:\"blue\", \n    shape:\"dot\", \n    text: `Manifest: ${(firmwareBuffer.length/1024).toFixed(1)}KB`\n});\n\nnode.warn(`FOTA Manifest: version=${manifest.version}, size=${manifest.size}, sha256=${sha256Hex}`);\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 920,
+        "y": 2040,
+        "wires": [
+            [
+                "03c1af3d8e16bf12"
+            ]
+        ]
+    },
+    {
+        "id": "b830e5c975c29d5f",
+        "type": "function",
+        "z": "flow1",
+        "name": "FotaHelpers",
+        "func": "\n// FOTA Helpers (set)\n// Run once on deploy or feed any msg through it.\n// Option 1: Access from global context (recommended)\nlet crypto = global.get('crypto');\n\n// Option 2: If crypto is not in global context, try to use the built-in crypto\nif (!crypto && typeof global.crypto !== 'undefined') {\n  crypto = global.crypto;\n}\n\n// Validation\nif (!crypto) {\n  node.status({ fill: \"red\", shape: \"ring\", text: \"No crypto available\" });\n  node.error(\"Crypto not available. Add to settings.js: functionGlobalContext: { crypto: require('crypto') }\");\n  return null;\n}\n\nfunction toBase64(buf) { return Buffer.from(buf).toString('base64'); }\nfunction fromBase64(s) { return Buffer.from(s, 'base64'); }\nfunction hexToBuf(hex) { return Buffer.from(hex.replace(/[^0-9a-f]/gi, ''), 'hex'); }\nfunction bufToHex(buf) { return Buffer.from(buf).toString('hex').toUpperCase(); }\n\n/**\n * SecureLink seal compatible with your device:\n * Header (packed, little-endian where applicable):\n *  struct SecureHdr {\n *    uint8_t   ver;         // 1\n *    uint8_t   type;        // app message type (use 2 for FOTA cmd)\n *    uint16_t  reserved;    // 0\n *    uint64_t  boot_epoch;  // from device (store per device)\n *    uint64_t  seq;         // increment per message (store per device)\n *    uint8_t   iv[12];      // 12-byte random; device pads to 16 with 0x00000000\n *  };\n * Cipher = AES-256-CTR(key=PSK, iv16 = iv12||00000000)\n * Tag    = HMAC-SHA256(key=PSK) over (header||ciphertext)\n * Final  = base64(header||ciphertext||tag)\n */\nfunction securelinkSeal(pskBuf, hdr, plaintextBuf) {\n    const iv12 = crypto.randomBytes(12);\n    const iv16 = Buffer.concat([iv12, Buffer.alloc(4, 0)]); // pad to 16 for Node's AES-CTR\n    // pack header\n    const h = Buffer.alloc(1 + 1 + 2 + 8 + 8 + 12);\n    let o = 0;\n    h.writeUInt8(hdr.ver || 1, o++);\n    h.writeUInt8(hdr.type || 2, o++);\n    h.writeUInt16LE(0, o); o += 2;\n    h.writeBigUInt64LE(BigInt(hdr.boot_epoch || 0), o); o += 8;\n    h.writeBigUInt64LE(BigInt(hdr.seq || 0), o); o += 8;\n    iv12.copy(h, o); o += 12;\n\n    const cipher = crypto.createCipheriv('aes-256-ctr', pskBuf, iv16);\n    const ct = Buffer.concat([cipher.update(plaintextBuf), cipher.final()]);\n\n    const mac = crypto.createHmac('sha256', pskBuf).update(h).update(ct).digest(); // 32 bytes\n\n    return toBase64(Buffer.concat([h, ct, mac]));\n}\n\n/** SHA-256 hex of a Buffer */\nfunction sha256Hex(buf) {\n    return crypto.createHash('sha256').update(buf).digest('hex').toUpperCase();\n}\n\n// save helpers to flow context\nflow.set('fota_helpers', { toBase64, fromBase64, hexToBuf, bufToHex, securelinkSeal, sha256Hex });\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 2000,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "1bf7accfb4d67566",
+        "type": "mqtt in",
+        "z": "flow1",
+        "name": "",
+        "topic": "devices/esp32-01/fota/status",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "034ffacc85f96e04",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 120,
+        "y": 1520,
+        "wires": [
+            [
+                "b830e5c975c29d5f",
+                "da458bd2647cc51f"
+            ]
+        ]
+    },
+    {
+        "id": "059ff7e1d46bd25c",
+        "type": "mqtt out",
+        "z": "flow1",
+        "name": "",
+        "topic": "devices/esp32-01/fota/cmd",
+        "qos": "1",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "034ffacc85f96e04",
+        "x": 1180,
+        "y": 1460,
+        "wires": []
+    },
+    {
+        "id": "a6f35b98977dd56b",
+        "type": "file in",
+        "z": "flow1",
+        "name": "",
+        "filename": "",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 900,
+        "y": 1160,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "inj_local",
+        "type": "inject",
+        "z": "flow1",
+        "name": "Start FOTA (local file)",
+        "props": [
+            {
+                "p": "path",
+                "v": "C:\\Users\\asus\\Downloads\\firmware.bin",
+                "vt": "str"
+            },
+            {
+                "p": "devId",
+                "v": "esp32-01",
+                "vt": "str"
+            },
+            {
+                "p": "version",
+                "v": "1.2.3",
+                "vt": "str"
+            },
+            {
+                "p": "chunkSize",
+                "v": "4096",
+                "vt": "num"
+            },
+            {
+                "p": "filename",
+                "v": "firmware.bin",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 160,
+        "y": 2140,
+        "wires": [
+            [
+                "file_in_local"
+            ]
+        ]
+    },
+    {
+        "id": "file_in_local",
+        "type": "file in",
+        "z": "flow1",
+        "name": "Read .bin as Buffer",
+        "filename": "path",
+        "filenameType": "msg",
+        "format": "",
+        "chunk": false,
+        "sendError": true,
+        "encoding": "none",
+        "allProps": false,
+        "x": 410,
+        "y": 2140,
+        "wires": [
+            [
+                "88e3e1be6f9d61fa"
+            ]
+        ]
+    },
+    {
+        "id": "fn_attach_fw",
+        "type": "function",
+        "z": "flow1",
+        "name": "Attach fw Buffer → msg.fw",
+        "func": "// msg.payload is a Buffer from File in node\nmsg.fw = msg.payload;\nmsg.topic = \"devices/esp32-01/fota/status\"\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 680,
+        "y": 2220,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "03c1af3d8e16bf12",
+        "type": "function",
+        "z": "flow1",
+        "name": "function 5",
+        "func": "// Downlink encryptor for ESP32 SecureLink\n// Topic shape: devices/<deviceId>/write\n// Input:  msg.payload = object or string (plaintext to send)\n// Output: msg.payload = base64(sealed), msg.secure metadata preserved\n\n// --- CRYPTO BOOTSTRAP (works with or without require) ---\n// Option 1: Access from global context (recommended)\nlet crypto = global.get('crypto');\n\n// Option 2: If crypto is not in global context, try to use the built-in crypto\nif (!crypto && typeof global.crypto !== 'undefined') {\n  crypto = global.crypto;\n}\n\n// Validation\nif (!crypto) {\n  node.status({ fill: \"red\", shape: \"ring\", text: \"No crypto available\" });\n  node.error(\"Crypto not available. Add to settings.js: functionGlobalContext: { crypto: require('crypto') }\");\n  return null;\n}\n// ---- PSK (32 bytes) must match the ESP32 ----\nconst PSK = Buffer.from(\n  \"4968A7E8835BC6EC5BDBE15AA9E7C478E5616E33AA0CC4CADB53A81AA20FA727\",\n  \"hex\"\n);\n\n// ---- SecureLink header layout ----\nconst HDR_LEN = 1 + 1 + 2 + 8 + 8 + 12; // 32\nconst INFO    = Buffer.from(\"EcoWatt\");\nconst OFF_VER = 0, OFF_TYPE = 1, OFF_BOOT = 4, OFF_SEQ = 12, OFF_IV = 20;\n\nfunction hkdf48(ikm, salt, info){\n  const prk = crypto.createHmac(\"sha256\", salt).update(ikm).digest();\n  let T = Buffer.alloc(0), okm = Buffer.alloc(0), ctr = 0;\n  while (okm.length < 48) {\n    ctr++;\n    T = crypto.createHmac(\"sha256\", prk).update(Buffer.concat([T, info, Buffer.from([ctr])])).digest();\n    okm = Buffer.concat([okm, T]);\n  }\n  return okm.slice(0,48);\n}\nfunction deriveKeys(deviceId){\n  const salt = crypto.createHash(\"sha256\").update(deviceId).digest();\n  const okm  = hkdf48(PSK, salt, INFO);\n  return { K_enc: okm.slice(0,16), K_mac: okm.slice(16,48) };\n}\nfunction u64le(bn){\n  const b = Buffer.alloc(8); b.writeBigUInt64LE(bn); return b;\n}\n\ntry {\n  // Expect: devices/<deviceId>/write\n  const parts = (msg.topic || \"\").split(\"/\");\n  if (parts.length < 3 || parts[0] !== \"devices\" || parts[2] !== \"fota\") {\n    throw Error(`unexpected topic: ${msg.topic}`);\n  }\n  const deviceId = parts[1];\n\n  // Serialize plaintext\n  let plain;\n  if (typeof msg.payload === \"string\") plain = Buffer.from(msg.payload, \"utf8\");\n  else plain = Buffer.from(JSON.stringify(msg.payload ?? {}), \"utf8\");\n\n  // Derive keys\n  const { K_enc, K_mac } = deriveKeys(deviceId);\n\n  // Per-device counters for downlink (anti-replay at device side)\n  const ck = `down:${deviceId}`;\n  let st = context.get(ck) || { boot: 0n, seq: 0n };\n  if (st.boot === 0n) { st.boot = BigInt(Date.now()); st.seq = 0n; }\n  st.seq += 1n; context.set(ck, st);\n\n  // Build header\n  const hdr = Buffer.alloc(HDR_LEN, 0);\n  hdr.writeUInt8(1, OFF_VER);                        // version\n  hdr.writeUInt8((msg.secureType ?? 2) & 0xFF, OFF_TYPE); // type: 2=command by default\n  u64le(st.boot).copy(hdr, OFF_BOOT);\n  u64le(st.seq).copy(hdr, OFF_SEQ);\n  const iv12 = crypto.randomBytes(12);\n  iv12.copy(hdr, OFF_IV);\n\n  // AES-128-CTR encrypt\n  const iv16 = Buffer.concat([iv12, Buffer.from([0,0,0,0])]);\n  const enc = crypto.createCipheriv(\"aes-128-ctr\", K_enc, iv16);\n  const ct  = Buffer.concat([enc.update(plain), enc.final()]);\n\n  // HMAC(header || ct)\n  const mac = crypto.createHmac(\"sha256\", K_mac).update(hdr).update(ct).digest();\n\n  // Assemble & base64\n  const sealed = Buffer.concat([hdr, ct, mac]);\n  msg.payload = sealed.toString(\"base64\");\n\n  // keep topic as-is (devices/<id>/write) for your MQTT out\n  msg.secure = { deviceId, type: (msg.secureType ?? 2), boot: st.boot.toString(), seq: st.seq.toString(), ct_len: ct.length };\n  return msg;\n\n} catch (e) {\n  node.status({fill:\"red\",shape:\"ring\",text:e.message});\n  node.warn(`[SEC] downlink error: ${e.message}`);\n  return null;\n}\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1080,
+        "y": 1940,
+        "wires": [
+            [
+                "059ff7e1d46bd25c",
+                "189ea675c35d691e"
+            ]
+        ]
+    },
+    {
+        "id": "f775b8adbd40e72c",
+        "type": "debug",
+        "z": "flow1",
+        "name": "debug 8",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 600,
+        "y": 1400,
+        "wires": []
+    },
+    {
+        "id": "da458bd2647cc51f",
+        "type": "function",
+        "z": "flow1",
+        "name": "function 6",
+        "func": "// Verify + Decrypt ESP32 \"SecureLink\" payloads\n// Topic shape: devices/<deviceId>/data\n// settings.js must have: functionGlobalContext: { crypto: require('crypto') }\n\nconst crypto = global.get('crypto');\n\n// ---- PSK (32 bytes) you provisioned on the ESP32 ----\nconst PSK = Buffer.from(\n  \"4968A7E8835BC6EC5BDBE15AA9E7C478E5616E33AA0CC4CADB53A81AA20FA727\",\n  \"hex\"\n);\n\n// Header layout (matches SecureLink.h)\nconst HDR_LEN = 1 + 1 + 2 + 8 + 8 + 12; // 32\nconst MAC_LEN = 32;\nconst INFO = Buffer.from(\"EcoWatt\");\nconst OFF_VER = 0, OFF_TYPE = 1, OFF_BOOT = 4, OFF_SEQ = 12, OFF_IV = 20;\n\nfunction hkdf48(ikm, salt, info) {\n  const prk = crypto.createHmac(\"sha256\", salt).update(ikm).digest();\n  let T = Buffer.alloc(0), okm = Buffer.alloc(0), ctr = 0;\n  while (okm.length < 48) { ctr++; T = crypto.createHmac(\"sha256\", prk).update(Buffer.concat([T, info, Buffer.from([ctr])])).digest(); okm = Buffer.concat([okm, T]); }\n  return okm.slice(0, 48);\n}\nfunction deriveKeys(deviceId) {\n  const salt = crypto.createHash(\"sha256\").update(deviceId).digest();\n  const okm = hkdf48(PSK, salt, INFO);\n  return { K_enc: okm.slice(0, 16), K_mac: okm.slice(16, 48) };\n}\nfunction timingSafeEq(a, b) { if (a.length !== b.length) return false; return crypto.timingSafeEqual(a, b); }\nfunction parseHeader(buf) {\n  if (buf.length < HDR_LEN + MAC_LEN) throw Error(`short packet (${buf.length})`);\n  const hdr = buf.slice(0, HDR_LEN);\n  const ct = buf.slice(HDR_LEN, buf.length - MAC_LEN);\n  const mac = buf.slice(buf.length - MAC_LEN);\n  return {\n    hdr, ct, mac,\n    ver: hdr.readUInt8(OFF_VER),\n    type: hdr.readUInt8(OFF_TYPE),\n    boot: hdr.readBigUInt64LE(OFF_BOOT),\n    seq: hdr.readBigUInt64LE(OFF_SEQ),\n    iv12: hdr.slice(OFF_IV, OFF_IV + 12)\n  };\n}\nfunction verifyHmac(K_mac, hdr, ct, mac) {\n  const tag = crypto.createHmac(\"sha256\", K_mac).update(hdr).update(ct).digest();\n  if (!timingSafeEq(tag, mac)) throw Error(\"bad hmac\");\n}\nfunction antiReplayOK(deviceId, boot, seq) {\n  const key = `replay:${deviceId}`;\n  const st = context.get(key) || { lastBoot: 0n, lastSeq: 0n };\n  const ok = (boot > st.lastBoot) || (boot === st.lastBoot && seq > st.lastSeq);\n  if (ok) context.set(key, { lastBoot: boot, lastSeq: seq });\n  return ok;\n}\nfunction decryptAesCtr(K_enc, iv12, ct) {\n  const iv16 = Buffer.concat([iv12, Buffer.from([0, 0, 0, 0])]); // 12B IV + 4B ctr\n  const dec = crypto.createDecipheriv(\"aes-128-ctr\", K_enc, iv16);\n  return Buffer.concat([dec.update(ct), dec.final()]);\n}\nfunction hexHead(buf, n = 16) { return Array.from(buf.slice(0, n)).map(b => b.toString(16).padStart(2, \"0\")).join(\"\"); }\n\ntry {\n  // Expect: devices/<deviceId>/data\n  const parts = (msg.topic || \"\").split(\"/\");\n  if (parts.length < 3 || parts[0] !== \"devices\" || parts[2] !== \"fota\")\n    throw Error(`unexpected topic: ${msg.topic}`);\n  const deviceId = parts[1];\n\n  // Base64 input (string or Buffer containing base64 text)\n  let b64;\n  if (Buffer.isBuffer(msg.payload)) b64 = msg.payload.toString(\"utf8\").trim();\n  else if (typeof msg.payload === \"string\") b64 = msg.payload.trim();\n  else throw Error(\"payload must be base64 string or Buffer\");\n  const buf = Buffer.from(b64, \"base64\");\n\n  node.status({ fill: \"blue\", shape: \"dot\", text: `rx ${buf.length}B head:${hexHead(buf)}` });\n\n  // Guard: if first byte looks like '{' → you sent plaintext JSON by mistake\n  if (buf.length && (buf[0] === 0x7B || buf[0] === 0x5B)) {\n    node.warn(\"[SEC] plaintext JSON received; device likely not sealing this message.\");\n    try { msg.payload = JSON.parse(buf.toString(\"utf8\")); } catch { msg.payload = buf.toString(\"utf8\"); }\n    msg.secure = { deviceId, note: \"plaintext_received\" };\n    return msg; // or return null to drop\n  }\n\n  const { K_enc, K_mac } = deriveKeys(deviceId);\n  const { hdr, ct, mac, ver, type, boot, seq, iv12 } = parseHeader(buf);\n  if (ver !== 1) { node.warn(`[SEC] version ${ver} not supported. head:${hexHead(buf, 8)}`); return null; }\n\n  verifyHmac(K_mac, hdr, ct, mac);\n  if (!antiReplayOK(deviceId, boot, seq)) throw Error(\"replay\");\n\n  const plain = decryptAesCtr(K_enc, iv12, ct);\n  let obj;\n  try { obj = JSON.parse(plain.toString(\"utf8\")); }\n  catch { throw Error(\"plaintext is not valid JSON\"); }\n\n  msg.payload = obj;\n  msg.secure = { deviceId, type, boot: boot.toString(), seq: seq.toString() };\n  return msg;\n\n} catch (e) {\n  node.status({ fill: \"red\", shape: \"ring\", text: e.message });\n  node.warn(`[SEC] drop: ${e.message}`);\n  return null;\n}\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 1400,
+        "wires": [
+            [
+                "f775b8adbd40e72c",
+                "024f57b061a6f524"
+            ]
+        ]
+    },
+    {
+        "id": "99e7659aeb84065d",
+        "type": "function",
+        "z": "flow1",
+        "name": "chunk sender",
+        "func": "// Function: Chunk Sender\n// Triggered by \"need_chunks\" event from ESP32\n// Input: msg.payload = { next_offset, total }\n\nconst firmwareBuffer = flow.get('firmwareBuffer');\nconst chunkSize = flow.get('chunkSize') || 4096;\nconst totalSize = flow.get('firmwareSize');\n\nif (!firmwareBuffer) {\n    node.error(\"No firmware buffer found\");\n    return null;\n}\n\n// Parse incoming status\nlet status;\ntry {\n    status = msg.payload;\n} catch(e) {\n    node.error(\"Invalid status JSON\");\n    return null;\n}\n\nconst nextOffset = parseInt(status.next_offset) || 0;\n\n// Check if complete\nif (nextOffset >= totalSize) {\n    node.status({fill:\"green\", shape:\"dot\", text:\"Transfer complete\"});\n    \n    // Send finish command\n    msg.payload = JSON.stringify({ op: \"finish\" });\n    msg.topic = \"device/esp32-01/fota/cmd\";\n    return msg;\n}\n\n// Extract chunk\nconst end = Math.min(nextOffset + chunkSize, totalSize);\nconst chunk = firmwareBuffer.slice(nextOffset, end);\nconst chunkB64 = chunk.toString('base64');\n\n// Build chunk message\nconst chunkMsg = {\n    op: \"chunk\",\n    offset: nextOffset,\n    data_b64: chunkB64\n};\n\nmsg.payload = JSON.stringify(chunkMsg);\nmsg.topic = \"devices/esp32-01/fota/cmd\";\n\n// Update status\nconst progress = ((nextOffset / totalSize) * 100).toFixed(2);\nnode.status({fill:\"yellow\", shape:\"ring\", text:`Progress: ${progress}%`});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 840,
+        "y": 1680,
+        "wires": [
+            [
+                "9cdbd15338089230"
+            ]
+        ]
+    },
+    {
+        "id": "024f57b061a6f524",
+        "type": "function",
+        "z": "flow1",
+        "name": "status handlers",
+        "func": "// Function: FOTA Status Handler\n// Processes status messages from ESP32\n// Input: Decrypted msg.payload from ESP32\n\nlet status;\ntry {\n    status = msg.payload;\n} catch(e) {\n    node.error(\"Invalid status JSON: \" + msg.payload);\n    return null;\n}\n\nconst event = status.ev;\n\nswitch(event) {\n    case \"need_chunks\":\n        // ESP32 is ready for chunks\n        node.status({fill:\"blue\", shape:\"dot\", text:\"Sending chunks\"});\n        node.send([msg, null, null]); // Output 1: trigger chunk sender\n        break;\n        \n    case \"progress\":\n        // Update progress\n        const pct = status.pct || 0;\n        node.status({fill:\"yellow\", shape:\"ring\", text:`${pct.toFixed(1)}%`});\n        \n        // Continue sending chunks\n        node.send([msg, null, null]); // Output 1: trigger chunk sender\n        break;\n        \n    case \"verify_ok\":\n        // SHA256 verified successfully\n        node.status({fill:\"green\", shape:\"dot\", text:\"Verified OK\"});\n        node.warn(\"Firmware verified: \" + status.sha256_hex);\n        \n        // Send reboot command\n        const rebootMsg = {\n            topic: msg.topic.replace('/status', '/cmd'),\n            payload: JSON.stringify({ op: \"reboot\" })\n        };\n        node.send([null, rebootMsg, null]); // Output 2: reboot\n        break;\n        \n    case \"verify_fail\":\n        // Verification failed\n        node.status({fill:\"red\", shape:\"dot\", text:\"Verify failed\"});\n        node.error(\"Verification failed: \" + status.reason);\n        node.send([null, null, status]); // Output 3: error\n        break;\n        \n    case \"rebooting\":\n        // ESP32 is rebooting\n        node.status({fill:\"blue\", shape:\"dot\", text:\"Rebooting...\"});\n        node.warn(\"Device rebooting into new firmware\");\n        break;\n        \n    case \"error\":\n        // Error occurred\n        node.status({fill:\"red\", shape:\"dot\", text:\"Error\"});\n        node.error(\"FOTA Error: \" + status.reason);\n        node.send([null, null, status]); // Output 3: error\n        break;\n        \n    default:\n        node.warn(\"Unknown event: \" + event);\n}\n\nreturn null;",
+        "outputs": 3,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 620,
+        "y": 1760,
+        "wires": [
+            [
+                "99e7659aeb84065d",
+                "8950a45304bb4222"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "8950a45304bb4222",
+        "type": "debug",
+        "z": "flow1",
+        "name": "debug 7",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 860,
+        "y": 1740,
+        "wires": []
+    },
+    {
+        "id": "00c077103ea11d56",
+        "type": "debug",
+        "z": "flow1",
+        "name": "debug 9",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1060,
+        "y": 1680,
+        "wires": []
+    },
+    {
+        "id": "3272de7190edb3fe",
+        "type": "debug",
+        "z": "flow1",
+        "name": "debug 10",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1160,
+        "y": 1380,
+        "wires": []
+    },
+    {
+        "id": "abe6b9c1b6303a24",
+        "type": "function",
+        "z": "flow1",
+        "name": "function 8",
+        "func": "// Downlink encryptor for ESP32 SecureLink\n// Topic shape: devices/<deviceId>/write\n// Input:  msg.payload = object or string (plaintext to send)\n// Output: msg.payload = base64(sealed), msg.secure metadata preserved\n\n// --- CRYPTO BOOTSTRAP (works with or without require) ---\n// Option 1: Access from global context (recommended)\nlet crypto = global.get('crypto');\n\n// Option 2: If crypto is not in global context, try to use the built-in crypto\nif (!crypto && typeof global.crypto !== 'undefined') {\n  crypto = global.crypto;\n}\n\n// Validation\nif (!crypto) {\n  node.status({ fill: \"red\", shape: \"ring\", text: \"No crypto available\" });\n  node.error(\"Crypto not available. Add to settings.js: functionGlobalContext: { crypto: require('crypto') }\");\n  return null;\n}\n// ---- PSK (32 bytes) must match the ESP32 ----\nconst PSK = Buffer.from(\n  \"4968A7E8835BC6EC5BDBE15AA9E7C478E5616E33AA0CC4CADB53A81AA20FA727\",\n  \"hex\"\n);\n\n// ---- SecureLink header layout ----\nconst HDR_LEN = 1 + 1 + 2 + 8 + 8 + 12; // 32\nconst INFO    = Buffer.from(\"EcoWatt\");\nconst OFF_VER = 0, OFF_TYPE = 1, OFF_BOOT = 4, OFF_SEQ = 12, OFF_IV = 20;\n\nfunction hkdf48(ikm, salt, info){\n  const prk = crypto.createHmac(\"sha256\", salt).update(ikm).digest();\n  let T = Buffer.alloc(0), okm = Buffer.alloc(0), ctr = 0;\n  while (okm.length < 48) {\n    ctr++;\n    T = crypto.createHmac(\"sha256\", prk).update(Buffer.concat([T, info, Buffer.from([ctr])])).digest();\n    okm = Buffer.concat([okm, T]);\n  }\n  return okm.slice(0,48);\n}\nfunction deriveKeys(deviceId){\n  const salt = crypto.createHash(\"sha256\").update(deviceId).digest();\n  const okm  = hkdf48(PSK, salt, INFO);\n  return { K_enc: okm.slice(0,16), K_mac: okm.slice(16,48) };\n}\nfunction u64le(bn){\n  const b = Buffer.alloc(8); b.writeBigUInt64LE(bn); return b;\n}\n\ntry {\n  // Expect: devices/<deviceId>/write\n  const parts = (msg.topic || \"\").split(\"/\");\n  if (parts.length < 3 || parts[0] !== \"devices\" || parts[2] !== \"fota\") {\n    throw Error(`unexpected topic: ${msg.topic}`);\n  }\n  const deviceId = parts[1];\n\n  // Serialize plaintext\n  let plain;\n  if (typeof msg.payload === \"string\") plain = Buffer.from(msg.payload, \"utf8\");\n  else plain = Buffer.from(JSON.stringify(msg.payload ?? {}), \"utf8\");\n\n  // Derive keys\n  const { K_enc, K_mac } = deriveKeys(deviceId);\n\n  // Per-device counters for downlink (anti-replay at device side)\n  const ck = `down:${deviceId}`;\n  let st = context.get(ck) || { boot: 0n, seq: 0n };\n  if (st.boot === 0n) { st.boot = BigInt(Date.now()); st.seq = 0n; }\n  st.seq += 1n; context.set(ck, st);\n\n  // Build header\n  const hdr = Buffer.alloc(HDR_LEN, 0);\n  hdr.writeUInt8(1, OFF_VER);                        // version\n  hdr.writeUInt8((msg.secureType ?? 2) & 0xFF, OFF_TYPE); // type: 2=command by default\n  u64le(st.boot).copy(hdr, OFF_BOOT);\n  u64le(st.seq).copy(hdr, OFF_SEQ);\n  const iv12 = crypto.randomBytes(12);\n  iv12.copy(hdr, OFF_IV);\n\n  // AES-128-CTR encrypt\n  const iv16 = Buffer.concat([iv12, Buffer.from([0,0,0,0])]);\n  const enc = crypto.createCipheriv(\"aes-128-ctr\", K_enc, iv16);\n  const ct  = Buffer.concat([enc.update(plain), enc.final()]);\n\n  // HMAC(header || ct)\n  const mac = crypto.createHmac(\"sha256\", K_mac).update(hdr).update(ct).digest();\n\n  // Assemble & base64\n  const sealed = Buffer.concat([hdr, ct, mac]);\n  msg.payload = sealed.toString(\"base64\");\n\n  // keep topic as-is (devices/<id>/write) for your MQTT out\n  msg.secure = { deviceId, type: (msg.secureType ?? 2), boot: st.boot.toString(), seq: st.seq.toString(), ct_len: ct.length };\n  return msg;\n\n} catch (e) {\n  node.status({fill:\"red\",shape:\"ring\",text:e.message});\n  node.warn(`[SEC] downlink error: ${e.message}`);\n  return null;\n}\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 880,
+        "y": 1440,
+        "wires": [
+            [
+                "3272de7190edb3fe",
+                "059ff7e1d46bd25c"
+            ]
+        ]
+    },
+    {
+        "id": "189ea675c35d691e",
+        "type": "debug",
+        "z": "flow1",
+        "name": "debug 11",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1220,
+        "y": 2060,
+        "wires": []
+    },
+    {
+        "id": "9cdbd15338089230",
+        "type": "delay",
+        "z": "flow1",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "1",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 720,
+        "y": 1540,
+        "wires": [
+            [
+                "00c077103ea11d56",
+                "abe6b9c1b6303a24"
             ]
         ]
     },
