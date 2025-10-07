@@ -77,8 +77,12 @@ bool Uploader::uploadBatch(std::vector<Record>& batch) {
   mqttJson = toBase64(sealed.data(), sealed.size());
   Serial.println(mqttJson);
 
-  if (mqttJson.length() > 0) {
-    client.setBufferSize((uint16_t)(mqttJson.length() + 64));
+  uint16_t currentBuffer = client.getBufferSize();
+  uint16_t neededBuffer = (uint16_t)(mqttJson.length() + 256);
+  
+  if (neededBuffer > currentBuffer) {
+    Serial.printf("[UPLOAD] Increasing buffer: %u -> %u\n", currentBuffer, neededBuffer);
+    client.setBufferSize(neededBuffer);
   }
 
   // Publish exactly as you do now

@@ -58,6 +58,9 @@ String t_status = String("devices/") + DEV_ID + "/status";
 String t_config = String("devices/") + DEV_ID + "/config";
 String t_ack = String("devices/") + DEV_ID + "/ack";
 String t_write = String("devices/") + DEV_ID + "/write";
+String t_fota_cmd = String("devices/") + DEV_ID + "/fota/cmd";
+String t_fota_status = String("devices/") + DEV_ID + "/fota/status";
+String t_fota_log = String("devices/") + DEV_ID + "/fota/log";
 
 const char *MQTT_USER = ""; // optional
 const char *MQTT_PASS = ""; // optional
@@ -67,6 +70,7 @@ bool writecommandreceived = false;
 WiFiClient espClient;
 PubSubClient client(espClient);
 SecureLink sec;
+FotaManager fota;
 
 void main_task(void *pvParameters)
 {
@@ -154,18 +158,19 @@ void main_task(void *pvParameters)
 }
 
 void CloudConnect(void *pvParameters)
-{
-
+{ 
+  
   wifiConnect();
   client.setServer(MQTT_HOST, MQTT_PORT);
-  client.setBufferSize(4096);  
+    
   client.setCallback(handleCmd);
   // error logging
   uint32_t last = 0;
   uint32_t now = 0;
   for (;;)
   {
-    vTaskDelay(10);
+    vTaskDelay(1);
+    client.loop();
     now = millis();
     if(now-last >= CONNECTION_CHECK_PERIOD_MS)
     {
@@ -179,7 +184,7 @@ void CloudConnect(void *pvParameters)
       {
         ensureMqtt();
       }
-      client.loop();
+      
     }
   }
   // handle mqtt requests
@@ -204,13 +209,23 @@ void setup()
   Serial.begin(115200);
   delay(200);
   wifiConnect();
+  client.setBufferSize(16384);
   EEPROM.begin(512);
   //first_time_provision(); // only ONCE
+
+
   if (!sec.begin(DEV_ID)) {
     Serial.println("SecureLink init failed (PSK missing?)");
     while(1) delay(1000);
   }
-
+  bool selftest_pass = true; // put any sanity checks here (sensors, EEPROM read, minimal task run, etc.)
+  fota.bootSelfTestFinalize(selftest_pass);
+  if (selftest_pass) {
+    publishFotaJson("{\"ev\":\"boot_ok\",\"version\":\"(fill from NVS or compile-time)\"}");
+  } else {
+    // If failing here, bootloader will roll back automatically
+    // You can still try to publish, but reboot happens quickly.
+  }
   try
   {
 #if SIMULATE
@@ -266,7 +281,7 @@ void setup()
   xTaskCreatePinnedToCore(
       CloudConnect, /* Task function. */
       "Task2",      /* name of task. */
-      10000,        /* Stack size of task */
+      20000,        /* Stack size of task */
       NULL,         /* parameter of the task */
       1,            /* priority of the task */
       &Task2,       /* Task handle to keep track of created task */
