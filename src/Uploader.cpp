@@ -49,7 +49,7 @@ bool Uploader::uploadBatch(std::vector<Record>& batch) {
     hex += buf;
   }
 
-  // Build JSON payload for MQTT so subscribers (e.g., MQTTX) can parse it
+  // Build JSON payload for MQTT 
   String mqttJson;
   mqttJson.reserve(hex.length() + 256);
   mqttJson += "{";
@@ -66,7 +66,7 @@ bool Uploader::uploadBatch(std::vector<Record>& batch) {
   mqttJson += "\"payload_hex\":\""; mqttJson += hex; mqttJson += "\"";
   mqttJson += "}";
 
-  // Ensure PubSubClient buffer is large enough, then publish JSON
+  
   // Seal (AES-CTR + HMAC) and base64 it into mqttJson
   std::vector<uint8_t> sealed;
   if (!sec.seal(/*type*/1, (const uint8_t*)mqttJson.c_str(),

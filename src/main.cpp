@@ -77,12 +77,16 @@ void main_task(void *pvParameters)
   for (;;)
   {
     
-    g_poller->read(SLAVE_ID, START_ADDR, QTY_REGS);
+
+    //g_poller->read(SLAVE_ID, START_ADDR, QTY_REGS);
+
+
     if (writecommandreceived)
     {
       g_poller->write(SLAVE_ID, 0x0009, 0x0010); // Example value to write
       writecommandreceived = false;
     }
+
     static uint32_t last = 0;
     uint32_t now = millis();
 
@@ -107,31 +111,10 @@ void main_task(void *pvParameters)
                         newRecords[i].raw.size());  
         }
         Serial.printf("[MAIN] Drained %u new records from buffer (dropped %u)\n", (unsigned)newRecords.size(), (unsigned)g_buffer->droppedCount());
-        Serial.println("=== REAL INVERTER DATA COMPRESSION REPORT (WITH TIMESTAMPS) ===");
-        Serial.printf("Compression Method Used: Delta Encoding with Timestamp Compression\n");
         Serial.printf("Number of Real Inverter Samples: %u\n", (unsigned)newRecords.size());
         uint32_t original_size = newRecords.size() * sizeof(Record);
         Serial.printf("Original Payload Size: %u bytes\n", original_size);
 
-        // Measure compression time
-        uint32_t compress_start = micros();
-        std::vector<uint8_t> compressed = Packetizer::finalizeBlock(newRecords);
-        uint32_t compress_time = micros() - compress_start;
-
-        Serial.printf("Compressed Payload Size: %u bytes\n", (unsigned)compressed.size());
-        float compression_ratio = (float)original_size / (float)compressed.size();
-        Serial.printf("Compression Ratio: %.2f:1 (%.1f%% reduction)\n",
-                      compression_ratio,
-                      (1.0f - (float)compressed.size() / (float)original_size) * 100.0f);
-        Serial.printf("CPU Time: %u microseconds\n", compress_time);
-
-        std::vector<Record> decompressed = Compression::decompressDelta(compressed);
-        bool lossless = (decompressed.size() == newRecords.size());
-        Serial.printf("Lossless Recovery Verification: %s\n", lossless ? "PASSED" : "FAILED");
-
-        // --- Packetizer: encrypt, chunk ---
-        // std::vector<uint8_t> encrypted = Packetizer::encryptAndMac(compressed);
-        // auto chunks = Packetizer::chunkData(encrypted, 32);
 
         bool uploadSuccess = g_uploader->uploadBatch(newRecords);
         if (!uploadSuccess)
@@ -151,9 +134,7 @@ void main_task(void *pvParameters)
 
       ApplyConfig();
       
-    }
-    //if write cmd received process it
-    
+    } 
   }
 }
 
@@ -187,9 +168,7 @@ void CloudConnect(void *pvParameters)
       
     }
   }
-  // handle mqtt requests
 
-  // validate config changes.
 }
 
 
@@ -212,13 +191,12 @@ void setup()
   client.setBufferSize(16384);
   EEPROM.begin(512);
   //first_time_provision(); // only ONCE
-
-
+  if (!fota.begin()) { Serial.println("[FOTA] init failed"); }
   if (!sec.begin(DEV_ID)) {
-    Serial.println("SecureLink init failed (PSK missing?)");
+    Serial.println("SecureLink init failed");
     while(1) delay(1000);
   }
-  bool selftest_pass = true; // put any sanity checks here (sensors, EEPROM read, minimal task run, etc.)
+  bool selftest_pass = true; 
   fota.bootSelfTestFinalize(selftest_pass);
   if (selftest_pass) {
     publishFotaJson("{\"ev\":\"boot_ok\",\"version\":\"(fill from NVS or compile-time)\"}");
@@ -228,45 +206,23 @@ void setup()
   }
   try
   {
-#if SIMULATE
-    g_transport = new CloudTransport(String(API_READ_URL), String(API_WRITE_URL), String(AUTH_HEADER), REQ_TIMEOUT_MS);
-#else
-    g_transport = new Rs485Transport(RS485_SERIAL, RS485_BAUD, RS485_DE_RE_PIN, REQ_TIMEOUT_MS);
-#endif
-    if (!g_transport)
-    {
-      Serial.println("Failed to create transport");
-      return;
-    }
+    #if SIMULATE
+      g_transport = new CloudTransport(String(API_READ_URL), String(API_WRITE_URL), String(AUTH_HEADER), REQ_TIMEOUT_MS);
+    #else
+      g_transport = new Rs485Transport(RS485_SERIAL, RS485_BAUD, RS485_DE_RE_PIN, REQ_TIMEOUT_MS);
+    #endif
 
-    g_client = new InverterClient(*g_transport);
-    if (!g_client)
-    {
-      Serial.println("Failed to create inverter client");
-      return;
-    }
-
-    // NEW: buffer + acquisition + uploader - create buffer first
+    g_client = new InverterClient(*g_transport);  
     g_buffer = new RingBuffer(BUFFER_CAPACITY);
-    //g_acq = new Acquisition(*g_client);
     g_uploader = new Uploader(String(API_UPLOAD_URL), String(AUTH_HEADER));
-
     g_poller = new Poller(*g_client, POLL_PERIOD_MS, *g_buffer);
-    if (!g_poller)
-    {
-      Serial.println("Failed to create poller");
-      return;
-    }
-
-    Serial.println("Compression enabled: using delta encoding for uploads.");
-    Serial.println("Setup done successfully.");
   }
   catch (const std::exception &e)
   {
     Serial.printf("Setup failed with error: %s\n", e.what());
   }
 
-  // create a task that will be executed in the Task1code() function, with priority 1 and executed on core 0
+  //main task acquisition
   xTaskCreatePinnedToCore(
       main_task, /* Task function. */
       "Task1",   /* name of task. */
@@ -277,11 +233,11 @@ void setup()
       1);        /* pin task to core 0 */
   delay(500);
 
-  // create a task that will be executed in the Task2code() function, with priority 1 and executed on core 1
+  // connectivity task
   xTaskCreatePinnedToCore(
       CloudConnect, /* Task function. */
       "Task2",      /* name of task. */
-      20000,        /* Stack size of task */
+      40000,        /* Stack size of task */
       NULL,         /* parameter of the task */
       1,            /* priority of the task */
       &Task2,       /* Task handle to keep track of created task */
