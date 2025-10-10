@@ -252,86 +252,286 @@ INDEX_HTML = """
   <title>ESP32 Console — FOTA, Config, Write & Telemetry</title>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <style>
-    body{font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI; margin: 2rem; color:#111;}
-    h1{margin:0 0 1rem 0}
+    body{font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI; margin: 2rem; color:#111; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;}
+    h1{margin:0 0 1rem 0; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.3);}
     .grid{display:grid; grid-template-columns: 1fr 1fr; gap:16px}
     @media(max-width: 1200px){ .grid{grid-template-columns: 1fr} }
-    .card{border:1px solid #ddd; border-radius:12px; padding:16px; margin-bottom:16px; box-shadow:0 1px 2px rgba(0,0,0,0.04)}
-    button{padding:8px 14px; border-radius:10px; border:1px solid #ccc; background:#fafafa; cursor:pointer}
-    button:hover{background:#f0f0f0}
+    .card{border:1px solid #ddd; border-radius:12px; padding:16px; margin-bottom:16px; box-shadow:0 4px 8px rgba(0,0,0,0.1); background: white;}
+    button{padding:8px 14px; border-radius:10px; border:1px solid #ccc; background:#fafafa; cursor:pointer; transition: all 0.2s;}
+    button:hover{background:#4a90e2; color: white; transform: translateY(-1px);}
     table{border-collapse: collapse; width:100%;}
     th,td{border-bottom:1px solid #eee; padding:8px; text-align:left; vertical-align:top}
     .muted{color:#666; font-size:12px}
-    input[type=file], input[type=text], input[type=number]{padding:8px}
+    input[type=file], input[type=text], input[type=number]{padding:8px; border-radius: 6px; border: 1px solid #ddd;}
     progress{width: 220px;}
     code{background:#f6f8fa; padding:2px 6px; border-radius:6px}
     .kv{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
     .kv label{display:flex; align-items:center; gap:6px}
     .stack{display:flex; flex-direction:column; gap:8px}
+
+    /* Solar Dashboard Styles */
+    .status-grid{display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 16px 0;}
+    .status-card{padding: 16px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.15);}
+    .status-card.voltage{background: linear-gradient(135deg, #667eea, #764ba2);}
+    .status-card.current{background: linear-gradient(135deg, #f093fb, #f5576c);}
+    .status-card.power{background: linear-gradient(135deg, #4facfe, #00f2fe);}
+    .status-card.frequency{background: linear-gradient(135deg, #43e97b, #38f9d7);}
+    .status-value{font-size: 2.5rem; font-weight: bold; margin-bottom: 4px;}
+    .status-label{font-size: 0.9rem; opacity: 0.9;}
+
+    .pv-section{margin: 20px 0;}
+    .pv-grid{display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;}
+    .pv-card{background: linear-gradient(135deg, #ffecd2, #fcb69f); padding: 12px; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
+    .pv-title{font-weight: bold; margin-bottom: 8px; color: #8b4513;}
+    .pv-values{font-size: 0.9rem; color: #d2691e;}
+
+    .system-grid{display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 16px 0;}
+    .system-item{display: flex; justify-content: space-between; padding: 12px; background: linear-gradient(135deg, #e3ffe7, #d9e7ff); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
+    .system-label{font-weight: 500; color: #2d3748;}
+    .system-value{font-weight: bold; color: #4a90e2;}
+
+    .charts-section{margin: 20px 0;}
+    .charts-grid{display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px;}
+    .chart-container{padding: 16px; background: #f8f9fa; border-radius: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); position: relative;}
+    .chart-container canvas{width: 100%; height: auto;}
+
+    details summary{padding: 8px 12px; background: #4a90e2; color: white; border-radius: 6px; margin-bottom: 8px;}
+    details[open] summary{border-radius: 6px 6px 0 0;}
+
+    /* Enhanced FOTA Section */
+    .fota-card{background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;}
+    .fota-card h2{color: white; margin-bottom: 20px;}
+    .file-upload-area{background: rgba(255,255,255,0.1); border: 2px dashed rgba(255,255,255,0.3); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 16px;}
+    .file-info{color: rgba(255,255,255,0.8); margin-top: 8px; font-size: 14px;}
+    .fota-settings{display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;}
+    .setting-group{display: flex; flex-direction: column;}
+    .setting-group label{color: rgba(255,255,255,0.9); margin-bottom: 4px; font-weight: 500;}
+    .setting-input{padding: 8px 12px; border-radius: 8px; border: none; background: rgba(255,255,255,0.9); color: #333;}
+    .fota-actions{display: flex; align-items: center; gap: 12px; flex-wrap: wrap;}
+    .primary-btn{background: linear-gradient(135deg, #4facfe, #00f2fe); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s;}
+    .primary-btn:hover{transform: translateY(-2px); box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);}
+    .secondary-btn{background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.3s;}
+    .secondary-btn:hover{background: rgba(255,255,255,0.3);}
+    .fota-progress{display: none; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.2); overflow: hidden;}
+    .log-container{margin-top: 16px; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; font-family: 'Courier New', monospace; font-size: 12px; color: rgba(255,255,255,0.9);}
+
+    /* Enhanced Config Section */
+    .config-card{background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;}
+    .config-card h2{color: white; margin-bottom: 20px;}
+    .config-form{background: rgba(255,255,255,0.1); border-radius: 12px; padding: 20px;}
+    .config-grid{display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;}
+    .config-field{display: flex; flex-direction: column;}
+    .config-field label{color: rgba(255,255,255,0.9); margin-bottom: 4px; font-weight: 500; font-size: 14px;}
+    .config-input{padding: 8px 12px; border-radius: 8px; border: none; background: rgba(255,255,255,0.9); color: #333;}
+    .config-actions{display: flex; gap: 12px;}
+    .config-btn{background: rgba(255,255,255,0.9); color: #43e97b; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s;}
+    .config-btn:hover{background: white; transform: translateY(-1px);}
+
+    /* Enhanced Write Section */
+    .write-card{background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;}
+    .write-card h2{color: white; margin-bottom: 20px;}
+    .write-form{background: rgba(255,255,255,0.1); border-radius: 12px; padding: 20px;}
+    .write-fields{display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end;}
+    .write-field{display: flex; flex-direction: column;}
+    .write-field label{color: rgba(255,255,255,0.9); margin-bottom: 4px; font-weight: 500;}
+    .write-input{padding: 8px 12px; border-radius: 8px; border: none; background: rgba(255,255,255,0.9); color: #333;}
+    .write-btn{background: rgba(255,255,255,0.9); color: #f5576c; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s; height: fit-content;}
+    .write-btn:hover{background: white; transform: translateY(-1px);}
   </style>
 </head>
 <body>
   <h1>ESP32 Console — FOTA, Config, Write & Telemetry</h1>
 
   <div class="grid">
-    <div class="card">
+    <div class="card fota-card">
       <h2>Firmware Upload & Update</h2>
       <form id="uploadForm">
-        <input type="file" id="fw" accept=".bin" required />
-        <div class="kv" style="margin-top:8px">
-          <label>Version <input type="text" id="version" value="v1.0.0"/></label>
-          <label>Chunk <input type="number" id="chunk" value="4096" min="512" step="512"/></label>
+        <div class="file-upload-area">
+          <input type="file" id="fw" accept=".bin" required />
+          <div class="file-info">Select .bin firmware file</div>
         </div>
-        <div style="margin-top:12px">
-          <button type="submit">Start FOTA</button>
-          <progress id="prog" value="0" max="100" style="vertical-align: middle; display:none"></progress>
-          <button type="button" id="rebootBtn" style="margin-left:8px">Send Reboot</button>
+        <div class="fota-settings">
+          <div class="setting-group">
+            <label>Version</label>
+            <input type="text" id="version" value="v1.0.0" class="setting-input"/>
+          </div>
+          <div class="setting-group">
+            <label>Chunk Size</label>
+            <input type="number" id="chunk" value="4096" min="512" step="512" class="setting-input"/>
+          </div>
+        </div>
+        <div class="fota-actions">
+          <button type="submit" class="primary-btn">Start FOTA</button>
+          <progress id="prog" value="0" max="100" class="fota-progress"></progress>
+          <button type="button" id="rebootBtn" class="secondary-btn">Send Reboot</button>
         </div>
       </form>
-      <div class="muted" style="margin-top:8px">FOTA publishes sealed <code>manifest → chunk(s) → finish</code> to <code>{{topic_cmd}}</code></div>
-      <div id="fotaLog" style="margin-top:12px; max-height:240px; overflow:auto; font-family:ui-monospace,monospace; font-size:12px; background:#f8f9fb; padding:8px; border-radius:8px;"></div>
+      <div style="margin-top: 16px; color: rgba(255,255,255,0.8); font-size: 13px;">FOTA publishes sealed <code>manifest → chunk(s) → finish</code> to <code>{{topic_cmd}}</code></div>
+      <div id="fotaLog" class="log-container"></div>
     </div>
 
-    <div class="card">
-      <h2>Device Config</h2>
-      <div class="muted">Sends a sealed JSON to <code>{{topic_config}}</code>. Only changed fields are updated in the form; the server merges and sends full config.</div>
-      <form id="cfgForm" class="stack" style="margin-top:8px">
-        <div class="kv">
-          <label>poll_period_ms <input type="number" id="poll_period_ms" min="100" step="100"></label>
-          <label>upload_period_ms <input type="number" id="upload_period_ms" min="100" step="100"></label>
+    <div class="card config-card">
+      <h2>Device Configuration</h2>
+      <div style="margin-bottom: 16px; color: rgba(255,255,255,0.8); font-size: 13px;">Sends a sealed JSON to <code>{{topic_config}}</code>. Only changed fields are updated in the form; the server merges and sends full config.</div>
+      <form id="cfgForm" class="config-form">
+        <div class="config-grid">
+          <div class="config-field">
+            <label>Poll Period (ms)</label>
+            <input type="number" id="poll_period_ms" min="100" step="100" class="config-input" placeholder="10000"/>
+          </div>
+          <div class="config-field">
+            <label>Upload Period (ms)</label>
+            <input type="number" id="upload_period_ms" min="100" step="100" class="config-input" placeholder="20000"/>
+          </div>
+          <div class="config-field">
+            <label>Buffer Capacity</label>
+            <input type="number" id="buffer_capacity" min="1" step="1" class="config-input" placeholder="256"/>
+          </div>
+          <div class="config-field">
+            <label>Register Request ID</label>
+            <input type="number" id="reg_req_id_1" min="0" step="1" class="config-input" placeholder="1023"/>
+          </div>
         </div>
-        <div class="kv">
-          <label>buffer_capacity <input type="number" id="buffer_capacity" min="1" step="1"></label>
-          <label>reg_req_id_1 <input type="number" id="reg_req_id_1" min="0" step="1"></label>
-        </div>
-        <div>
-          <button type="submit">Send Config</button>
-          <button type="button" id="loadCfgBtn" style="margin-left:8px">Load Current</button>
+        <div class="config-actions">
+          <button type="submit" class="config-btn">Send Config</button>
+          <button type="button" id="loadCfgBtn" class="config-btn">Load Current</button>
         </div>
       </form>
-      <div id="cfgLog" style="margin-top:12px; max-height:160px; overflow:auto; font-family:ui-monospace,monospace; font-size:12px; background:#f8f9fb; padding:8px; border-radius:8px;"></div>
+      <div id="cfgLog" class="log-container"></div>
     </div>
   </div>
 
-  <div class="card">
+  <div class="card write-card">
     <h2>Write Register</h2>
-    <div class="muted">Publishes a sealed JSON to <code>{{topic_write}}</code> with address & value.</div>
-    <form id="writeForm" class="kv" style="margin-top:8px">
-      <label>address <input type="number" id="wr_address" min="0" step="1" required></label>
-      <label>value <input type="number" id="wr_value" step="1" required></label>
-      <button type="submit">Send Write</button>
+    <div style="margin-bottom: 16px; color: rgba(255,255,255,0.8); font-size: 13px;">Publishes a sealed JSON to <code>{{topic_write}}</code> with address & value.</div>
+    <form id="writeForm" class="write-form">
+      <div class="write-fields">
+        <div class="write-field">
+          <label>Register Address</label>
+          <input type="number" id="wr_address" min="0" step="1" required class="write-input" placeholder="0"/>
+        </div>
+        <div class="write-field">
+          <label>Register Value</label>
+          <input type="number" id="wr_value" step="1" required class="write-input" placeholder="0"/>
+        </div>
+        <button type="submit" class="write-btn">Send Write</button>
+      </div>
     </form>
-    <div id="writeLog" style="margin-top:12px; max-height:120px; overflow:auto; font-family:ui-monospace,monospace; font-size:12px; background:#f8f9fb; padding:8px; border-radius:8px;"></div>
+    <div id="writeLog" class="log-container"></div>
   </div>
 
+  <!-- Solar Data Dashboard -->
   <div class="card">
-    <h2>Live Data</h2>
-    <div class="muted">Decoding sealed <code>{{topic_data}}</code> uplink records.</div>
-    <table id="dataTable" style="margin-top:12px">
-      <thead><tr><th>Timestamp (ms)</th><th>Registers (decoded)</th></tr></thead>
-      <tbody></tbody>
-    </table>
-    <div class="muted">Showing most recent 50 records.</div>
+    <h2>Live Solar Data Dashboard</h2>
+    <div class="muted">Real-time solar inverter telemetry from <code>{{topic_data}}</code></div>
+    
+    <!-- Status Overview -->
+    <div class="status-grid">
+      <div class="status-card voltage">
+        <div class="status-value" id="currentVoltage">--</div>
+        <div class="status-label">AC Voltage (V)</div>
+      </div>
+      <div class="status-card current">
+        <div class="status-value" id="currentCurrent">--</div>
+        <div class="status-label">AC Current (A)</div>
+      </div>
+      <div class="status-card power">
+        <div class="status-value" id="currentPower">--</div>
+        <div class="status-label">AC Power (W)</div>
+      </div>
+      <div class="status-card frequency">
+        <div class="status-value" id="currentFreq">--</div>
+        <div class="status-label">Frequency (Hz)</div>
+      </div>
+    </div>
+
+    <!-- PV Panels Section -->
+    <div class="pv-section">
+      <h3>PV Panel Status</h3>
+      <div class="pv-grid">
+        <div class="pv-card">
+          <div class="pv-title">PV1</div>
+          <div class="pv-values">
+            <span id="pv1Voltage">--</span> • <span id="pv1Current">--</span>
+          </div>
+        </div>
+        <div class="pv-card">
+          <div class="pv-title">PV2</div>
+          <div class="pv-values">
+            <span id="pv2Voltage">--</span> • <span id="pv2Current">--</span>
+          </div>
+        </div>
+        <div class="pv-card">
+          <div class="pv-title">PV3</div>
+          <div class="pv-values">
+            <span id="pv3Voltage">--</span> • <span id="pv3Current">--</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Status -->
+    <div class="system-grid">
+      <div class="system-item">
+        <span class="system-label">Temperature:</span>
+        <span id="sysTemp" class="system-value">--</span>
+      </div>
+      <div class="system-item">
+        <span class="system-label">Export Ratio:</span>
+        <span id="exportRatio" class="system-value">--</span>
+      </div>
+      <div class="system-item">
+        <span class="system-label">Last Update:</span>
+        <span id="lastUpdate" class="system-value">--:--:--</span>
+      </div>
+    </div>
+
+    <!-- Live Charts -->
+    <div class="charts-section">
+      <h3>Live Charts - All 10 Registers</h3>
+      <div class="charts-grid">
+        <div class="chart-container">
+          <canvas id="voltageChart" width="350" height="180"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="currentChart" width="350" height="180"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="frequencyChart" width="350" height="180"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="powerChart" width="350" height="180"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="pv1VChart" width="350" height="180"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="pv1IChart" width="350" height="180"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="pv2VChart" width="350" height="180"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="pv2IChart" width="350" height="180"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="pv3VChart" width="350" height="180"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="temperatureChart" width="350" height="180"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Raw Data Table -->
+    <details style="margin-top: 20px;">
+      <summary style="cursor: pointer; font-weight: bold;">Raw Data Records</summary>
+      <table id="dataTable" style="margin-top:12px">
+        <thead><tr><th>Timestamp</th><th>V(AC)</th><th>I(AC)</th><th>Freq</th><th>PV1-V</th><th>PV1-I</th><th>PV2-V</th><th>PV2-I</th><th>PV3-V</th><th>PV3-I</th><th>Temp</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="muted">Showing most recent 50 records.</div>
+    </details>
   </div>
 
 <script>
@@ -353,23 +553,285 @@ async function pollEvents(){
     }
   }catch{}
 }
+// Chart data storage for all 10 registers
+let chartData = {
+  voltage: [],
+  current: [],
+  frequency: [],
+  power: [],
+  pv1V: [],
+  pv1I: [],
+  pv2V: [],
+  pv2I: [],
+  pv3V: [],
+  temperature: []
+};
+let timeLabels = [];
+
+
+
 async function pollData(){
   try{
     const r = await fetch('/api/data?limit=50'); const j = await r.json();
+    const records = j.records || [];
+    
+    if (records.length > 0) {
+      const latest = records[records.length - 1];
+      const regs = latest.registers || {};
+      
+      // Update current values display
+      const voltage = (regs[0]?.value || 0) * 0.1; // Scale to volts
+      const current = (regs[1]?.value || 0) * 0.01; // Scale to amps  
+      const frequency = (regs[2]?.value || 0) * 0.01; // Scale to Hz
+      const pv1_voltage = (regs[3]?.value || 0) * 0.1;
+      const pv1_current = (regs[4]?.value || 0) * 0.01;
+      const pv2_voltage = (regs[5]?.value || 0) * 0.1;
+      const pv2_current = (regs[6]?.value || 0) * 0.01;
+      const pv3_voltage = (regs[7]?.value || 0) * 0.1;
+      const pv3_current = (regs[8]?.value || 0) * 0.01;
+      const temperature = (regs[9]?.value || 0) * 0.1;
+      const power = voltage * current;
+
+      // Update status cards
+      document.getElementById('currentVoltage').textContent = voltage.toFixed(1);
+      document.getElementById('currentCurrent').textContent = current.toFixed(2);
+      document.getElementById('currentPower').textContent = Math.round(power);
+      document.getElementById('currentFreq').textContent = frequency.toFixed(1);
+
+      // Update PV panels
+      document.getElementById('pv1Voltage').textContent = pv1_voltage.toFixed(1) + 'V';
+      document.getElementById('pv1Current').textContent = pv1_current.toFixed(2) + 'A';
+      document.getElementById('pv2Voltage').textContent = pv2_voltage.toFixed(1) + 'V';
+      document.getElementById('pv2Current').textContent = pv2_current.toFixed(2) + 'A';
+      document.getElementById('pv3Voltage').textContent = pv3_voltage.toFixed(1) + 'V';
+      document.getElementById('pv3Current').textContent = pv3_current.toFixed(2) + 'A';
+
+      // Update system status
+      document.getElementById('sysTemp').textContent = temperature.toFixed(1) + '°C';
+      const exportRatio = power > 0 ? Math.min(100, (power / 2000 * 100)) : 0;
+      document.getElementById('exportRatio').textContent = exportRatio.toFixed(0) + '%';
+      document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+
+      // Update all chart data with real values
+      const now = new Date().toLocaleTimeString();
+      chartData.voltage.push(voltage);
+      chartData.current.push(current);
+      chartData.frequency.push(frequency);
+      chartData.power.push(power);
+      chartData.pv1V.push(pv1_voltage);
+      chartData.pv1I.push(pv1_current);
+      chartData.pv2V.push(pv2_voltage);
+      chartData.pv2I.push(pv2_current);
+      chartData.pv3V.push(pv3_voltage);
+      chartData.temperature.push(temperature);
+      timeLabels.push(now);
+      
+      // Keep only last 20 points for all charts
+      if (timeLabels.length > 20) {
+        Object.keys(chartData).forEach(key => chartData[key].shift());
+        timeLabels.shift();
+      }
+      
+      updateAllCharts();
+    }
+
+    // Update raw data table
     const tb = document.querySelector('#dataTable tbody'); tb.innerHTML='';
-    (j.records || []).slice(-50).reverse().forEach(rec=>{
+    records.slice(-50).reverse().forEach(rec=>{
       const tr = document.createElement('tr');
-      const td1 = document.createElement('td'); td1.textContent = rec.timestamp;
-      const td2 = document.createElement('td');
       const regs = rec.registers || {};
-      td2.textContent = Object.entries(regs).map(([k,v])=>`${k}: ${v.value} ${v.unit}`).join('  |  ');
-      tr.appendChild(td1); tr.appendChild(td2); tb.appendChild(tr);
+      
+      const cells = [
+        new Date(rec.timestamp).toLocaleString(),
+        ((regs[0]?.value || 0) * 0.1).toFixed(1), // AC Voltage
+        ((regs[1]?.value || 0) * 0.01).toFixed(2), // AC Current
+        ((regs[2]?.value || 0) * 0.01).toFixed(1), // Frequency
+        ((regs[3]?.value || 0) * 0.1).toFixed(1), // PV1 Voltage
+        ((regs[4]?.value || 0) * 0.01).toFixed(2), // PV1 Current
+        ((regs[5]?.value || 0) * 0.1).toFixed(1), // PV2 Voltage
+        ((regs[6]?.value || 0) * 0.01).toFixed(2), // PV2 Current
+        ((regs[7]?.value || 0) * 0.1).toFixed(1), // PV3 Voltage
+        ((regs[8]?.value || 0) * 0.01).toFixed(2), // PV3 Current
+        ((regs[9]?.value || 0) * 0.1).toFixed(1) // Temperature
+      ];
+      
+      cells.forEach(cellData => {
+        const td = document.createElement('td');
+        td.textContent = cellData;
+        tr.appendChild(td);
+      });
+      
+      tb.appendChild(tr);
     });
-  }catch{}
+  }catch(e){console.error('Poll data error:', e);}
 }
+
+// Update all 10 charts
+function updateAllCharts() {
+  drawChart('voltageChart', chartData.voltage, timeLabels, 'AC Voltage (V)', '#667eea');
+  drawChart('currentChart', chartData.current, timeLabels, 'AC Current (A)', '#f093fb');
+  drawChart('frequencyChart', chartData.frequency, timeLabels, 'Grid Frequency (Hz)', '#43e97b');
+  drawChart('powerChart', chartData.power, timeLabels, 'AC Power (W)', '#4facfe');
+  drawChart('pv1VChart', chartData.pv1V, timeLabels, 'PV1 Voltage (V)', '#ff9500');
+  drawChart('pv1IChart', chartData.pv1I, timeLabels, 'PV1 Current (A)', '#ff6b35');
+  drawChart('pv2VChart', chartData.pv2V, timeLabels, 'PV2 Voltage (V)', '#ffa726');
+  drawChart('pv2IChart', chartData.pv2I, timeLabels, 'PV2 Current (A)', '#ff7043');
+  drawChart('pv3VChart', chartData.pv3V, timeLabels, 'PV3 Voltage (V)', '#ffb74d');
+  drawChart('temperatureChart', chartData.temperature, timeLabels, 'Temperature (°C)', '#e53e3e');
+}
+
+function drawChart(canvasId, data, labels, title, color) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+  
+  // Clear canvas
+  ctx.clearRect(0, 0, width, height);
+  
+  // Draw background with gradient
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, '#ffffff');
+  gradient.addColorStop(1, '#f8f9fa');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+  
+  // Draw border
+  ctx.strokeStyle = '#e9ecef';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0, 0, width, height);
+  
+  if (data.length < 1) {
+    // No data message
+    ctx.fillStyle = '#6c757d';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No Data Available', width / 2, height / 2);
+    ctx.fillText(title, width / 2, 25);
+    return;
+  }
+  
+  // Find min/max for scaling
+  const minVal = Math.min(...data) * 0.98;
+  const maxVal = Math.max(...data) * 1.02;
+  const range = maxVal - minVal || 1;
+  
+  // Draw title with better styling
+  ctx.fillStyle = '#212529';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(title, width / 2, 18);
+  
+  // Draw grid lines
+  ctx.strokeStyle = '#dee2e6';
+  ctx.lineWidth = 0.5;
+  for (let i = 1; i <= 4; i++) {
+    const y = 35 + (height - 65) * i / 5;
+    ctx.beginPath();
+    ctx.moveTo(45, y);
+    ctx.lineTo(width - 15, y);
+    ctx.stroke();
+  }
+  
+  // Draw Y-axis
+  ctx.strokeStyle = '#495057';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(45, 30);
+  ctx.lineTo(45, height - 25);
+  ctx.stroke();
+  
+  // Draw X-axis
+  ctx.beginPath();
+  ctx.moveTo(45, height - 25);
+  ctx.lineTo(width - 15, height - 25);
+  ctx.stroke();
+  
+  if (data.length < 2) return;
+  
+  // Draw area under curve
+  ctx.fillStyle = color + '20'; // Add transparency
+  ctx.beginPath();
+  ctx.moveTo(45, height - 25);
+  data.forEach((value, index) => {
+    const x = 45 + (width - 60) * index / (data.length - 1);
+    const y = height - 25 - ((value - minVal) / range) * (height - 60);
+    ctx.lineTo(x, y);
+  });
+  ctx.lineTo(45 + (width - 60), height - 25);
+  ctx.closePath();
+  ctx.fill();
+  
+  // Draw data line
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  
+  data.forEach((value, index) => {
+    const x = 45 + (width - 60) * index / (data.length - 1);
+    const y = height - 25 - ((value - minVal) / range) * (height - 60);
+    
+    if (index === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  });
+  
+  ctx.stroke();
+  
+  // Draw points
+  ctx.fillStyle = color;
+  data.forEach((value, index) => {
+    const x = 45 + (width - 60) * index / (data.length - 1);
+    const y = height - 25 - ((value - minVal) / range) * (height - 60);
+    ctx.beginPath();
+    ctx.arc(x, y, 2.5, 0, 2 * Math.PI);
+    ctx.fill();
+  });
+  
+  // Draw Y-axis labels
+  ctx.fillStyle = '#6c757d';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const value = minVal + (range * (4 - i) / 4);
+    const y = 35 + (height - 65) * i / 5;
+    ctx.fillText(value.toFixed(1), 40, y + 3);
+  }
+  
+  // Draw current value box
+  if (data.length > 0) {
+    const currentVal = data[data.length - 1];
+    ctx.fillStyle = color;
+    ctx.fillRect(width - 65, 3, 60, 20);
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(currentVal.toFixed(1), width - 35, 16);
+  }
+  
+  // Draw time labels (first and last)
+  if (labels.length >= 2) {
+    ctx.fillStyle = '#6c757d';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'left';
+    const firstTime = labels[0].split(':').slice(1, 3).join(':'); // Remove seconds for space
+    ctx.fillText(firstTime, 47, height - 10);
+    ctx.textAlign = 'right';
+    const lastTime = labels[labels.length - 1].split(':').slice(1, 3).join(':');
+    ctx.fillText(lastTime, width - 17, height - 10);
+  }
+}
+
 setInterval(pollEvents, 1500);
 setInterval(pollData, 1500);
 pollEvents(); pollData();
+
+// Initialize empty charts
+updateAllCharts();
 
 document.getElementById('rebootBtn').onclick = async ()=>{
   const r = await fetch('/api/reboot', {method:'POST'}); const j = await r.json();
