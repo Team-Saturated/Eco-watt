@@ -50,3 +50,5 @@ extern const uint16_t MQTT_PORT;
 
 #define WRITE 1
 #define READ 0
+extern uint16_t WRITE_ADDR;
+extern uint16_t WRITE_VALUE;

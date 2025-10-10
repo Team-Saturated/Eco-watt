@@ -115,6 +115,7 @@ void Poller::write(uint8_t slave, uint16_t addr, uint16_t value) {
 
   if (res.ok) {
     Serial.print("Write works");
+    client.publish(t_ack.c_str(), res.error.c_str(), true);
     }
   else {
     client.publish(t_ack.c_str(), res.error.c_str(), true);

@@ -52,6 +52,9 @@ uint16_t REG_REQ_ID_1 = 0b0000001111111111;
 const char *MQTT_HOST = "broker.emqx.io"; // or cloud host
 const uint16_t MQTT_PORT = 1883;
 
+uint16_t WRITE_ADDR = 0x0009;
+uint16_t WRITE_VALUE = 0x03FF;
+
 const char *DEV_ID = "esp32-01";
 String t_data = String("devices/") + DEV_ID + "/data/dulmin";
 String t_status = String("devices/") + DEV_ID + "/status";
@@ -83,7 +86,7 @@ void main_task(void *pvParameters)
 
     if (writecommandreceived)
     {
-      g_poller->write(SLAVE_ID, 0x0009, 0x0010); // Example value to write
+      g_poller->write(SLAVE_ID, WRITE_ADDR, WRITE_VALUE); // Example value to write
       writecommandreceived = false;
     }
 
