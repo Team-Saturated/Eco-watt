@@ -25,8 +25,20 @@ extern const char* MQTT_PASS;  // optional
 extern WiFiClient espClient;
 extern PubSubClient client;
 
+struct MqttTx {
+  String topic;                  // where to publish
+  std::vector<uint8_t> payload;  // what to publish (plain, will be encrypted)
+  bool retain = false;
+};
+
+extern QueueHandle_t mqttTxQueue;
+
 void ensureMqtt();
 void handleCmd(char* topic, byte* payload, unsigned int len);
 // FOTA helpers
-void publishFotaStatus(const String& jsonPlainSealedBase64);
+
 bool publishFotaJson(const String& jsonPlain); // seals + publishes to t_fota_status
+
+bool mqttEnqueue(const String& topic, const uint8_t* data, size_t len, bool retain=false);
+
+bool encryptPayload(const uint8_t* plain, size_t len, std::vector<uint8_t>& outCipher);

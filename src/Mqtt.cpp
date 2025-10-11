@@ -263,7 +263,7 @@ void fotaReceived(std::vector<uint8_t> &plain)
     uint64_t offset = doc["offset"] | 0ULL;
 
     const char *b64 = doc["data_b64"] | "";
-    Serial.printf(b64);
+    
     size_t b64_len = strlen(b64);
     if (b64_len == 0)
     {
@@ -349,8 +349,6 @@ void handleCmd(char *topic, byte *payload, unsigned int len)
   std::vector<uint8_t> plain;
   Serial.printf("Message arrived [%s] len=%d: ", topic, len);
   Serial.println();
-
-  Serial.println((char *)payload);
   if (!mqttDecrypt(payload, len, mtype, plain))
   {
     Serial.println("[SEC] dropping: decrypt/verify failed");
@@ -384,3 +382,33 @@ void handleCmd(char *topic, byte *payload, unsigned int len)
     return;
   }
 }
+
+bool encryptPayload(const uint8_t* plain, size_t len, std::vector<uint8_t>& outCipher) {
+  // --- Example placeholder: identity (no-op). Replace with your AES/SecureLink ---
+  outCipher.resize(len);
+  if (len) memcpy(outCipher.data(), plain, len);
+  return true;
+  // If you also need Base64 after encryption:
+  //  - produce binary cipher first,
+  //  - then Base64 encode into a new vector<uint8_t> (or publish as text).
+}
+
+static MqttTx* makeMsg(const String& topic, const uint8_t* data, size_t len, bool retain) {
+  auto* m = new (std::nothrow) MqttTx();
+  if (!m) return nullptr;
+  m->topic = topic;
+  m->retain = retain;
+  m->payload.resize(len);
+  if (len) memcpy(m->payload.data(), data, len);
+  return m;
+}
+
+bool mqttEnqueue(const String& topic, const uint8_t* data, size_t len, bool retain) {
+  if (!mqttTxQueue) return false;
+  MqttTx* p = makeMsg(topic, data, len, retain);
+  if (!p) return false;
+  if (xQueueSend(mqttTxQueue, &p, 0) != pdPASS) { delete p; return false; }
+  return true;
+}
+// ===== Publisher task (decrypts? no) → encrypts → publishes =====
+

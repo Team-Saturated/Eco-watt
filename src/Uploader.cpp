@@ -75,7 +75,7 @@ bool Uploader::uploadBatch(std::vector<Record>& batch) {
     return false;
   }
   mqttJson = toBase64(sealed.data(), sealed.size());
-  Serial.println(mqttJson);
+  
 
   uint16_t currentBuffer = client.getBufferSize();
   uint16_t neededBuffer = (uint16_t)(mqttJson.length() + 256);
@@ -84,12 +84,12 @@ bool Uploader::uploadBatch(std::vector<Record>& batch) {
     Serial.printf("[UPLOAD] Increasing buffer: %u -> %u\n", currentBuffer, neededBuffer);
     client.setBufferSize(neededBuffer);
   }
-
+  mqttEnqueue(t_data, (const uint8_t*)mqttJson.c_str(), mqttJson.length(), false);
   // Publish exactly as you do now
-  if (!client.publish(t_data.c_str(), mqttJson.c_str(), false)) {
-    Serial.println("[MQTT] publish failed");
-    return false;
-  }
+  //if (!client.publish(t_data.c_str(), mqttJson.c_str(), false)) {
+  //  Serial.println("[MQTT] publish failed");
+  //  return false;
+  //}
   // Serial.printf(compressed.data()); // Removed: unsafe to print raw binary as string
   // Optionally, print first few bytes as hex for debugging:
   Serial.print("[UPLOAD] Compressed data (first 8 bytes): ");

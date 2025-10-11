@@ -14,7 +14,7 @@
 #include "Packetizer.h"  // Added for packetizer
 #include <FS.h>          // For file writing (ESP32/ESP8266)
 #include <EEPROM.h>
-
+#include "Mqtt.h"
 #if defined(ESP8266)
 #include <ESP8266WiFi.h>
 #else
@@ -74,6 +74,7 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 SecureLink sec;
 FotaManager fota;
+QueueHandle_t mqttTxQueue = nullptr;
 
 void main_task(void *pvParameters)
 {
@@ -81,7 +82,7 @@ void main_task(void *pvParameters)
   {
     
 
-    //g_poller->read(SLAVE_ID, START_ADDR, QTY_REGS);
+    g_poller->read(SLAVE_ID, START_ADDR, QTY_REGS);
 
 
     if (writecommandreceived)
@@ -170,6 +171,21 @@ void CloudConnect(void *pvParameters)
       }
       
     }
+
+    MqttTx* p = nullptr;
+    if (xQueueReceive(mqttTxQueue, &p, pdMS_TO_TICKS(5)) == pdPASS && p) {
+      // 1) Encrypt
+      std::vector<uint8_t> cipher;
+      Serial.println("[MQTT] Publishing message to topic: " + p->topic);
+      bool ok = encryptPayload(p->payload.data(), p->payload.size(), cipher);
+      Serial.println(ok ? "[MQTT] Encryption successful" : "[MQTT] Encryption failed");
+      // 2) Publish (binary-safe). If you need base64, do it inside encryptPayload().
+      if (ok && client.connected()) {
+        Serial.printf("[MQTT] Publishing %u  to topic %s\n", (unsigned)cipher.data(), p->topic.c_str());
+        (void)client.publish(p->topic.c_str(), cipher.data(), cipher.size(), p->retain);
+      }
+      delete p;
+    }
   }
 
 }
@@ -193,6 +209,7 @@ void setup()
   wifiConnect();
   client.setBufferSize(16384);
   EEPROM.begin(512);
+  mqttTxQueue = xQueueCreate(32, sizeof(MqttTx*));
   //first_time_provision(); // only ONCE
   if (!fota.begin()) { Serial.println("[FOTA] init failed"); }
   if (!sec.begin(DEV_ID)) {
@@ -229,11 +246,11 @@ void setup()
   xTaskCreatePinnedToCore(
       main_task, /* Task function. */
       "Task1",   /* name of task. */
-      10000,     /* Stack size of task */
+      40000,     /* Stack size of task */
       NULL,      /* parameter of the task */
       1,         /* priority of the task */
       &Task1,    /* Task handle to keep track of created task */
-      1);        /* pin task to core 0 */
+      1);        /* pin task to core 1 */
   delay(500);
 
   // connectivity task
@@ -244,8 +261,9 @@ void setup()
       NULL,         /* parameter of the task */
       1,            /* priority of the task */
       &Task2,       /* Task handle to keep track of created task */
-      0);           /* pin task to core 1 */
+      0);           /* pin task to core 0 */
   delay(500);
+  
 }
 
 void loop()
