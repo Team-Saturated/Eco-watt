@@ -14,7 +14,7 @@
 #define API_BULK_URL ""
 #endif
 
-static String toBase64(const uint8_t* data, size_t len) {
+static String toBase64_U(const uint8_t* data, size_t len) {
   size_t outLen = 0;
   (void) mbedtls_base64_encode(nullptr, 0, &outLen, data, len); // get size
   std::unique_ptr<uint8_t[]> out(new uint8_t[outLen + 1]);
@@ -74,24 +74,10 @@ bool Uploader::uploadBatch(std::vector<Record>& batch) {
     Serial.println("[SEC] seal failed");
     return false;
   }
-  mqttJson = toBase64(sealed.data(), sealed.size());
+  mqttJson = toBase64_U(sealed.data(), sealed.size());
   
-
-  uint16_t currentBuffer = client.getBufferSize();
-  uint16_t neededBuffer = (uint16_t)(mqttJson.length() + 256);
-  
-  if (neededBuffer > currentBuffer) {
-    Serial.printf("[UPLOAD] Increasing buffer: %u -> %u\n", currentBuffer, neededBuffer);
-    client.setBufferSize(neededBuffer);
-  }
   mqttEnqueue(t_data, (const uint8_t*)mqttJson.c_str(), mqttJson.length(), false);
-  // Publish exactly as you do now
-  //if (!client.publish(t_data.c_str(), mqttJson.c_str(), false)) {
-  //  Serial.println("[MQTT] publish failed");
-  //  return false;
-  //}
-  // Serial.printf(compressed.data()); // Removed: unsafe to print raw binary as string
-  // Optionally, print first few bytes as hex for debugging:
+  
   Serial.print("[UPLOAD] Compressed data (first 8 bytes): ");
   for (size_t i = 0; i < compressed.size() && i < 8; ++i) {
     Serial.printf("%02X ", compressed[i]);

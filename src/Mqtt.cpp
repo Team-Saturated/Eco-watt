@@ -28,7 +28,7 @@ static String toBase64(const uint8_t *data, size_t len)
   return String((char *)out.get());
 }
 
-bool publishFotaJson(const String &jsonPlain)
+bool publishFotaJsonACK(const String &jsonPlain)
 {
   // Seal with SecureLink then Base64 (same style as your Uploader) :contentReference[oaicite:6]{index=6}
   std::vector<uint8_t> sealed;
@@ -41,6 +41,21 @@ bool publishFotaJson(const String &jsonPlain)
   // if (b64.length() > 0) client.setBufferSize((uint16_t)(b64.length() + 64));
   return client.publish(t_fota_status.c_str(), b64.c_str(), false);
 }
+
+bool publishConfigJsonACK(const String &jsonPlain)
+{
+  // Seal with SecureLink then Base64 (same style as your Uploader)
+  std::vector<uint8_t> sealed;
+  if (!sec.seal(/*type*/ 2, (const uint8_t *)jsonPlain.c_str(), jsonPlain.length(), sealed))
+  {
+    Serial.println("[CONFIG] seal failed");
+    return false;
+  }
+  String b64 = toBase64(sealed.data(), sealed.size());
+  // if (b64.length() > 0) client.setBufferSize((uint16_t)(b64.length() + 64));
+  return client.publish(t_config_ack.c_str(), b64.c_str(), false);
+}
+
 
 static inline String u64dec(uint64_t v)
 {
@@ -96,18 +111,47 @@ static bool mqttDecrypt(const uint8_t *in, size_t inLen,
   return true;
 }
 
+// Minimal JSON escape for Arduino String
+static String jsonEscape(const String& s) {
+  String out; out.reserve(s.length() + 8);
+  for (size_t i = 0; i < s.length(); ++i) {
+    char c = s[i];
+    switch (c) {
+      case '\"': out += "\\\""; break;
+      case '\\': out += "\\\\"; break;
+      case '\b': out += "\\b";  break;
+      case '\f': out += "\\f";  break;
+      case '\n': out += "\\n";  break;
+      case '\r': out += "\\r";  break;
+      case '\t': out += "\\t";  break;
+      default:
+        if ((unsigned char)c < 0x20) {  // control chars -> \u00XX
+          char buf[7];
+          snprintf(buf, sizeof(buf), "\\u%04X", (unsigned char)c);
+          out += buf;
+        } else {
+          out += c;
+        }
+    }
+  }
+  return out;
+}
+
+
+
+
 void ensureMqtt()
 {
   while (!client.connected())
   {
     String cid = String("esp32-") + String((uint32_t)ESP.getEfuseMac(), HEX);
     // LWT
-    if (client.connect(cid.c_str(), MQTT_USER, MQTT_PASS, t_status.c_str(), 1, true, "offline"))
+    if (client.connect(cid.c_str(), MQTT_USER, MQTT_PASS, t_config_ack.c_str(), 1, true, "offline"))
     {
-      client.publish(t_status.c_str(), "online", true);
+      client.publish(t_config_ack.c_str(), "online", true);
 
       client.subscribe(t_config.c_str(), 0);
-      client.subscribe(t_ack.c_str(), 0);
+      //client.subscribe(t_ack.c_str(), 0);
       client.subscribe(t_write.c_str(), 0);
       client.subscribe(t_fota_cmd.c_str(), 1);
     }
@@ -126,39 +170,40 @@ void configReceived(std::vector<uint8_t> &plain)
   {
   case ERR_OK:
     Serial.println("Config saved successfully");
-    ackMsg = "Config saved successfully";
+    ackMsg = "ERR_OK";
     break;
 
   case ERR_DESERIALIZE_FAILED:
     Serial.println("Config deserialization failed");
-    ackMsg = "Config deserialization failed";
+    ackMsg = "ERR_DESERIALIZE_FAILED";
     break;
 
   case ERR_POLL_MS_FAILED:
     Serial.println("Polling period update failed");
-    ackMsg = "Polling period update failed";
+    ackMsg = "ERR_POLL_MS_FAILED";
     break;
 
   case ERR_UPLOAD_MS_FAILED:
     Serial.println("Upload period update failed");
-    ackMsg = "Upload period update failed";
+    ackMsg = "ERR_UPLOAD_MS_FAILED";
     break;
 
   case ERR_BUFFER_CAPACITY_FAILED:
     Serial.println("Buffer capacity update failed");
-    ackMsg = "Buffer capacity update failed";
+    ackMsg = "ERR_BUFFER_CAPACITY_FAILED";
     break;
 
   case ERR_REG_REQ_ID_1_FAILED:
     Serial.println("Reg request ID 1 update failed");
-    ackMsg = "Reg request ID 1 update failed";
+    ackMsg = "ERR_REG_REQ_ID_1_FAILED";
     break;
 
   default:
     break;
   }
+  
+  publishConfigJsonACK("{\"ack\":\"" + ackMsg + "\"}");
 
-  client.publish(t_ack.c_str(), ackMsg.c_str(), true);
 
   return;
 }
@@ -206,7 +251,7 @@ void fotaReceived(std::vector<uint8_t> &plain)
   if (err)
   {
     Serial.printf("[FOTA] bad json: %s\n", err.c_str());
-    publishFotaJson("{\"ev\":\"error\",\"reason\":\"bad_json\"}");
+    publishFotaJsonACK("{\"ev\":\"error\",\"reason\":\"bad_json\"}");
     return;
   }
 
@@ -231,7 +276,7 @@ void fotaReceived(std::vector<uint8_t> &plain)
     }
     else
     {
-      publishFotaJson("{\"ev\":\"error\",\"reason\":\"sha_len\"}");
+      publishFotaJsonACK("{\"ev\":\"error\",\"reason\":\"sha_len\"}");
       return;
     }
 
@@ -241,20 +286,20 @@ void fotaReceived(std::vector<uint8_t> &plain)
     const char *nonce_b64 = doc["nonce_b64"] | "";
     if (mbedtls_base64_decode(nonce, sizeof(nonce), &nb, (const unsigned char *)nonce_b64, strlen(nonce_b64)) != 0 || nb != 16)
     {
-      publishFotaJson("{\"ev\":\"error\",\"reason\":\"nonce_len\"}");
+      publishFotaJsonACK("{\"ev\":\"error\",\"reason\":\"nonce_len\"}");
       return;
     }
 
     if (!fota.handleManifest(String(version), size, csize, sha, nonce))
     {
-      publishFotaJson("{\"ev\":\"error\",\"reason\":\"manifest_refused\"}");
+      publishFotaJsonACK("{\"ev\":\"error\",\"reason\":\"manifest_refused\"}");
       return;
     }
     // Tell cloud where to start sending
     String st = String("{\"ev\":\"need_chunks\",\"next_offset\":") + u64dec((uint64_t)fota.nextOffset()) +
                 ",\"total\":" + String(fota.totalSize()) + ",\"version\":\"" + version + "\"}";
     Serial.println("This is st: " + st);
-    publishFotaJson(st);
+    publishFotaJsonACK(st);
     return;
   }
 
@@ -267,7 +312,7 @@ void fotaReceived(std::vector<uint8_t> &plain)
     size_t b64_len = strlen(b64);
     if (b64_len == 0)
     {
-      publishFotaJson("{\"ev\":\"error\",\"reason\":\"chunk_empty\"}");
+      publishFotaJsonACK("{\"ev\":\"error\",\"reason\":\"chunk_empty\"}");
       return;
     }
     size_t need = 0;
@@ -278,14 +323,14 @@ void fotaReceived(std::vector<uint8_t> &plain)
     if (rc != 0 && rc != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL)
     {
       Serial.printf("[FOTA] base64 size calculation failed, rc=%d\n", rc);
-      publishFotaJson("{\"ev\":\"error\",\"reason\":\"chunk_b64_invalid\"}");
+      publishFotaJsonACK("{\"ev\":\"error\",\"reason\":\"chunk_b64_invalid\"}");
       return;
     }
     std::vector<uint8_t> buf(need);
     size_t outLen = 0;
     if (mbedtls_base64_decode(buf.data(), buf.size(), &outLen, (const unsigned char *)b64, strlen(b64)) != 0)
     {
-      publishFotaJson("{\"ev\":\"error\",\"reason\":\"chunk_b64_decode\"}");
+      publishFotaJsonACK("{\"ev\":\"error\",\"reason\":\"chunk_b64_decode\"}");
       return;
     }
     buf.resize(outLen);
@@ -294,7 +339,7 @@ void fotaReceived(std::vector<uint8_t> &plain)
     {
       String st = String("{\"ev\":\"error\",\"reason\":\"chunk_apply\",\"expect\":") +
                   u64dec((uint64_t)fota.nextOffset()) + "}";
-      publishFotaJson(st);
+      publishFotaJsonACK(st);
       return;
     }
 
@@ -302,7 +347,7 @@ void fotaReceived(std::vector<uint8_t> &plain)
     float pct = (fota.totalSize() == 0) ? 0.f : (100.0f * (float)fota.nextOffset() / (float)fota.totalSize());
     String st = String("{\"ev\":\"progress\",\"next_offset\":") + u64dec((uint64_t)fota.nextOffset()) +
                 ",\"total\":" + String(fota.totalSize()) + ",\"pct\":" + String(pct, 2) + "}";
-    publishFotaJson(st);
+    publishFotaJsonACK(st);
     return;
   }
 
@@ -312,30 +357,30 @@ void fotaReceived(std::vector<uint8_t> &plain)
     uint8_t digest[32];
     if (!fota.finishAndVerify(shaOk, digest))
     {
-      publishFotaJson("{\"ev\":\"verify_fail\",\"reason\":\"finish_failed\"}");
+      publishFotaJsonACK("{\"ev\":\"verify_fail\",\"reason\":\"finish_failed\"}");
       return;
     }
     if (!shaOk)
     {
-      publishFotaJson("{\"ev\":\"verify_fail\",\"reason\":\"sha_mismatch\"}");
+      publishFotaJsonACK("{\"ev\":\"verify_fail\",\"reason\":\"sha_mismatch\"}");
       return;
     }
     String dhex = String("{\"ev\":\"verify_ok\",\"sha256_hex\":\"") + bytesToHex(digest, 32) + "\"}";
-    publishFotaJson(dhex);
+    publishFotaJsonACK(dhex);
     // Wait for explicit "reboot" op (controlled reboot). You can auto-reboot if desired.
     return;
   }
 
   if (!strcmp(op, "reboot"))
   {
-    publishFotaJson("{\"ev\":\"rebooting\"}");
+    publishFotaJsonACK("{\"ev\":\"rebooting\"}");
     // Controlled reboot → ESP32 will boot new partition in PENDING_VERIFY state. :contentReference[oaicite:10]{index=10}
     fota.requestReboot(); // esp_restart()
     return;
   }
 
   // Unknown op
-  publishFotaJson("{\"ev\":\"error\",\"reason\":\"bad_op\"}");
+  publishFotaJsonACK("{\"ev\":\"error\",\"reason\":\"bad_op\"}");
   return;
 
 }
@@ -360,12 +405,7 @@ void handleCmd(char *topic, byte *payload, unsigned int len)
     configReceived(plain);
     return;
   }
-  else if (strcmp(topic, t_ack.c_str()) == 0)
-  {
-
-    ackReceived(plain);
-    return;
-  }
+  
   else if (strcmp(topic, t_write.c_str()) == 0)
   {
     writeReceived(plain);

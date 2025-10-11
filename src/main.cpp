@@ -57,13 +57,17 @@ uint16_t WRITE_VALUE = 0x03FF;
 
 const char *DEV_ID = "esp32-01";
 String t_data = String("devices/") + DEV_ID + "/data/dulmin";
-String t_status = String("devices/") + DEV_ID + "/status";
+//String t_status = String("devices/") + DEV_ID + "/status";
+
 String t_config = String("devices/") + DEV_ID + "/config";
-String t_ack = String("devices/") + DEV_ID + "/ack";
+String t_config_ack = String("devices/") + DEV_ID + "/ack/config";
+//String t_ack = String("devices/") + DEV_ID + "/ack";
 String t_write = String("devices/") + DEV_ID + "/write";
+String t_write_ack = String("devices/") + DEV_ID + "/ack/write";
+
 String t_fota_cmd = String("devices/") + DEV_ID + "/fota/cmd";
 String t_fota_status = String("devices/") + DEV_ID + "/fota/status";
-String t_fota_log = String("devices/") + DEV_ID + "/fota/log";
+//String t_fota_log = String("devices/") + DEV_ID + "/fota/log";
 
 const char *MQTT_USER = ""; // optional
 const char *MQTT_PASS = ""; // optional
@@ -81,7 +85,7 @@ void main_task(void *pvParameters)
   for (;;)
   {
     
-
+    vTaskDelay(1);
     g_poller->read(SLAVE_ID, START_ADDR, QTY_REGS);
 
 
@@ -205,11 +209,12 @@ void first_time_provision() {
 void setup()
 {
   Serial.begin(115200);
+  mqttTxQueue = xQueueCreate(32, sizeof(MqttTx*));
   delay(200);
   wifiConnect();
   client.setBufferSize(16384);
   EEPROM.begin(512);
-  mqttTxQueue = xQueueCreate(32, sizeof(MqttTx*));
+  
   //first_time_provision(); // only ONCE
   if (!fota.begin()) { Serial.println("[FOTA] init failed"); }
   if (!sec.begin(DEV_ID)) {
@@ -219,7 +224,7 @@ void setup()
   bool selftest_pass = true; 
   fota.bootSelfTestFinalize(selftest_pass);
   if (selftest_pass) {
-    publishFotaJson("{\"ev\":\"boot_ok\",\"version\":\"(fill from NVS or compile-time)\"}");
+    publishFotaJsonACK("{\"ev\":\"boot_ok\",\"version\":\"(fill from NVS or compile-time)\"}");
   } else {
     // If failing here, bootloader will roll back automatically
     // You can still try to publish, but reboot happens quickly.

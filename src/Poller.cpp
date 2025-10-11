@@ -15,6 +15,14 @@
 //  }
 //  return s;
 //}
+static String toBase64_P(const uint8_t* data, size_t len) {
+  size_t outLen = 0;
+  (void) mbedtls_base64_encode(nullptr, 0, &outLen, data, len); // get size
+  std::unique_ptr<uint8_t[]> out(new uint8_t[outLen + 1]);
+  if (mbedtls_base64_encode(out.get(), outLen, &outLen, data, len) != 0) return String();
+  out[outLen] = 0;
+  return String((char*)out.get());
+}
 
 void Poller::applyBackoff() {
   if (_backoffMs == 0) _backoffMs = BACKOFF_MIN_MS;
@@ -113,15 +121,24 @@ void Poller::write(uint8_t slave, uint16_t addr, uint16_t value) {
   
   auto res = _c.writeSingle(slave, addr, value);
 
-  if (res.ok) {
-    Serial.print("Write works");
-    client.publish(t_ack.c_str(), res.error.c_str(), true);
-    }
-  else {
-    client.publish(t_ack.c_str(), res.error.c_str(), true);
+  std::vector<uint8_t> sealed;
+  if (!sec.seal(/*type*/1, (const uint8_t*)res.error.c_str(),
+                res.error.length(), sealed)) {
+    Serial.println("[SEC] seal failed");
     
   }
+  String mqttJson = toBase64_P(sealed.data(), sealed.size());
+  if (res.ok) {
+    Serial.print("Write works");
+    Serial.println(res.error.c_str());
+    mqttEnqueue(t_write_ack, (const uint8_t*)mqttJson.c_str(), false);
+
+    }
+  else {
+    mqttEnqueue(t_write_ack, (const uint8_t*)mqttJson.c_str(), false);
+  }
 }
+
 void Poller::changePeriod(uint32_t newPeriod) {
   if (newPeriod == 0) return; // ignore invalid
   _period = newPeriod;
