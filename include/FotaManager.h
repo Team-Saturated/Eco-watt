@@ -275,10 +275,10 @@ class FotaManager {
     esp_ota_img_states_t st = ESP_OTA_IMG_UNDEFINED;
     esp_err_t r = esp_ota_get_state_partition(running, &st);
 
-    if (r != ESP_OK) {
-      if (_pending && !pass) {
+    if (r != ESP_OK || !pass) {
+      
         esp_ota_mark_app_invalid_rollback_and_reboot(); // never returns
-      }
+      
       return;
     }
 
