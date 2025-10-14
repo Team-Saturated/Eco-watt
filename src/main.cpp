@@ -23,7 +23,7 @@
 
 #include "CloudTransport.h"
 #include "Rs485Transport.h"
-
+#include <LittleFS.h> 
 #if SIMULATE
 CloudTransport *g_transport = nullptr;
 #else
@@ -79,6 +79,7 @@ PubSubClient client(espClient);
 SecureLink sec;
 FotaManager fota;
 QueueHandle_t mqttTxQueue = nullptr;
+fs::LITTLEFSFS LittleFS;
 
 void main_task(void *pvParameters)
 {
