@@ -58,7 +58,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
     String txHex = String(Modbus::toHex(request).c_str());
     txHex.toUpperCase();
     String payload = "{\"frame\":\"" + txHex + "\"}";
-    Serial.println("[CloudTransport] Sending payload: " + payload);
+    //Serial.println("[CloudTransport] Sending payload: " + payload);
 
     int code = http.POST(payload);
     res.status = code;
@@ -75,8 +75,8 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
         return res; // stop on non-2xx
       }
 
-      Serial.println("[CloudTransport] HTTP code: " + String(code));
-      Serial.println("[CloudTransport] Raw response: " + res.body);
+      //Serial.println("[CloudTransport] HTTP code: " + String(code));
+      //Serial.println("[CloudTransport] Raw response: " + res.body);
 
       // Parse JSON and extract "frame"
       StaticJsonDocument<256> doc;
@@ -90,7 +90,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
       }
 
       String rxHex = doc["frame"].as<String>();
-      Serial.println("[CloudTransport] Decoded frame HEX: " + rxHex);
+      //Serial.println("[CloudTransport] Decoded frame HEX: " + rxHex);
 
       // Hex -> bytes
       std::vector<uint8_t> rx;
@@ -145,8 +145,8 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
           http.end(); return res;
         }
 
-        Serial.printf("[CloudTransport] Slave=0x%02X Func=0x%02X Start=%u Qty=%u\n",
-                      slave, func, startAddr, qty);
+        //Serial.printf("[CloudTransport] Slave=0x%02X Func=0x%02X Start=%u Qty=%u\n",
+                      //slave, func, startAddr, qty);
 
         // Data words are big-endian, starting at rx[3]
         for (uint16_t i = 0; i < qty && (3 + 2*i + 1) < rx.size(); ++i) {
@@ -157,8 +157,8 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
           float value = raw / scale;
 
           // Print
-          Serial.printf("  Reg[%u] Addr=%u Raw=0x%04X -> %.3f %s\n",
-                        i, addr, raw, value, unit);
+          //Serial.printf("  Reg[%u] Addr=%u Raw=0x%04X -> %.3f %s\n",
+                       // i, addr, raw, value, unit);
 
           // Store decoded register in result
           res.regs.push_back(DecodedReg{addr, raw, value, String(unit)});

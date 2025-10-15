@@ -3,6 +3,12 @@
 #include <vector>
 #include "Buffer.h"
 
+struct DecodedRec {
+  uint64_t ts_ms;
+  // values[0..9] valid for bits set in mask; others unchanged
+  uint16_t values[10];
+  uint16_t mask;
+};
 // Lightweight delta compression for time-series data
 class Compression {
 public:

@@ -163,17 +163,41 @@ def try_open_ack(
     meta = {"ver": ver, "type": typ, "boot": str(boot), "seq": str(seq)}
     return obj, meta
 
-# ---------- Delta decompressor ----------
+# ---------- Delta decompressor (supports mask+delta v1; tolerant to trailing) ----------
+
+# ---------- Delta decompressor (supports mask+delta v1; tolerant to trailing) ----------
+
 def get16_le(buf: bytes, i: int):
-    if i + 2 > len(buf): return None
-    return buf[i] | (buf[i+1] << 8)
+    if i + 2 > len(buf): return None, i
+    return (buf[i] | (buf[i+1] << 8)) & 0xFFFF, i + 2
+
 def get32_le(buf: bytes, i: int):
-    if i + 4 > len(buf): return None
-    return (buf[i] | (buf[i+1]<<8) | (buf[i+2]<<16) | (buf[i+3]<<24)) & 0xFFFFFFFF
+    if i + 4 > len(buf): return None, i
+    return (buf[i] | (buf[i+1] << 8) | (buf[i+2] << 16) | (buf[i+3] << 24)) & 0xFFFFFFFF, i + 4
+
 def get64_le(buf: bytes, i: int):
-    if i + 8 > len(buf): return None
-    low = get32_le(buf, i); high = get32_le(buf, i+4)
-    return low + (high * 0x100000000)
+    if i + 8 > len(buf): return None, i
+    v = 0
+    for s in range(8):
+        v |= (buf[i+s] << (8*s))
+    return v & 0xFFFFFFFFFFFFFFFF, i + 8
+
+def _get_varuint32(buf: bytes, i: int):
+    """Returns (value, new_index) or (None, i) on error."""
+    v = 0
+    shift = 0
+    while i < len(buf):
+        b = buf[i]; i += 1
+        v |= (b & 0x7F) << shift
+        if (b & 0x80) == 0:
+            return v, i
+        shift += 7
+        if shift > 28:  # guard
+            return None, i
+    return None, i
+
+def _unzigzag32(u: int) -> int:
+    return (u >> 1) ^ -(u & 1)
 
 REGISTER_MAP = {
     0:  ('Vac1_L1_Phase_voltage',          10, 'V'),
@@ -187,34 +211,111 @@ REGISTER_MAP = {
     8:  ('Set_export_power_percentage',     1, '%'),
     9:  ('Pac_L_Inverter_current_output_power', 1, 'W'),
 }
+
 def decode_register(addr: int, raw: int) -> Dict[str, Any]:
     if addr in REGISTER_MAP:
         name, gain, unit = REGISTER_MAP[addr]
         return {"address": addr, "name": name, "raw_value": raw, "value": raw / gain, "unit": unit}
     return {"address": addr, "name": f"Unknown_Register_{addr}", "raw_value": raw, "value": raw, "unit": "unknown"}
-def decompress_delta(hex_string: str):
-    buf = bytes.fromhex(hex_string); i = 0
-    base_ts = get64_le(buf, i); i += 8
+
+def _popcount16(x: int) -> int:
+    return bin(x & 0xFFFF).count("1")
+
+def _try_decompress_mask_delta(buf: bytes):
+    i = 0
+    base_ts, i = get64_le(buf, i)
     if base_ts is None: return None
-    nrecs   = get16_le(buf, i); i += 2
+    nrecs, i = get16_le(buf, i)
     if nrecs is None: return None
-    out = []; prev_ts = base_ts
+
+    last = [0] * 10
+    ts = base_ts
+    out = []
+
     for _ in range(nrecs):
-        dt_ms = get32_le(buf, i); i += 4
-        qty   = get16_le(buf, i); i += 2
+        dt, i = get32_le(buf, i)
+        mask, i = get16_le(buf, i)
+        if dt is None or mask is None: return None
+        mask &= 0x03FF
+        ts = (ts + dt) & 0xFFFFFFFFFFFFFFFF
+
+        regs: Dict[str, Any] = {}
+        setbits = _popcount16(mask)
+        # quick sanity: impossible to have more than 10 regs or zero when dt>0 repeatedly
+        if setbits > 10: return None
+
+        for reg in range(10):
+            if (mask & (1 << reg)) == 0:
+                continue
+            enc, i = _get_varuint32(buf, i)
+            if enc is None: return None
+            delta = _unzigzag32(enc)
+            cur = int(last[reg]) + int(delta)
+            if cur < 0: cur = 0
+            if cur > 0xFFFF: cur = 0xFFFF
+            last[reg] = cur
+
+            d = decode_register(reg, cur)
+            regs[d["name"]] = {
+                "address": d["address"],
+                "raw_value": d["raw_value"],
+                "value": d["value"],
+                "unit": d["unit"],
+            }
+
+        out.append({"timestamp": ts, "register_count": setbits, "registers": regs})
+
+    # IMPORTANT: be lenient — ignore trailing bytes instead of failing
+    return out
+
+def _try_decompress_legacy(buf: bytes):
+    """Legacy format: [base_ts:u64][nrecs:u16] then per rec [dt:u32][qty:u16][(addr:u16)(data:u16)]*qty"""
+    i = 0
+    base_ts, i = get64_le(buf, i)
+    if base_ts is None: return None
+    nrecs, i = get16_le(buf, i)
+    if nrecs is None: return None
+
+    prev_ts = base_ts
+    out = []
+
+    for _ in range(nrecs):
+        dt_ms, i = get32_le(buf, i)
+        qty,   i = get16_le(buf, i)
         if dt_ms is None or qty is None: return None
+
         need = qty * 4
         if i + need > len(buf): return None
-        ts_ms = prev_ts + dt_ms
+
+        ts_ms = (prev_ts + dt_ms) & 0xFFFFFFFFFFFFFFFF
         regs: Dict[str, Any] = {}
+
         for __ in range(qty):
-            addr = get16_le(buf, i); val  = get16_le(buf, i+2)
+            addr, i2 = get16_le(buf, i)
+            val,  i3 = get16_le(buf, i + 2)
             if addr is None or val is None: return None
+            i = i + 4
             d = decode_register(addr, val)
             regs[d["name"]] = {"address": d["address"], "raw_value": d["raw_value"], "value": d["value"], "unit": d["unit"]}
-            i += 4
+
         out.append({"timestamp": ts_ms, "register_count": qty, "registers": regs})
         prev_ts = ts_ms
+
+    return out
+
+def decompress_delta(hex_string: str):
+    try:
+        buf = bytes.fromhex(hex_string)
+    except Exception:
+        return None
+
+    # Try new mask+delta first
+    out = _try_decompress_mask_delta(buf)
+    if out is not None:
+        return out
+
+    # Fallback to legacy layout
+    out = _try_decompress_legacy(buf)
     return out
 
 # ---------- State & Loggers ----------

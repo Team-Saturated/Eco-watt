@@ -235,7 +235,7 @@ void setup()
   xTaskCreatePinnedToCore(
       main_task, /* Task function. */
       "Task1",   /* name of task. */
-      40000,     /* Stack size of task */
+      100000,     /* Stack size of task */
       NULL,      /* parameter of the task */
       1,         /* priority of the task */
       &Task1,    /* Task handle to keep track of created task */
