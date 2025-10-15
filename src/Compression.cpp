@@ -102,11 +102,12 @@ std::vector<uint8_t> Compression::compressDelta(const std::vector<Record>& recor
     // Timestamp delta
     uint32_t dt = (r.ts_ms >= prev_ts) ? uint32_t(r.ts_ms - prev_ts) : 0;
     prev_ts = r.ts_ms;
-    put32_le(out, dt);
+    putVarUint32(out, dt); 
 
     // Mask (only bits 0..9 used)
     uint16_t mask = (REG_REQ_ID_1 & 0x03FF);
-    putVarUint32(out, dt); 
+    
+    put16_le(out, mask);
 
     // Deltas for set bits in ascending reg index
     for (uint8_t reg = 0; reg < 10; ++reg) {

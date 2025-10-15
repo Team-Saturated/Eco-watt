@@ -336,7 +336,7 @@ current_config = {  # server-side cache; update as you like
     "poll_period_ms": 10000,
     "upload_period_ms": 20000,
     "buffer_capacity": 256,
-    "reg_req_id_1": 1023
+    "reg_req_id": 1023  # Bitwise register selection ID (all 10 registers by default)
 }
 
 # ---------- MQTT ----------
@@ -547,6 +547,13 @@ INDEX_HTML ="""
     .fota-settings{display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;}
     .config-grid{display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;}
     .write-fields{display: grid; grid-template-columns: 1fr 1fr auto; gap: 16px; align-items: end;}
+    
+    .register-selection{margin: 16px 0; padding: 16px; background: #f1f5f9; border-radius: 8px;}
+    .register-selection h4{margin: 0 0 12px 0; color: #334155; font-size: 0.9rem;}
+    .register-grid{display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px;}
+    .reg-checkbox{display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem;}
+    .reg-checkbox input[type="checkbox"]{margin: 0; width: 14px; height: 14px;}
+    .reg-checkbox:hover{background: #e2e8f0;}
 
     .actions-row{display: flex; align-items: center; gap: 12px; flex-wrap: wrap;}
     .fota-progress{display: none; height: 6px; border-radius: 3px; background: #e2e8f0; overflow: hidden;}
@@ -606,7 +613,22 @@ INDEX_HTML ="""
           <div class="form-group"><label>Poll Period (ms)</label><input type="number" id="poll_period_ms" min="100" step="100" class="form-input" placeholder="10000"/></div>
           <div class="form-group"><label>Upload Period (ms)</label><input type="number" id="upload_period_ms" min="100" step="100" class="form-input" placeholder="20000"/></div>
           <div class="form-group"><label>Buffer Capacity</label><input type="number" id="buffer_capacity" min="1" step="1" class="form-input" placeholder="256"/></div>
-          <div class="form-group"><label>Register Request ID</label><input type="number" id="reg_req_id_1" min="0" step="1" class="form-input" placeholder="1023"/></div>
+        </div>
+        
+        <div class="register-selection">
+          <h4>Register Request ID</h4>
+          <div class="register-grid">
+            <label class="reg-checkbox"><input type="checkbox" id="reg_0" checked/><span>AC Voltage</span></label>
+            <label class="reg-checkbox"><input type="checkbox" id="reg_1" checked/><span>AC Current</span></label>
+            <label class="reg-checkbox"><input type="checkbox" id="reg_2" checked/><span>Grid Frequency</span></label>
+            <label class="reg-checkbox"><input type="checkbox" id="reg_3" checked/><span>PV1 Voltage</span></label>
+            <label class="reg-checkbox"><input type="checkbox" id="reg_4" checked/><span>PV2 Voltage</span></label>
+            <label class="reg-checkbox"><input type="checkbox" id="reg_5" checked/><span>PV1 Current</span></label>
+            <label class="reg-checkbox"><input type="checkbox" id="reg_6" checked/><span>PV2 Current</span></label>
+            <label class="reg-checkbox"><input type="checkbox" id="reg_7" checked/><span>Temperature</span></label>
+            <label class="reg-checkbox"><input type="checkbox" id="reg_8" checked/><span>Export %</span></label>
+            <label class="reg-checkbox"><input type="checkbox" id="reg_9" checked/><span>Output Power</span></label>
+          </div>
         </div>
         <div class="actions-row">
           <button type="submit" class="btn-primary">Send Config</button>
@@ -973,13 +995,37 @@ document.getElementById('uploadForm').onsubmit = async (e)=>{
   }
 };
 
+// Helper function to create register request ID from checkboxes
+function getRegisterRequestId() {
+  let regId = 0;
+  for (let i = 0; i < 10; i++) {
+    if (document.getElementById(`reg_${i}`)?.checked) {
+      regId |= (1 << i);  // Set bit i if checkbox is checked
+    }
+  }
+  return regId;
+}
+
+// Helper function to set checkboxes from register request ID
+function setRegisterCheckboxes(regId) {
+  for (let i = 0; i < 10; i++) {
+    const checkbox = document.getElementById(`reg_${i}`);
+    if (checkbox) {
+      checkbox.checked = (regId & (1 << i)) !== 0;
+    }
+  }
+}
+
 // Config UI
 async function loadConfig(){
   const r = await fetch('/api/config'); const j = await r.json();
-  for (const k of ['poll_period_ms','upload_period_ms','buffer_capacity','reg_req_id_1']){
+  for (const k of ['poll_period_ms','upload_period_ms','buffer_capacity']){
     if (j.config[k] !== undefined) document.getElementById(k).value = j.config[k];
   }
-  clog('✓ Loaded current: '+JSON.stringify(j.config));
+  if (j.config['reg_req_id'] !== undefined) {
+    setRegisterCheckboxes(j.config['reg_req_id']);
+  }
+  clog('✓ Loaded config');
 }
 document.getElementById('loadCfgBtn').onclick = loadConfig;
 
@@ -989,10 +1035,12 @@ document.getElementById('cfgForm').onsubmit = async (e)=>{
   const originalText = btn.textContent;
   btn.textContent = 'Sending...'; btn.disabled = true;
   const body = {};
-  for (const k of ['poll_period_ms','upload_period_ms','buffer_capacity','reg_req_id_1']){
+  for (const k of ['poll_period_ms','upload_period_ms','buffer_capacity']){
     const v = document.getElementById(k).value;
     if (v !== '') body[k] = Number(v);
   }
+  // Add register request ID from checkboxes
+  body['reg_req_id'] = getRegisterRequestId();
   try {
     const r = await fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
     const j = await r.json();
@@ -1124,7 +1172,7 @@ def api_config():
         patch = request.get_json(force=True) or {}
     except Exception:
         return jsonify({"ok": False, "error": "bad_json"}), 400
-    allowed = {"poll_period_ms", "upload_period_ms", "buffer_capacity", "reg_req_id_1"}
+    allowed = {"poll_period_ms", "upload_period_ms", "buffer_capacity", "reg_req_id"}
     for k,v in patch.items():
         if k in allowed and isinstance(v, (int, float)):
             current_config[k] = int(v)

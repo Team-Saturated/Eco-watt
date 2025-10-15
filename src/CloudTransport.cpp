@@ -157,8 +157,8 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
           float value = raw / scale;
 
           // Print
-          //Serial.printf("  Reg[%u] Addr=%u Raw=0x%04X -> %.3f %s\n",
-                       // i, addr, raw, value, unit);
+          Serial.printf("  Reg[%u] Addr=%u Raw=0x%04X -> %.3f %s\n",
+                        i, addr, raw, value, unit);
 
           // Store decoded register in result
           res.regs.push_back(DecodedReg{addr, raw, value, String(unit)});
