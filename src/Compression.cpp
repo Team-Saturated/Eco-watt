@@ -106,7 +106,7 @@ std::vector<uint8_t> Compression::compressDelta(const std::vector<Record>& recor
 
     // Mask (only bits 0..9 used)
     uint16_t mask = (REG_REQ_ID_1 & 0x03FF);
-    put16_le(out, mask);
+    putVarUint32(out, dt); 
 
     // Deltas for set bits in ascending reg index
     for (uint8_t reg = 0; reg < 10; ++reg) {

@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include "time.h"
 
 #include "Config.h"
 #include "InverterClient.h"
@@ -62,6 +63,12 @@ bool config_changed = false;
 bool writecommandreceived = false;
 
 
+
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 5 * 3600 + 30 * 60; // For Sri Lanka (UTC+5:30)
+const int   daylightOffset_sec = 0;
+struct tm timeinfo;
+
 WiFiClient espClient;
 PubSubClient client(espClient);
 SecureLink sec;
@@ -71,9 +78,10 @@ QueueHandle_t mqttTxQueue = nullptr;
 
 void main_task(void *pvParameters)
 {
+  
   for (;;)
   {
-    
+    //Serial.println((unsigned long)now);
     vTaskDelay(1);
     g_poller->read(SLAVE_ID, START_ADDR, QTY_REGS);
 
@@ -198,7 +206,11 @@ void setup()
   wifiConnect();
   client.setBufferSize(16384);
   EEPROM.begin(512);
-  
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  if (!getLocalTime(&timeinfo)) {
+  Serial.println("[TIME] Failed to obtain time from NTP");
+  return;
+  }
   //first_time_provision(); 
   if (!fota.begin()) { Serial.println("[FOTA] init failed"); }
   if (!sec.begin(DEV_ID)) {

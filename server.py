@@ -233,7 +233,8 @@ def _try_decompress_mask_delta(buf: bytes):
     out = []
 
     for _ in range(nrecs):
-        dt, i = get32_le(buf, i)
+        dt, i = _get_varuint32(buf, i)
+        if dt is None: return None
         mask, i = get16_le(buf, i)
         if dt is None or mask is None: return None
         mask &= 0x03FF
