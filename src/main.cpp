@@ -1,29 +1,23 @@
 #include <Arduino.h>
-#include "../include/Config.h"
-#include "../include/InverterClient.h"
-#include "../include/Poller.h"
-#include "../include/ConfigUpdate.h"
-#include "../include/WiFiConn.h"
-#include "../include/Mqtt.h"
-#include "../include/SecureLink.h"
-// NEW:
+#include <WiFi.h>
+
+#include "Config.h"
+#include "InverterClient.h"
+#include "Poller.h"
+#include "ConfigUpdate.h"
+#include "WiFiConn.h"
+#include "Mqtt.h"
+#include "SecureLink.h"
 #include "Acquisition.h"
 #include "Buffer.h"
 #include "Uploader.h"
-#include "Compression.h" // Added for compression
-#include "Packetizer.h"  // Added for packetizer
-#include <FS.h>          // For file writing (ESP32/ESP8266)
+#include "Compression.h" 
+#include "Packetizer.h"          
 #include <EEPROM.h>
 #include "Mqtt.h"
-#if defined(ESP8266)
-#include <ESP8266WiFi.h>
-#else
-#include <WiFi.h>
-#endif
-
 #include "CloudTransport.h"
 #include "Rs485Transport.h"
-#include <LittleFS.h> 
+
 #if SIMULATE
 CloudTransport *g_transport = nullptr;
 #else
@@ -33,53 +27,47 @@ Rs485Transport *g_transport = nullptr;
 InverterClient *g_client = nullptr;
 Poller *g_poller = nullptr;
 
-// NEW: globals used by Poller
-RingBuffer *g_buffer = nullptr;
-//Acquisition *g_acq = nullptr;
-Uploader *g_uploader = nullptr;
 
-// Batch collection globals
+RingBuffer *g_buffer = nullptr;
+Uploader *g_uploader = nullptr;
 std::vector<Record> g_recordBatch;
 uint32_t g_batchStartTime = 0;
 
 TaskHandle_t Task1;
 TaskHandle_t Task2;
 
-uint16_t POLL_PERIOD_MS = 10000;    // how often we poll the inverter
-uint16_t UPLOAD_PERIOD_MS = 20000; // send buffered data every 14 sec (before Poller flush at 15s)
+uint16_t POLL_PERIOD_MS = 10000;    
+uint16_t UPLOAD_PERIOD_MS = 20000; 
 uint16_t BUFFER_CAPACITY = 128;
 uint16_t REG_REQ_ID_1 = 0b0000001111111111;
-const char *MQTT_HOST = "broker.emqx.io"; // or cloud host
+const char *MQTT_HOST = "broker.emqx.io"; 
 const uint16_t MQTT_PORT = 1883;
 
 uint16_t WRITE_ADDR = 0x0009;
 uint16_t WRITE_VALUE = 0x03FF;
 
 const char *DEV_ID = "esp32-01";
-String t_data = String("devices/") + DEV_ID + "/data/dulmin";
-//String t_status = String("devices/") + DEV_ID + "/status";
-
-String t_config = String("devices/") + DEV_ID + "/config";
-String t_config_ack = String("devices/") + DEV_ID + "/ack/config";
-//String t_ack = String("devices/") + DEV_ID + "/ack";
-String t_write = String("devices/") + DEV_ID + "/write";
-String t_write_ack = String("devices/") + DEV_ID + "/ack/write";
-
-String t_fota_cmd = String("devices/") + DEV_ID + "/fota/cmd";
-String t_fota_status = String("devices/") + DEV_ID + "/fota/status";
-//String t_fota_log = String("devices/") + DEV_ID + "/fota/log";
+const String t_data = String("devices/") + DEV_ID + "/data/dulmin";
+const String t_config = String("devices/") + DEV_ID + "/config";
+const String t_config_ack = String("devices/") + DEV_ID + "/ack/config";
+const String t_write = String("devices/") + DEV_ID + "/write";
+const String t_write_ack = String("devices/") + DEV_ID + "/ack/write";
+const String t_fota_cmd = String("devices/") + DEV_ID + "/fota/cmd";
+const String t_fota_status = String("devices/") + DEV_ID + "/fota/status";
 
 const char *MQTT_USER = ""; // optional
 const char *MQTT_PASS = ""; // optional
 
 bool config_changed = false;
 bool writecommandreceived = false;
+
+
 WiFiClient espClient;
 PubSubClient client(espClient);
 SecureLink sec;
 FotaManager fota;
 QueueHandle_t mqttTxQueue = nullptr;
-fs::LITTLEFSFS LittleFS;
+
 
 void main_task(void *pvParameters)
 {
@@ -88,7 +76,6 @@ void main_task(void *pvParameters)
     
     vTaskDelay(1);
     g_poller->read(SLAVE_ID, START_ADDR, QTY_REGS);
-
 
     if (writecommandreceived)
     {
@@ -124,7 +111,6 @@ void main_task(void *pvParameters)
         uint32_t original_size = newRecords.size() * sizeof(Record);
         Serial.printf("Original Payload Size: %u bytes\n", original_size);
 
-
         bool uploadSuccess = g_uploader->uploadBatch(newRecords);
         if (!uploadSuccess)
         {
@@ -139,7 +125,6 @@ void main_task(void *pvParameters)
 
     if (config_changed)
     {
-      // getconfig from server
 
       ApplyConfig();
       
@@ -154,7 +139,7 @@ void CloudConnect(void *pvParameters)
   client.setServer(MQTT_HOST, MQTT_PORT);
     
   client.setCallback(handleCmd);
-  // error logging
+  
   uint32_t last = 0;
   uint32_t now = 0;
   for (;;)
@@ -179,12 +164,12 @@ void CloudConnect(void *pvParameters)
 
     MqttTx* p = nullptr;
     if (xQueueReceive(mqttTxQueue, &p, pdMS_TO_TICKS(5)) == pdPASS && p) {
-      // 1) Encrypt
+      
       std::vector<uint8_t> cipher;
       Serial.println("[MQTT] Publishing message to topic: " + p->topic);
       bool ok = encryptPayload(p->payload.data(), p->payload.size(), cipher);
       Serial.println(ok ? "[MQTT] Encryption successful" : "[MQTT] Encryption failed");
-      // 2) Publish (binary-safe). If you need base64, do it inside encryptPayload().
+      
       if (ok && client.connected()) {
         Serial.printf("[MQTT] Publishing %u  to topic %s\n", (unsigned)cipher.data(), p->topic.c_str());
         (void)client.publish(p->topic.c_str(), cipher.data(), cipher.size(), p->retain);
@@ -195,8 +180,6 @@ void CloudConnect(void *pvParameters)
 
 }
 
-
-// (Run once to set PSK; then comment it out)
 void first_time_provision() {
   uint8_t myPSK[32] = {
     0x49, 0x68, 0xA7, 0xE8, 0x83, 0x5B, 0xC6, 0xEC,
@@ -216,7 +199,7 @@ void setup()
   client.setBufferSize(16384);
   EEPROM.begin(512);
   
-  //first_time_provision(); // only ONCE
+  //first_time_provision(); 
   if (!fota.begin()) { Serial.println("[FOTA] init failed"); }
   if (!sec.begin(DEV_ID)) {
     Serial.println("SecureLink init failed");

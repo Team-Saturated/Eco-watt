@@ -10,7 +10,6 @@
 #include "Compression.h" // Added for compression
 
 #ifndef API_BULK_URL
-// Optional: define in platformio.ini as -DAPI_BULK_URL="\"http://<host>/api/inverter/bulk\""
 #define API_BULK_URL ""
 #endif
 

@@ -9,18 +9,13 @@ extern FotaManager fota;
 
 
 extern const char* DEV_ID;
-extern String t_data;
-//extern String t_status;
-extern String t_config;
-extern String t_config_ack;
-
-//extern String t_ack;
-
-extern String t_write;
-extern String t_write_ack;
-
-extern String t_fota_cmd;     
-extern String t_fota_status;
+extern const String t_data;
+extern const String t_config;
+extern const String t_config_ack;
+extern const String t_write;
+extern const String t_write_ack;
+extern const String t_fota_cmd;     
+extern const String t_fota_status;
 
 
 
@@ -39,8 +34,8 @@ struct MqttTx {
 extern QueueHandle_t mqttTxQueue;
 
 void ensureMqtt();
+
 void handleCmd(char* topic, byte* payload, unsigned int len);
-// FOTA helpers
 
 bool publishFotaJsonACK(const String& jsonPlain); // seals + publishes to t_fota_status
 

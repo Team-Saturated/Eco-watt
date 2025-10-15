@@ -56,13 +56,13 @@ bool publishConfigJsonACK(const String &jsonPlain)
   return client.publish(t_config_ack.c_str(), b64.c_str(), false);
 }
 
-
 static inline String u64dec(uint64_t v)
 {
   char b[21]; // up to 20 digits + NUL
   snprintf(b, sizeof(b), "%llu", (unsigned long long)v);
   return String(b);
 }
+
 static inline String u64hex(uint64_t v)
 {
   char b[17];
@@ -111,35 +111,6 @@ static bool mqttDecrypt(const uint8_t *in, size_t inLen,
   return true;
 }
 
-// Minimal JSON escape for Arduino String
-static String jsonEscape(const String& s) {
-  String out; out.reserve(s.length() + 8);
-  for (size_t i = 0; i < s.length(); ++i) {
-    char c = s[i];
-    switch (c) {
-      case '\"': out += "\\\""; break;
-      case '\\': out += "\\\\"; break;
-      case '\b': out += "\\b";  break;
-      case '\f': out += "\\f";  break;
-      case '\n': out += "\\n";  break;
-      case '\r': out += "\\r";  break;
-      case '\t': out += "\\t";  break;
-      default:
-        if ((unsigned char)c < 0x20) {  // control chars -> \u00XX
-          char buf[7];
-          snprintf(buf, sizeof(buf), "\\u%04X", (unsigned char)c);
-          out += buf;
-        } else {
-          out += c;
-        }
-    }
-  }
-  return out;
-}
-
-
-
-
 void ensureMqtt()
 {
   while (!client.connected())
@@ -151,7 +122,6 @@ void ensureMqtt()
       client.publish(t_config_ack.c_str(), "online", true);
 
       client.subscribe(t_config.c_str(), 0);
-      //client.subscribe(t_ack.c_str(), 0);
       client.subscribe(t_write.c_str(), 0);
       client.subscribe(t_fota_cmd.c_str(), 1);
     }
@@ -318,8 +288,6 @@ void fotaReceived(std::vector<uint8_t> &plain)
     size_t need = 0;
     int rc = mbedtls_base64_decode(nullptr, 0, &need, (const unsigned char *)b64, b64_len);
 
-    // mbedtls_base64_decode returns MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL when called with nullptr
-    // This is expected behavior - it sets 'need' to the required size
     if (rc != 0 && rc != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL)
     {
       Serial.printf("[FOTA] base64 size calculation failed, rc=%d\n", rc);
@@ -367,15 +335,14 @@ void fotaReceived(std::vector<uint8_t> &plain)
     }
     String dhex = String("{\"ev\":\"verify_ok\",\"sha256_hex\":\"") + bytesToHex(digest, 32) + "\"}";
     publishFotaJsonACK(dhex);
-    // Wait for explicit "reboot" op (controlled reboot). You can auto-reboot if desired.
+    
     return;
   }
 
   if (!strcmp(op, "reboot"))
   {
     publishFotaJsonACK("{\"ev\":\"rebooting\"}");
-    // Controlled reboot → ESP32 will boot new partition in PENDING_VERIFY state. :contentReference[oaicite:10]{index=10}
-    fota.requestReboot(); // esp_restart()
+    fota.requestReboot(); 
     return;
   }
 
@@ -384,8 +351,6 @@ void fotaReceived(std::vector<uint8_t> &plain)
   return;
 
 }
-
-
 
 void handleCmd(char *topic, byte *payload, unsigned int len)
 {
@@ -428,9 +393,6 @@ bool encryptPayload(const uint8_t* plain, size_t len, std::vector<uint8_t>& outC
   outCipher.resize(len);
   if (len) memcpy(outCipher.data(), plain, len);
   return true;
-  // If you also need Base64 after encryption:
-  //  - produce binary cipher first,
-  //  - then Base64 encode into a new vector<uint8_t> (or publish as text).
 }
 
 static MqttTx* makeMsg(const String& topic, const uint8_t* data, size_t len, bool retain) {
@@ -450,5 +412,5 @@ bool mqttEnqueue(const String& topic, const uint8_t* data, size_t len, bool reta
   if (xQueueSend(mqttTxQueue, &p, 0) != pdPASS) { delete p; return false; }
   return true;
 }
-// ===== Publisher task (decrypts? no) → encrypts → publishes =====
+
 

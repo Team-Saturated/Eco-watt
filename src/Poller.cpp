@@ -5,16 +5,6 @@
 #include <vector>
 #include "Mqtt.h"
 
-//static String bytesToHex(const std::vector<uint8_t>& v) {
-//  String s;
-//  s.reserve(v.size() * 2);
-//  for (uint8_t b : v) {
-//    char buf[3];
-//    snprintf(buf, sizeof(buf), "%02X", b);
-//    s += buf;
-//  }
-//  return s;
-//}
 static String toBase64_P(const uint8_t* data, size_t len) {
   size_t outLen = 0;
   (void) mbedtls_base64_encode(nullptr, 0, &outLen, data, len); // get size
