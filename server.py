@@ -336,7 +336,7 @@ current_config = {  # server-side cache; update as you like
     "poll_period_ms": 10000,
     "upload_period_ms": 20000,
     "buffer_capacity": 256,
-    "reg_req_id": 1023  # Bitwise register selection ID (all 10 registers by default)
+    "reg_req_id_1": 1023  # Bitwise register selection ID (all 10 registers by default)
 }
 
 # ---------- MQTT ----------
@@ -414,9 +414,14 @@ def on_message(client, userdata, msg):
         _push_log(logs_conf, {"topic":"ack/config", "ack": obj, "meta": meta})
 
     elif topic == TOPIC_ACK_WRITE:
-        try: obj, meta = try_open_ack(msg.payload)
-        except: obj, meta = None, {}
-        _push_log(logs_write, {"topic":"ack/write", "ack": obj, "meta": meta})
+        
+        res = try_open_ack(msg.payload)
+        if not res:
+            _push_log(logs_write, {"topic":"ack/write", "error":"parse_failed"})
+        else:
+            obj, meta = res
+            _push_log(logs_write, {"topic":"ack/write", "ack": obj, "meta": meta})
+
 
 mqttc.on_connect = on_connect
 mqttc.on_message = on_message
@@ -1022,8 +1027,8 @@ async function loadConfig(){
   for (const k of ['poll_period_ms','upload_period_ms','buffer_capacity']){
     if (j.config[k] !== undefined) document.getElementById(k).value = j.config[k];
   }
-  if (j.config['reg_req_id'] !== undefined) {
-    setRegisterCheckboxes(j.config['reg_req_id']);
+  if (j.config['reg_req_id_1'] !== undefined) {
+    setRegisterCheckboxes(j.config['reg_req_id_1']);
   }
   clog('✓ Loaded config');
 }
@@ -1040,7 +1045,7 @@ document.getElementById('cfgForm').onsubmit = async (e)=>{
     if (v !== '') body[k] = Number(v);
   }
   // Add register request ID from checkboxes
-  body['reg_req_id'] = getRegisterRequestId();
+  body['reg_req_id_1'] = getRegisterRequestId();
   try {
     const r = await fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
     const j = await r.json();
@@ -1172,7 +1177,7 @@ def api_config():
         patch = request.get_json(force=True) or {}
     except Exception:
         return jsonify({"ok": False, "error": "bad_json"}), 400
-    allowed = {"poll_period_ms", "upload_period_ms", "buffer_capacity", "reg_req_id"}
+    allowed = {"poll_period_ms", "upload_period_ms", "buffer_capacity", "reg_req_id_1"}
     for k,v in patch.items():
         if k in allowed and isinstance(v, (int, float)):
             current_config[k] = int(v)

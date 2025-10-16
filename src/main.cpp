@@ -65,7 +65,7 @@ bool writecommandreceived = false;
 
 
 const char* ntpServer = "pool.ntp.org";
-const long  gmtOffset_sec = 5 * 3600 + 30 * 60; // For Sri Lanka (UTC+5:30)
+const long  gmtOffset_sec = 5 * 3600 + 30 * 60; 
 const int   daylightOffset_sec = 0;
 struct tm timeinfo;
 
@@ -81,7 +81,7 @@ void main_task(void *pvParameters)
   
   for (;;)
   {
-    //Serial.println((unsigned long)now);
+    
     vTaskDelay(1);
     g_poller->read(SLAVE_ID, START_ADDR, QTY_REGS);
 
@@ -115,9 +115,9 @@ void main_task(void *pvParameters)
                         newRecords[i].raw.size());  
         }
         Serial.printf("[MAIN] Drained %u new records from buffer (dropped %u)\n", (unsigned)newRecords.size(), (unsigned)g_buffer->droppedCount());
-        Serial.printf("Number of Real Inverter Samples: %u\n", (unsigned)newRecords.size());
+        Serial.printf("[MAIN]Number of Real Inverter Samples: %u\n", (unsigned)newRecords.size());
         uint32_t original_size = newRecords.size() * sizeof(Record);
-        Serial.printf("Original Payload Size: %u bytes\n", original_size);
+        Serial.printf("[MAIN]Original Payload Size: %u bytes\n", original_size);
 
         bool uploadSuccess = g_uploader->uploadBatch(newRecords);
         if (!uploadSuccess)
@@ -144,9 +144,6 @@ void CloudConnect(void *pvParameters)
 { 
   
   wifiConnect();
-  client.setServer(MQTT_HOST, MQTT_PORT);
-    
-  client.setCallback(handleCmd);
   
   uint32_t last = 0;
   uint32_t now = 0;
@@ -172,18 +169,19 @@ void CloudConnect(void *pvParameters)
 
     MqttTx* p = nullptr;
     if (xQueueReceive(mqttTxQueue, &p, pdMS_TO_TICKS(5)) == pdPASS && p) {
-      
       std::vector<uint8_t> cipher;
-      Serial.println("[MQTT] Publishing message to topic: " + p->topic);
-      bool ok = encryptPayload(p->payload.data(), p->payload.size(), cipher);
-      Serial.println(ok ? "[MQTT] Encryption successful" : "[MQTT] Encryption failed");
-      
-      if (ok && client.connected()) {
-        Serial.printf("[MQTT] Publishing %u  to topic %s\n", (unsigned)cipher.data(), p->topic.c_str());
-        (void)client.publish(p->topic.c_str(), cipher.data(), cipher.size(), p->retain);
-      }
+
+      bool sent = client.publish(
+          p->topic.c_str(),
+          p->payload.data(),
+          (unsigned)p->payload.size(),
+          p->retain);
+      Serial.println(sent ? "[MQTT] Publish OK"
+                          : String("[MQTT] Publish FAILED, state=") + client.state());
+
       delete p;
     }
+
   }
 
 }
@@ -204,12 +202,16 @@ void setup()
   mqttTxQueue = xQueueCreate(32, sizeof(MqttTx*));
   delay(200);
   wifiConnect();
-  client.setBufferSize(16384);
   EEPROM.begin(512);
+  client.setBufferSize(16384);
+  client.setServer(MQTT_HOST, MQTT_PORT); 
+  client.setCallback(handleCmd);
+  ensureMqtt();
+  
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
   if (!getLocalTime(&timeinfo)) {
   Serial.println("[TIME] Failed to obtain time from NTP");
-  return;
+ 
   }
   //first_time_provision(); 
   if (!fota.begin()) { Serial.println("[FOTA] init failed"); }
@@ -217,13 +219,14 @@ void setup()
     Serial.println("SecureLink init failed");
     while(1) delay(1000);
   }
+  String version  = fota.version();
   bool selftest_pass = true; 
   fota.bootSelfTestFinalize(selftest_pass);
   if (selftest_pass) {
-    publishFotaJsonACK("{\"ev\":\"boot_ok\",\"version\":\"(fill from NVS or compile-time)\"}");
+    publishFotaJsonACK("{\"ev\":\"boot_ok\",\"version\":\"" + version + "\"}");
+    Serial.println("[FOTA] Boot self-test passed");
   } else {
-    // If failing here, bootloader will roll back automatically
-    // You can still try to publish, but reboot happens quickly.
+    
   }
   try
   {

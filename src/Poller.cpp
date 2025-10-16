@@ -14,6 +14,23 @@ static String toBase64_P(const uint8_t* data, size_t len) {
   return String((char*)out.get());
 }
 
+static String jsonEscape(const String& s) {
+  String out; out.reserve(s.length() + 8);
+  for (size_t i = 0; i < s.length(); ++i) {
+    char c = s[i];
+    switch (c) {
+      case '\"': out += "\\\""; break;
+      case '\\': out += "\\\\"; break;
+      case '\n': out += "\\n"; break;
+      case '\r': out += "\\r"; break;
+      case '\t': out += "\\t"; break;
+      default:
+        if ((uint8_t)c < 0x20) { char b[7]; snprintf(b, sizeof(b), "\\u%04X", (unsigned)c); out += b; }
+        else out += c;
+    }
+  }
+  return out;
+}
 void Poller::applyBackoff() {
   if (_backoffMs == 0) _backoffMs = BACKOFF_MIN_MS;
   else {
@@ -112,22 +129,34 @@ void Poller::read(uint8_t slave, uint16_t addr, uint16_t qty) {
 void Poller::write(uint8_t slave, uint16_t addr, uint16_t value) {
   
   auto res = _c.writeSingle(slave, addr, value);
-
+  
+  String ack;
+  ack.reserve(96 + res.error.length());
+  ack += "{\"ev\":\"write_ack\",\"ok\":";
+  ack += (res.ok ? "true" : "false");
+  ack += ",\"address\":"; ack += String(addr);
+  ack += ",\"value\":";   ack += String(value);
+  if (res.error.length()) {
+    ack += ",\"error\":\""; ack += jsonEscape(res.error); ack += "\"";
+  }
+  ack += "}";
   std::vector<uint8_t> sealed;
-  if (!sec.seal(/*type*/1, (const uint8_t*)res.error.c_str(),
-                res.error.length(), sealed)) {
+  if (!sec.seal(/*type*/1, (const uint8_t*)ack.c_str(),
+                ack.length(), sealed)) {
     Serial.println("[SEC] seal failed");
     
   }
-  String mqttJson = toBase64_P(sealed.data(), sealed.size());
+  String b64 = toBase64_P(sealed.data(), sealed.size());
   if (res.ok) {
     Serial.print("Write works");
     Serial.println(res.error.c_str());
-    mqttEnqueue(t_write_ack, (const uint8_t*)mqttJson.c_str(), false);
-
+    mqttEnqueue(t_write_ack, (const uint8_t*)b64.c_str(), b64.length(), false);
+    
     }
   else {
-    mqttEnqueue(t_write_ack, (const uint8_t*)mqttJson.c_str(), false);
+    Serial.println(res.error.c_str());
+    mqttEnqueue(t_write_ack, (const uint8_t*)b64.c_str(), b64.length(), false);
+    mqttEnqueue(t_data, (const uint8_t*)b64.c_str(), b64.length(), false);
   }
 }
 

@@ -119,8 +119,6 @@ void ensureMqtt()
     // LWT
     if (client.connect(cid.c_str(), MQTT_USER, MQTT_PASS, t_config_ack.c_str(), 1, true, "offline"))
     {
-      client.publish(t_config_ack.c_str(), "online", true);
-
       client.subscribe(t_config.c_str(), 0);
       client.subscribe(t_write.c_str(), 0);
       client.subscribe(t_fota_cmd.c_str(), 1);
@@ -386,13 +384,6 @@ void handleCmd(char *topic, byte *payload, unsigned int len)
     Serial.println("Unknown topic");
     return;
   }
-}
-
-bool encryptPayload(const uint8_t* plain, size_t len, std::vector<uint8_t>& outCipher) {
-  // --- Example placeholder: identity (no-op). Replace with your AES/SecureLink ---
-  outCipher.resize(len);
-  if (len) memcpy(outCipher.data(), plain, len);
-  return true;
 }
 
 static MqttTx* makeMsg(const String& topic, const uint8_t* data, size_t len, bool retain) {

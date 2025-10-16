@@ -40,8 +40,8 @@ uint8_t retrieveConfig(uint8_t addr) {
 
 static ErrorCode validateConfig(uint16_t poll_period_ms, uint16_t upload_period_ms, uint16_t buffer_capacity, uint16_t reg_req_id_1) {
     // Example validation rules
-    if (poll_period_ms < 100 || poll_period_ms > 30000) return ERR_POLL_MS_FAILED;
-    if (upload_period_ms < 1000 || upload_period_ms > 300000) return ERR_UPLOAD_MS_FAILED;
+    if (poll_period_ms < 1000 || poll_period_ms > 20000) return ERR_POLL_MS_FAILED;
+    if (upload_period_ms < 5000 || upload_period_ms > 300000) return ERR_UPLOAD_MS_FAILED;
     if (buffer_capacity < 10 || buffer_capacity > 1000) return ERR_BUFFER_CAPACITY_FAILED;
     // reg_req_id_1 can be any 16-bit value
 
