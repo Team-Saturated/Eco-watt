@@ -1,3 +1,45 @@
-Video Link : https://drive.google.com/file/d/1hEavEfT15CIfmV2vrpXerurY_LmC8xn_/view?usp=sharing
+GitHub link : https://github.com/Team-Saturated/Eco-watt.git
 
-Simulation program path: \Eco-watt\.pio\build\native
+Video Links 
+
+Millestone 01: https://drive.google.com/file/d/1MVOB7h8qTtJ0MxUhxQDnDy69xXurbujf/view?usp=sharing
+
+Millestone 02: https://drive.google.com/file/d/1hEavEfT15CIfmV2vrpXerurY_LmC8xn_/view?usp=sharing
+
+Millestone 03: https://drive.google.com/file/d/1pLby1gPoU-QYmkWT6IO3SxVMhlKSWOwj/view?usp=sharing
+
+Millestone 04: https://drive.google.com/drive/folders/12PSSnW2oueumz5GOcbdgnG_vCKYrLblf?usp=sharing
+
+
+(Please refer to the branch "test-dulmin" as the current directory for this milestone.)
+
+
+
+
+
+Breief description about this milestone implementation.
+
+Fota: 
+cloud is the main controller.
+it sends the manifest.
+device replies the required offset.
+cloud send the chunk.
+if the device doesnt reply within the intevel cloud sends the mmanifest again. device can send the offset it needs and startfrom where it stopped. 
+if the version is new device start all over.
+
+Security:
+Security Framework 
+AES-256-CTR Encryption: 
+HMAC-SHA256 Authentication: 
+Key Derivation: HKDF with device-specific identifiers
+Anti-Replay Protection: Boot timestamps and sequence validation
+Secure Configuration: Encrypted parameter updates and storage
+
+Write Cmd.
+when the cloud send the write command, device up a flag to indicate a write is recevied. when the device is idling it executes the command and send the result back to the server.
+
+config send.
+
+here we use a 16 bit mask to send the config registers. Valuse are validate upon receiving. result is sent back to the device. We only report what could not uploaded.
+When the configuration is sent we validate and we up a flag and  save them on eeprom.
+Then read it before the next upload cycle.
