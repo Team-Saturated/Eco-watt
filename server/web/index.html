@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>ESP32 Console — FOTA, Config, Write & Telemetry</title>
+  <link rel="stylesheet" href="static/style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1>ESP32 Console</h1>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+      <button class="tab-btn" data-tab="fota">FOTA</button>
+      <button class="tab-btn" data-tab="config">Config</button>
+      <button class="tab-btn" data-tab="write">Write</button>
+      <button class="tab-btn" data-tab="logs">Logs</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="tab-section active">
+      <div class="card">
+        <h2>Live System Overview</h2>
+        <div class="status-grid">
+          <div class="status-card"><div class="status-value" id="currentVoltage">--</div><div class="status-label">AC Voltage (V)</div></div>
+          <div class="status-card"><div class="status-value" id="currentCurrent">--</div><div class="status-label">AC Current (A)</div></div>
+          <div class="status-card"><div class="status-value" id="currentPower">--</div><div class="status-label">AC Power (W)</div></div>
+          <div class="status-card"><div class="status-value" id="currentFreq">--</div><div class="status-label">Frequency (Hz)</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>PV & System Status</h2>
+        <div class="pv-grid">
+          <div class="pv-card"><div class="pv-title">PV1</div><div class="pv-values"><span id="pv1Voltage">--</span> • <span id="pv1Current">--</span></div></div>
+          <div class="pv-card"><div class="pv-title">PV2</div><div class="pv-values"><span id="pv2Voltage">--</span> • <span id="pv2Current">--</span></div></div>
+          <div class="pv-card"><div class="pv-title">Output Power</div><div class="pv-values"><span id="outputPower">--</span>W</div></div>
+          <div class="pv-card"><div class="pv-title">Temperature</div><div class="pv-values"><span id="sysTemp">--</span>°C</div></div>
+          <div class="pv-card"><div class="pv-title">Export Ratio</div><div class="pv-values"><span id="exportRatio">--</span>%</div></div>
+          <div class="pv-card"><div class="pv-title">Last Update</div><div class="pv-values"><span id="lastUpdate">--:--:--</span></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Live Charts</h2>
+        <div class="charts-grid">
+          <div class="chart-card"><h4>AC Voltage (V)</h4><canvas id="voltageChart"></canvas></div>
+          <div class="chart-card"><h4>AC Current (A)</h4><canvas id="currentChart"></canvas></div>
+          <div class="chart-card"><h4>Grid Frequency (Hz)</h4><canvas id="frequencyChart"></canvas></div>
+          <div class="chart-card"><h4>AC Power (W)</h4><canvas id="powerChart"></canvas></div>
+          <div class="chart-card"><h4>PV1 Voltage (V)</h4><canvas id="pv1VChart"></canvas></div>
+          <div class="chart-card"><h4>PV1 Current (A)</h4><canvas id="pv1IChart"></canvas></div>
+          <div class="chart-card"><h4>PV2 Voltage (V)</h4><canvas id="pv2VChart"></canvas></div>
+          <div class="chart-card"><h4>PV2 Current (A)</h4><canvas id="pv2IChart"></canvas></div>
+          <div class="chart-card"><h4>Output Power (W)</h4><canvas id="outputPowerChart"></canvas></div>
+          <div class="chart-card"><h4>Temperature (°C)</h4><canvas id="temperatureChart"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOTA -->
+    <section id="fota" class="tab-section">
+      <div class="card">
+        <h2>Firmware Upload & Update</h2>
+        <form id="uploadForm">
+          <div class="form-group">
+            <label>Firmware File (.bin)</label>
+            <input type="file" id="fw" accept=".bin" required/>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Version</label><input type="text" id="version" value="v1.0.0"/></div>
+            <div class="form-group"><label>Chunk Size</label><input type="number" id="chunk" value="4096" min="512" step="512"/></div>
+          </div>
+          <div class="actions-row">
+            <button type="submit" class="btn-primary">Start FOTA</button>
+            <progress id="prog" value="0" max="100" class="fota-progress"></progress>
+            <button type="button" id="rebootBtn" class="btn-secondary">Send Reboot</button>
+          </div>
+        </form>
+        <div id="fotaLog" class="log-container"></div>
+      </div>
+    </section>
+
+    <!-- CONFIG -->
+    <section id="config" class="tab-section">
+      <div class="card">
+        <h2>Device Configuration</h2>
+        <form id="cfgForm">
+          <div class="form-row">
+            <div class="form-group"><label>Poll Period (ms)</label><input type="number" id="poll_period_ms" placeholder="10000"/></div>
+            <div class="form-group"><label>Upload Period (ms)</label><input type="number" id="upload_period_ms" placeholder="20000"/></div>
+            <div class="form-group"><label>Buffer Capacity</label><input type="number" id="buffer_capacity" placeholder="256"/></div>
+          </div>
+          <div class="register-selection">
+            <h4>Register Request ID</h4>
+            <div class="register-grid" id="registerGrid"></div>
+          </div>
+          <div class="actions-row">
+            <button type="submit" class="btn-primary">Send Config</button>
+            <button type="button" id="loadCfgBtn" class="btn-secondary">Load Current</button>
+          </div>
+        </form>
+        <div id="cfgLog" class="log-container"></div>
+      </div>
+    </section>
+
+    <!-- WRITE -->
+    <section id="write" class="tab-section">
+      <div class="card">
+        <h2>Write Register</h2>
+        <form id="writeForm">
+          <div class="form-row">
+            <div class="form-group"><label>Register Address</label><input type="number" id="wr_address" required/></div>
+            <div class="form-group"><label>Register Value</label><input type="number" id="wr_value" required/></div>
+            <button type="submit" class="btn-primary">Send Write</button>
+          </div>
+        </form>
+        <div id="writeLog" class="log-container"></div>
+      </div>
+    </section>
+
+    <!-- LOGS -->
+    <section id="logs" class="tab-section">
+      <div class="card">
+        <h2>Data Logs</h2>
+        <div id="dataTopLog" class="log-container"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>ESP32 Console — Dark Neon Theme © 2025</p>
+  </footer>
+
+  <script src="static/script.js"></script>
+</body>
+</html>

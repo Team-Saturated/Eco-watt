@@ -63,7 +63,7 @@ void Poller::read(uint8_t slave, uint16_t addr, uint16_t qty) {
     time(&hello); 
     uint32_t ts = (uint32_t)hello;
     Record rec;
-    if (rec.buildFromRTU_Select_NoCRC(millis(), addr, res.bytes,REG_REQ_ID_1)) {
+    if (rec.buildFromRTU_Select_NoCRC(ts, addr, res.bytes,REG_REQ_ID_1)) {
       bool kept = _buf.push(rec);   // record contains NO CRC; only [ts][qty][addr/data...]
       if (!kept) {
         Serial.println("[BUF] Warning: buffer full, oldest record dropped");
