@@ -55,10 +55,10 @@ def api_write():
         return jsonify({"ok": False, "error": "address_value_must_be_int"}), 400
 
     payload = {"op": "write", "address": addr, "value": val}
-    from mqtt_client import publish
-    publish(TOPIC_WRITE, payload, "write")
+    from mqtt_client import publish_write
+    publish_write(TOPIC_WRITE, payload, "write")
     from state import push_log
-    push_log("write", {"dir": "tx", "sent": payload})
+    push_log("write", {"dir": "tx", "sent": payload,"topic":'Write/Command'})
     return jsonify({"ok": True, "sent": payload})
 
 # ---- CONFIG: get & send ----
@@ -89,7 +89,7 @@ def api_config():
     publish_config(current_config.copy())
 
     from state import push_log
-    push_log("config", {"topic": "config", "dir": "tx", "sent": current_config.copy()})
+    push_log("config", {"topic": "config/sent", "dir": "tx", "sent": current_config.copy()})
 
     return jsonify({"ok": True, "sent": current_config})
 

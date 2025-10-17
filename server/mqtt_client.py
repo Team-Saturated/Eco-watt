@@ -16,7 +16,7 @@ state = {"firmware": None, "version": None, "chunk": DEFAULT_CHUNK,
 def publish(topic: str, obj: dict, bucket: str):
     payload = seal_downlink(obj)
     mqttc.publish(topic, payload, qos=1)
-    push_log(bucket, {"dir": "tx", "payload": obj})
+    push_log(bucket, {"dir": "sending from server", "offset": obj.get('offset'),"operation": obj.get('op'),"topic":"Fota/Chunk/Sent"})
 
 def on_connect(client, userdata, flags, rc):
     subs = [(TOPIC_STAT,1),(TOPIC_DATA,1),(TOPIC_ACK_FOTA,1),
@@ -32,7 +32,7 @@ def on_message(client, userdata, msg):
         return
 
     if topic == TOPIC_STAT:
-        push_log("fota", obj)
+        push_log("fota", {"request_offset": obj.get("next_offset"), "event": obj.get("ev"),  "meta": obj.get("meta"), "topic":"Fota/Chunk/Request"})
         ev = obj.get("ev")
         if ev in ("need_chunks", "progress"):
             from fota_manager import send_next_chunk, state
@@ -45,7 +45,7 @@ def on_message(client, userdata, msg):
 
     # --- DATA (uplink) ---
     if topic == TOPIC_DATA:
-        push_log("data", {"info": "rx"})
+        push_log("data", {"topic": "data/rx", "info": "rx"})
         if "payload_hex" in obj:
             from telemetry import decompress_delta
             recs = decompress_delta(obj["payload_hex"])
@@ -57,7 +57,7 @@ def on_message(client, userdata, msg):
                 from state import data_records, trim_records
                 data_records.extend(recs)
                 trim_records()
-                push_log("data", {"decoded": len(recs)})
+                push_log("data", {"topic": "data/decoded", "decoded": len(recs)})
         return
     if topic == TOPIC_ACK_WRITE:
         
@@ -69,7 +69,7 @@ def on_message(client, userdata, msg):
         return
     if topic == TOPIC_ACK_CONFIG:
         
-        push_log("config", {"topic": "ack/config", "ack": obj or {"error":"parse_failed"}})
+        push_log("config", {"topic": "config/ack", "ack": obj or {"error":"parse_failed"}})
         return
     if topic == TOPIC_ACK_FOTA:
         ack = try_open_uplink(msg.payload)
@@ -78,12 +78,16 @@ def on_message(client, userdata, msg):
 
 def publish_config(obj: dict):
     """Send sealed configuration JSON to the device."""
-    from securelink import seal_downlink
+
     payload = seal_downlink(obj)
     mqttc.publish(TOPIC_CONFIG, payload, qos=1, retain=False)
-    from state import push_log
-    push_log("config", {"dir": "tx", "sent": obj})
+    #push_log("config", {"dir": "tx", "sent": obj})
     print(f"[MQTT] Sent CONFIG: {obj}")
+
+def publish_write(topic: str, obj: dict, bucket: str):
+    payload = seal_downlink(obj)
+    mqttc.publish(topic, payload, qos=1)
+    push_log(bucket, {"dir": "sending from server","operation": obj.get('op')})
 
 
 mqttc.on_connect = on_connect
