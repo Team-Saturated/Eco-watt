@@ -63,7 +63,7 @@ const String t_device_status = String("devices/") + DEV_ID + "/status";
 const char *MQTT_USER = ""; // optional
 const char *MQTT_PASS = ""; // optional
 
-bool config_changed = false;
+bool config_changed = true;
 bool writecommandreceived = false;
 
 
@@ -205,32 +205,48 @@ void setup()
   Serial.begin(115200);
   mqttTxQueue = xQueueCreate(32, sizeof(MqttTx*));
   delay(200);
+
+  //Wifi initialization
   wifiConnect();
-  status_reg |= 0b00000001; // WIFI connected
+  status_reg |= 0b00000001; 
+ 
+  //EEPROM Initialization
   EEPROM.begin(512);
+  
+  //Mqtt Initialization
   client.setBufferSize(16384);
   client.setServer(MQTT_HOST, MQTT_PORT); 
   client.setCallback(handleCmd);
   ensureMqtt();
-  status_reg |= 0b00000010; // MQTT connected
-  
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-  if (!getLocalTime(&timeinfo)) {
-  Serial.println("[TIME] Failed to obtain time from NTP");
-  }
-  else {
-    Serial.println("[TIME] NTP time obtained");
-    status_reg |= 0b00000100; // TIME synced
-  }
-  //first_time_provision(); 
-  if (!fota.begin()) 
-  { 
-    Serial.println("[FOTA] init failed"); 
-  }else {
-    status_reg |= 0b00001000; // FOTA ready
-    Serial.println("[FOTA] init succeeded");
-  }
+  status_reg |= 0b00000010;
 
+  //NTP Initialization  
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  if (!getLocalTime(&timeinfo)) 
+    {
+      Serial.println("[TIME] Failed to obtain time from NTP");
+    }
+  else 
+    {
+      Serial.println("[TIME] NTP time obtained");
+      status_reg |= 0b00000100; // TIME synced
+    }
+
+  //PSK Provisioning for SecureLink 
+  //first_time_provision();
+  
+  //FOTA Initialization
+  if (!fota.begin()) 
+    { 
+      Serial.println("[FOTA] init failed"); 
+    }
+  else 
+    {
+      status_reg |= 0b00001000; // FOTA ready
+      Serial.println("[FOTA] init succeeded");
+    }
+
+  //SecureLink Initialization
   if (!sec.begin(DEV_ID)) {
     Serial.println("SecureLink init failed");
     while(1) delay(1000);
@@ -238,20 +254,29 @@ void setup()
     status_reg |= 0b00010000; // Security ready
     Serial.println("SecureLink init succeeded");
   }
+
+  //System Check
   String version  = fota.version();
   bool selftest_pass = false; 
-  if(status_reg & 0b00011111) {
-    selftest_pass = true;
-    Serial.printf("[FOTA] Current firmware version: %s\n", version.c_str());
-  }
-  
-  fota.bootSelfTestFinalize(selftest_pass);
-  if (selftest_pass) {
-    publishDeviceStatusJson("{\"ev\":\"boot_ok\",\"version\":\"" + version + "\",\"status_reg\":" + status_reg + "}");
-    Serial.println("[FOTA] Boot self-test passed");
-  } else {
+  if(status_reg & 0b00011111) 
+    {
+      selftest_pass = true;
+      Serial.printf("[FOTA] Current firmware version: %s\n", version.c_str());
+      Serial.println("[FOTA] Boot self-test passed");
+      publishDeviceStatusJson("{\"ev\":\"boot_ok\",\"version\":\"" + version + "\",\"status_reg\":" + status_reg + "}");
+
+    }
+  else 
+    {
+      Serial.println("[FOTA] Boot self-test failed");
+      publishDeviceStatusJson("{\"ev\":\"system_fail\",\"version\":\"" + version + "\",\"status_reg\":" + status_reg + "}");
+    } 
     
-  }
+  //rollback or finalize FOTA update based on self-test result  
+  fota.bootSelfTestFinalize(selftest_pass);
+
+
+  //InverterClient, Poller, Buffer, Uploader Initialization
   try
   {
     #if SIMULATE
