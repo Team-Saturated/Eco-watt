@@ -30,6 +30,31 @@ static String toBase64(const uint8_t *data, size_t len)
 
 bool publishFotaJsonACK(const String &jsonPlain)
 {
+  std::vector<uint8_t> sealed;
+  if (!sec.seal(/*type*/ 2, (const uint8_t *)jsonPlain.c_str(), jsonPlain.length(), sealed))
+  {
+    Serial.println("[FOTA] seal failed");
+    return false;
+  }
+  String b64 = toBase64(sealed.data(), sealed.size());
+  return client.publish(t_fota_status.c_str(), b64.c_str(), false);
+}
+
+bool publishConfigJsonACK(const String &jsonPlain)
+{
+  // Seal with SecureLink then Base64 
+  std::vector<uint8_t> sealed;
+  if (!sec.seal(/*type*/ 2, (const uint8_t *)jsonPlain.c_str(), jsonPlain.length(), sealed))
+  {
+    Serial.println("[CONFIG] seal failed");
+    return false;
+  }
+  String b64 = toBase64(sealed.data(), sealed.size());
+  return client.publish(t_config_ack.c_str(), b64.c_str(), false);
+}
+
+bool publishDeviceStatusJson(const String &jsonPlain)
+{
   // Seal with SecureLink then Base64 (same style as your Uploader) :contentReference[oaicite:6]{index=6}
   std::vector<uint8_t> sealed;
   if (!sec.seal(/*type*/ 2, (const uint8_t *)jsonPlain.c_str(), jsonPlain.length(), sealed))
@@ -39,22 +64,10 @@ bool publishFotaJsonACK(const String &jsonPlain)
   }
   String b64 = toBase64(sealed.data(), sealed.size());
   // if (b64.length() > 0) client.setBufferSize((uint16_t)(b64.length() + 64));
-  return client.publish(t_fota_status.c_str(), b64.c_str(), false);
+  return client.publish(t_device_status.c_str(), b64.c_str(), false);
 }
 
-bool publishConfigJsonACK(const String &jsonPlain)
-{
-  // Seal with SecureLink then Base64 (same style as your Uploader)
-  std::vector<uint8_t> sealed;
-  if (!sec.seal(/*type*/ 2, (const uint8_t *)jsonPlain.c_str(), jsonPlain.length(), sealed))
-  {
-    Serial.println("[CONFIG] seal failed");
-    return false;
-  }
-  String b64 = toBase64(sealed.data(), sealed.size());
-  // if (b64.length() > 0) client.setBufferSize((uint16_t)(b64.length() + 64));
-  return client.publish(t_config_ack.c_str(), b64.c_str(), false);
-}
+
 
 static inline String u64dec(uint64_t v)
 {

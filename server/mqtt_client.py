@@ -20,7 +20,7 @@ def publish(topic: str, obj: dict, bucket: str):
 
 def on_connect(client, userdata, flags, rc):
     subs = [(TOPIC_STAT,1),(TOPIC_DATA,1),(TOPIC_ACK_FOTA,1),
-            (TOPIC_ACK_CONFIG,1),(TOPIC_ACK_WRITE,1)]
+            (TOPIC_ACK_CONFIG,1),(TOPIC_ACK_WRITE,1),(TOPIC_DEVICE_STATUS,1)]
     client.subscribe(subs)
     print(f"[MQTT] Connected rc={rc}")
 
@@ -72,9 +72,37 @@ def on_message(client, userdata, msg):
         push_log("config", {"topic": "config/ack", "ack": obj or {"error":"parse_failed"}})
         return
     if topic == TOPIC_ACK_FOTA:
-        ack = try_open_uplink(msg.payload)
-        push_log("fota", {"topic": "ack/fota", "ack": ack or {"error":"parse_failed"}})
+        
+        push_log("fota", {"topic": "ack/fota", "ack": obj or {"error":"parse_failed"}})
         return
+    if topic == TOPIC_DEVICE_STATUS:
+        status = ""
+        try :
+            reg = obj.get("status_reg", 0)
+
+            flags = []
+
+            if reg & 0b00001:
+                flags.append("WIFI connected")
+            if reg & 0b00010:
+                flags.append("MQTT connected")
+            if reg & 0b00100:
+                flags.append("TIME synced")
+            if reg & 0b01000:
+                flags.append("FOTA ok")
+            if reg & 0b10000:
+                flags.append("Security ok")
+
+            status = " | ".join(flags) if flags else f"Unknown ({reg})"
+            push_log("device", {"topic": "device/status", "status": status})
+
+        except Exception as e:
+            push_log("device", {"topic": "device/status", "error": str(e)})
+            return
+        #push_log("device", {"topic": "device/status", "status": obj or {"error":"parse_failed"}})
+        print(f"[MQTT] Device Status: {obj}")
+        return
+    
 
 def publish_config(obj: dict):
     """Send sealed configuration JSON to the device."""

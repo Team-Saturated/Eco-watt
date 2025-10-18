@@ -41,6 +41,9 @@ uint16_t POLL_PERIOD_MS = 10000;
 uint16_t UPLOAD_PERIOD_MS = 20000; 
 uint16_t BUFFER_CAPACITY = 128;
 uint16_t REG_REQ_ID_1 = 0b0000001111111111;
+
+uint8_t status_reg = 0b00000000;//.......|Poller|Security|FOTA|TIME|MQTT|WIFI|
+
 const char *MQTT_HOST = "broker.emqx.io"; 
 const uint16_t MQTT_PORT = 1883;
 
@@ -55,6 +58,7 @@ const String t_write = String("devices/") + DEV_ID + "/write";
 const String t_write_ack = String("devices/") + DEV_ID + "/ack/write";
 const String t_fota_cmd = String("devices/") + DEV_ID + "/fota/cmd";
 const String t_fota_status = String("devices/") + DEV_ID + "/fota/status";
+const String t_device_status = String("devices/") + DEV_ID + "/status";
 
 const char *MQTT_USER = ""; // optional
 const char *MQTT_PASS = ""; // optional
@@ -202,28 +206,48 @@ void setup()
   mqttTxQueue = xQueueCreate(32, sizeof(MqttTx*));
   delay(200);
   wifiConnect();
+  status_reg |= 0b00000001; // WIFI connected
   EEPROM.begin(512);
   client.setBufferSize(16384);
   client.setServer(MQTT_HOST, MQTT_PORT); 
   client.setCallback(handleCmd);
   ensureMqtt();
+  status_reg |= 0b00000010; // MQTT connected
   
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
   if (!getLocalTime(&timeinfo)) {
   Serial.println("[TIME] Failed to obtain time from NTP");
- 
+  }
+  else {
+    Serial.println("[TIME] NTP time obtained");
+    status_reg |= 0b00000100; // TIME synced
   }
   //first_time_provision(); 
-  if (!fota.begin()) { Serial.println("[FOTA] init failed"); }
+  if (!fota.begin()) 
+  { 
+    Serial.println("[FOTA] init failed"); 
+  }else {
+    status_reg |= 0b00001000; // FOTA ready
+    Serial.println("[FOTA] init succeeded");
+  }
+
   if (!sec.begin(DEV_ID)) {
     Serial.println("SecureLink init failed");
     while(1) delay(1000);
+  }else{
+    status_reg |= 0b00010000; // Security ready
+    Serial.println("SecureLink init succeeded");
   }
   String version  = fota.version();
-  bool selftest_pass = true; 
+  bool selftest_pass = false; 
+  if(status_reg & 0b00011111) {
+    selftest_pass = true;
+    Serial.printf("[FOTA] Current firmware version: %s\n", version.c_str());
+  }
+  
   fota.bootSelfTestFinalize(selftest_pass);
   if (selftest_pass) {
-    publishFotaJsonACK("{\"ev\":\"boot_ok\",\"version\":\"" + version + "\"}");
+    publishDeviceStatusJson("{\"ev\":\"boot_ok\",\"version\":\"" + version + "\",\"status_reg\":" + status_reg + "}");
     Serial.println("[FOTA] Boot self-test passed");
   } else {
     

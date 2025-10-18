@@ -29,6 +29,7 @@ const dataTopLog=document.getElementById('dataTopLog');
 const fotaLog=document.getElementById('fotaLog');
 const cfgLog=document.getElementById('cfgLog');
 const writeLog=document.getElementById('writeLog');
+const deviceLog=document.getElementById('DeviceLog');
 
 // Chart.js initialization
 const charts={};
@@ -171,6 +172,7 @@ setInterval(()=>pollLogs('/api/logs/data',dataTopLog),3000);
 setInterval(()=>pollLogs('/api/logs/fota',fotaLog),3000);
 setInterval(()=>pollLogs('/api/logs/config',cfgLog),3000);
 setInterval(()=>pollLogs('/api/logs/write',writeLog),3000);
+setInterval(()=>pollLogs('/api/logs/device',deviceLog),3000);
 pollData();
 
 // FOTA
@@ -241,3 +243,10 @@ document.getElementById('writeForm').onsubmit=async e=>{
     logLine(writeLog,'✓ Write sent: '+JSON.stringify(j.sent));
   }catch(err){logLine(writeLog,'✗ Write failed: '+err);}
 };
+
+document.getElementById('writeLoadBtn')
+{
+  
+}
+
+// Device Status log

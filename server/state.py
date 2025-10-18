@@ -3,7 +3,7 @@ import time
 from typing import List, Dict, Any
 from config import MAX_EVENTS, MAX_RECORDS
 
-logs = {"data": [], "fota": [], "config": [], "write": []}
+logs = {"data": [], "fota": [], "config": [], "write": [], "device": []}
 data_records: List[Dict[str, Any]] = []
 
 def push_log(bucket: str, ev: Dict[str, Any]):

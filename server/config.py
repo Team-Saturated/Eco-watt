@@ -15,6 +15,7 @@ TOPIC_WRITE   = f"devices/{DEV_ID}/write"
 TOPIC_ACK_FOTA   = f"devices/{DEV_ID}/fota/status"
 TOPIC_ACK_CONFIG = f"devices/{DEV_ID}/ack/config"
 TOPIC_ACK_WRITE  = f"devices/{DEV_ID}/ack/write"
+TOPIC_DEVICE_STATUS = f"devices/{DEV_ID}/status"
 
 # Security
 PSK_HEX = "4968A7E8835BC6EC5BDBE15AA9E7C478E5616E33AA0CC4CADB53A81AA20FA727"

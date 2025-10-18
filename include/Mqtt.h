@@ -16,7 +16,7 @@ extern const String t_write;
 extern const String t_write_ack;
 extern const String t_fota_cmd;     
 extern const String t_fota_status;
-
+extern const String t_device_status;
 
 
 extern const char* MQTT_USER;  // optional
@@ -38,6 +38,10 @@ void ensureMqtt();
 void handleCmd(char* topic, byte* payload, unsigned int len);
 
 bool publishFotaJsonACK(const String& jsonPlain); // seals + publishes to t_fota_status
+
+bool publishConfigJsonACK(const String& jsonPlain); // seals + publishes to t_config_ack
+
+bool publishDeviceStatusJson(const String& jsonPlain); // seals + publishes to t_device_status
 
 bool mqttEnqueue(const String& topic, const uint8_t* data, size_t len, bool retain=false);
 
