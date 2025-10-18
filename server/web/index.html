@@ -123,14 +123,74 @@
         <h2>Write Register</h2>
         <form id="writeForm">
           <div class="form-row">
-            <div class="form-group"><label>Register Address</label><input type="number" id="wr_address" required/></div>
-            <div class="form-group"><label>Register Value</label><input type="number" id="wr_value" required/></div>
+            <div class="form-group">
+              <label>Register Address</label>
+              <input type="number" id="wr_address" required />
+            </div>
+
+            <div class="form-group">
+              <label>Register Value</label>
+              <input type="number" id="wr_value" required />
+            </div>
+
+            <!-- Slave Address is REQUIRED always -->
+            <div class="form-group">
+              <label for="write_slaveAddr">Slave Address</label>
+              <input type="number" id="write_slaveAddr" min="0" step="1" value="1" required />
+            </div>
+
             <button type="submit" class="btn-primary">Send Write</button>
           </div>
+
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="write_simulate" />
+              Simulate error for next request
+            </label>
+            <small class="hint">Tick to include function code + error parameters.</small>
+          </div>
+
+          <!-- Optional controls (hidden until "Simulate" is checked) -->
+          <fieldset id="write_opts" class="card" style="margin-top:1rem; display:none">
+            <legend>Protocol & Error Options (optional)</legend>
+
+            <div class="form-row">
+              <div class="form-group" id="write_funcWrap">
+                <label for="write_funcCode">Function Code</label>
+                <input type="number" id="write_funcCode" min="0" step="1" value="1" />
+              </div>
+
+              <div class="form-group" id="write_errorTypeWrap">
+                <label for="write_errorType">Error Type</label>
+                <select id="write_errorType">
+                  <option value="">(none)</option>
+                  <option value="EXCEPTION">EXCEPTION</option>
+                  <option value="CRC_ERROR">CRC_ERROR</option>
+                  <option value="CORRUPT">CORRUPT</option>
+                  <option value="PACKET_DROP">PACKET_DROP</option>
+                  <option value="DELAY">DELAY</option>
+                </select>
+                <small class="hint">Applies to the next device request if set.</small>
+              </div>
+
+              <div class="form-group" id="write_exceptionWrap" style="display:none">
+                <label for="write_exceptionCode">Exception Code</label>
+                <input type="number" id="write_exceptionCode" min="0" step="1" value="1" />
+              </div>
+
+              <div class="form-group" id="write_delayWrap" style="display:none">
+                <label for="write_delayMs">Delay (ms)</label>
+                <input type="number" id="write_delayMs" min="0" step="100" value="1000" />
+              </div>
+            </div>
+          </fieldset>
         </form>
+
         <div id="writeLog" class="log-container"></div>
       </div>
     </section>
+
+
 
     <!-- LOGS -->
     <section id="logs" class="tab-section">

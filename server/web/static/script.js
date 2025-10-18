@@ -232,16 +232,87 @@ document.getElementById('loadCfgBtn').onclick=async()=>{
 };
 
 // Write
-document.getElementById('writeForm').onsubmit=async e=>{
+// WRITE
+document.getElementById('writeForm').onsubmit = async (e) => {
   e.preventDefault();
-  const addr=Number(document.getElementById('wr_address').value);
-  const val=Number(document.getElementById('wr_value').value);
-  if(isNaN(addr)||isNaN(val)){logLine(writeLog,'⚠ Invalid numbers');return;}
-  try{
-    const r=await fetch('/api/write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address:addr,value:val})});
-    const j=await r.json();
-    logLine(writeLog,'✓ Write sent: '+JSON.stringify(j.sent));
-  }catch(err){logLine(writeLog,'✗ Write failed: '+err);}
+
+  const addrEl   = document.getElementById('wr_address');
+  const valEl    = document.getElementById('wr_value');
+  const slaveEl  = document.getElementById('write_slaveAddr');
+  const simEl    = document.getElementById('write_simulate');
+
+  const addr  = Number(addrEl.value);
+  const val   = Number(valEl.value);
+  const slave = Number(slaveEl.value);
+  const simulate = !!simEl?.checked;
+
+  // Required (always)
+  if (![addr, val, slave].every(Number.isInteger)) {
+    logLine(writeLog, '⚠ address, value, and slaveAddress must be integers.');
+    (!Number.isInteger(addr)  ? addrEl  :
+     !Number.isInteger(val)   ? valEl   :
+     !Number.isInteger(slave) ? slaveEl : null)?.focus();
+    return;
+  }
+
+  // Base payload
+  const body = { address: addr, value: val, slaveAddress: slave };
+
+  if (simulate) {
+    const funcEl    = document.getElementById('write_funcCode');
+    const typeEl    = document.getElementById('write_errorType');
+    const excEl     = document.getElementById('write_exceptionCode');
+    const delayEl   = document.getElementById('write_delayMs');
+
+    const func = Number(funcEl.value);
+    if (!Number.isInteger(func)) {
+      logLine(writeLog, '⚠ functionCode must be an integer when simulating.');
+      funcEl.focus(); return;
+    }
+
+    const errTypeRaw = (typeEl?.value || '').trim();
+    const errType = errTypeRaw.toUpperCase();
+    const allowed = new Set(['EXCEPTION','CRC_ERROR','CORRUPT','PACKET_DROP','DELAY']);
+    if (!allowed.has(errType)) {
+      logLine(writeLog, '⚠ Select a valid errorType to simulate.');
+      typeEl.focus(); return;
+    }
+
+    body.functionCode = func;
+    body.errorType    = errType;
+
+    if (errType === 'EXCEPTION') {
+      const ex = Number(excEl?.value);
+      if (!Number.isInteger(ex)) {
+        logLine(writeLog, '⚠ exceptionCode must be an integer for EXCEPTION.');
+        excEl?.focus(); return;
+      }
+      body.exceptionCode = ex;
+    } else if (errType === 'DELAY') {
+      const ms = Number(delayEl?.value);
+      if (!Number.isInteger(ms) || ms < 0) {
+        logLine(writeLog, '⚠ delayMs must be a non-negative integer for DELAY.');
+        delayEl?.focus(); return;
+      }
+      body.delayMs = ms;
+    }
+  }
+
+  try {
+    const r = await fetch('/api/write', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      logLine(writeLog, `✗ Write failed ${r.status}: ${j.error || j.message || 'bad_request'}`);
+      return;
+    }
+    logLine(writeLog, '✓ Write sent: ' + JSON.stringify(j.sent || body));
+  } catch (err) {
+    logLine(writeLog, '✗ Write failed: ' + err);
+  }
 };
 
 document.getElementById('writeLoadBtn')
@@ -384,3 +455,118 @@ efForm.onsubmit = async (e) => {
     ef_log(`✗ Request failed: ${err}`);
   }
 };
+
+// === WRITE tab: visibility + submit ===
+(function () {
+  const writeForm  = document.getElementById('writeForm');
+  const writeLogEl = document.getElementById('writeLog');
+  const log = (m) => logLine(writeLogEl, m);
+
+  // Inputs
+  const addrEl  = document.getElementById('wr_address');
+  const valEl   = document.getElementById('wr_value');
+  const slaveEl = document.getElementById('write_slaveAddr');
+
+  // Simulate toggles / wrappers
+  const simEl   = document.getElementById('write_simulate');
+  const optsFS  = document.getElementById('write_opts');
+
+  const funcWrap = document.getElementById('write_funcWrap');
+  const typeWrap = document.getElementById('write_errorTypeWrap');
+  const excWrap  = document.getElementById('write_exceptionWrap');
+  const delWrap  = document.getElementById('write_delayWrap');
+
+  // Optional fields
+  const funcEl  = document.getElementById('write_funcCode');
+  const typeEl  = document.getElementById('write_errorType');
+  const excEl   = document.getElementById('write_exceptionCode');
+  const delayEl = document.getElementById('write_delayMs');
+
+  function refreshVis() {
+    const on = !!simEl.checked;
+    const t  = (typeEl.value || '').toUpperCase();
+
+    optsFS.style.display   = on ? '' : 'none';
+    funcWrap.style.display = on ? '' : 'none';
+    typeWrap.style.display = on ? '' : 'none';
+    excWrap.style.display  = (on && t === 'EXCEPTION') ? '' : 'none';
+    delWrap.style.display  = (on && t === 'DELAY') ? '' : 'none';
+
+    // required flags
+    funcEl.required  = on;
+    excEl.required   = (on && t === 'EXCEPTION');
+    delayEl.required = (on && t === 'DELAY');
+  }
+  simEl.addEventListener('change', refreshVis);
+  typeEl.addEventListener('change', refreshVis);
+  refreshVis();
+
+  writeForm.onsubmit = async (e) => {
+    e.preventDefault();
+
+    const addr  = Number(addrEl.value);
+    const val   = Number(valEl.value);
+    const slave = Number(slaveEl.value);
+    const simulate = !!simEl.checked;
+
+    if (![addr, val, slave].every(Number.isInteger)) {
+      log('⚠ address, value, and slaveAddress must be integers.');
+      (!Number.isInteger(addr)  ? addrEl :
+       !Number.isInteger(val)   ? valEl  :
+       !Number.isInteger(slave) ? slaveEl: null)?.focus();
+      return;
+    }
+
+    const body = { address: addr, value: val, slaveAddress: slave };
+
+    if (simulate) {
+      const func = Number(funcEl.value);
+      if (!Number.isInteger(func)) {
+        log('⚠ functionCode must be an integer when simulating.');
+        funcEl.focus(); return;
+      }
+
+      const errType = (typeEl.value || '').toUpperCase();
+      const allowed = new Set(['EXCEPTION','CRC_ERROR','CORRUPT','PACKET_DROP','DELAY']);
+      if (!allowed.has(errType)) {
+        log('⚠ Select a valid errorType to simulate.');
+        typeEl.focus(); return;
+      }
+
+      body.functionCode = func;
+      body.errorType    = errType;
+
+      if (errType === 'EXCEPTION') {
+        const ex = Number(excEl.value);
+        if (!Number.isInteger(ex)) {
+          log('⚠ exceptionCode must be an integer for EXCEPTION.');
+          excEl.focus(); return;
+        }
+        body.exceptionCode = ex;
+      } else if (errType === 'DELAY') {
+        const ms = Number(delayEl.value);
+        if (!Number.isInteger(ms) || ms < 0) {
+          log('⚠ delayMs must be a non-negative integer for DELAY.');
+          delayEl.focus(); return;
+        }
+        body.delayMs = ms;
+      }
+    }
+
+    try {
+      const r = await fetch('/api/write', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        log(`✗ Write failed ${r.status}: ${j.error || j.message || 'bad_request'}`);
+        return;
+      }
+      log('✓ Write sent: ' + JSON.stringify(j.sent || body));
+    } catch (err) {
+      log('✗ Write failed: ' + err);
+    }
+  };
+})();

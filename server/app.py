@@ -37,7 +37,6 @@ def api_reboot():
     push_log("fota", {"info":"reboot_sent"})
     return jsonify({"ok":True})
 
-
 @app.route("/api/write", methods=["POST"])
 def api_write():
     try:
@@ -45,20 +44,78 @@ def api_write():
     except Exception:
         return jsonify({"ok": False, "error": "bad_json"}), 400
 
-    if "address" not in body or "value" not in body:
-        return jsonify({"ok": False, "error": "need_address_and_value"}), 400
+    # --- Required fields ---
+    for k in ("address", "value", "slaveAddress"):
+        if k not in body:
+            return jsonify({"ok": False, "error": f"missing_{k}"}), 400
 
     try:
         addr = int(body["address"])
         val  = int(body["value"])
+        slave = int(body["slaveAddress"])
     except Exception:
-        return jsonify({"ok": False, "error": "address_value_must_be_int"}), 400
+        return jsonify({"ok": False, "error": "address_value_slave_must_be_int"}), 400
 
-    payload = {"op": "write", "address": addr, "value": val}
+    # --- Optional simulation fields ---
+    func = None
+    if "functionCode" in body:
+        try:
+            func = int(body["functionCode"])
+        except Exception:
+            return jsonify({"ok": False, "error": "functionCode_must_be_int"}), 400
+
+    err_type = body.get("errorType")
+    exc_code = body.get("exceptionCode")
+    delay_ms = body.get("delayMs")
+
+    if err_type is not None:
+        err_type = str(err_type).upper().strip()
+        allowed = {"EXCEPTION", "CRC_ERROR", "CORRUPT", "PACKET_DROP", "DELAY"}
+        if err_type not in allowed:
+            return jsonify({"ok": False, "error": "invalid_errorType"}), 400
+        # If simulating, functionCode should be present
+        if func is None:
+            return jsonify({"ok": False, "error": "functionCode_required_when_errorType_set"}), 400
+        if err_type == "EXCEPTION":
+            if exc_code is None:
+                return jsonify({"ok": False, "error": "exceptionCode_required_for_EXCEPTION"}), 400
+            try:
+                exc_code = int(exc_code)
+            except Exception:
+                return jsonify({"ok": False, "error": "exceptionCode_must_be_int"}), 400
+        if err_type == "DELAY":
+            if delay_ms is None:
+                return jsonify({"ok": False, "error": "delayMs_required_for_DELAY"}), 400
+            try:
+                delay_ms = int(delay_ms)
+                if delay_ms < 0:
+                    raise ValueError
+            except Exception:
+                return jsonify({"ok": False, "error": "delayMs_must_be_nonnegative_int"}), 400
+
+    # --- Build payload ---
+    payload = {
+        "op": "write",
+        "address": addr,
+        "value": val,
+        "slaveAddress": slave,
+    }
+    if func is not None:
+        payload["functionCode"] = func
+    if err_type is not None:
+        payload["errorType"] = err_type
+        if err_type == "EXCEPTION":
+            payload["exceptionCode"] = exc_code
+        elif err_type == "DELAY":
+            payload["delayMs"] = delay_ms
+
+    # --- Publish + log ---
     from mqtt_client import publish_write
     publish_write(TOPIC_WRITE, payload, "write")
+
     from state import push_log
-    push_log("write", {"dir": "tx", "sent": payload,"topic":'Write/Command'})
+    push_log("write", {"dir": "tx", "sent": payload, "topic": "Write/Command"})
+
     return jsonify({"ok": True, "sent": payload})
 
 # ---- CONFIG: get & send ----
