@@ -84,64 +84,53 @@ void main_task(void *pvParameters)
 {
   
   for (;;)
-  {
-    
-    vTaskDelay(1);
-    g_poller->read(SLAVE_ID, START_ADDR, QTY_REGS);
-
-    if (writecommandreceived)
     {
-      g_poller->write(SLAVE_ID, WRITE_ADDR, WRITE_VALUE); // Example value to write
-      writecommandreceived = false;
-    }
-
-    static uint32_t last = 0;
-    uint32_t now = millis();
-
-    if (now - last >= UPLOAD_PERIOD_MS)
-    {
-      last = now;
-      std::vector<Record> newRecords;
-      g_buffer->drainTo(newRecords);
-
-      if (newRecords.empty())
-      {
-        Serial.println("[MAIN] No new records to upload.");
-      }
-      else
-      {
-        Serial.printf("[MAIN] Printing %u new records:\n", (unsigned)newRecords.size());
-        for (size_t i = 0; i < newRecords.size(); i++) {
-          Serial.printf("Record %u: timestamp=%u, start address=%u, qty=%u, rawFrameHex=%s\n", 
-                        (unsigned)i, 
-                        newRecords[i].ts_ms,
-                        newRecords[i].raw.data(),
-                        newRecords[i].raw.size());  
-        }
-        Serial.printf("[MAIN] Drained %u new records from buffer (dropped %u)\n", (unsigned)newRecords.size(), (unsigned)g_buffer->droppedCount());
-        Serial.printf("[MAIN]Number of Real Inverter Samples: %u\n", (unsigned)newRecords.size());
-        uint32_t original_size = newRecords.size() * sizeof(Record);
-        Serial.printf("[MAIN]Original Payload Size: %u bytes\n", original_size);
-
-        bool uploadSuccess = g_uploader->uploadBatch(newRecords);
-        if (!uploadSuccess)
-        {
-          Serial.println("[MAIN]  Upload failed");
-        }
-        else
-        {
-          Serial.println("[MAIN]  Real inverter data with timestamps uploaded successfully!");
-        }
-      }
-    }
-
-    if (config_changed)
-    {
-
-      ApplyConfig();
       
-    } 
-  }
+      vTaskDelay(1);
+      
+      g_poller->read(SLAVE_ID, START_ADDR, QTY_REGS);
+
+      if (writecommandreceived)
+        {
+          g_poller->write(SLAVE_ID, WRITE_ADDR, WRITE_VALUE); 
+          writecommandreceived = false;
+        }
+
+      static uint32_t last = 0;
+      uint32_t now = millis();
+
+      if (now - last >= UPLOAD_PERIOD_MS)
+        {
+          last = now;
+          std::vector<Record> newRecords;
+          g_buffer->drainTo(newRecords);
+
+          if (newRecords.empty())
+            {
+              Serial.println("[MAIN] No new records to upload.");
+            }
+          else
+            {
+              Serial.printf("[MAIN] Drained %u new records from buffer (dropped %u)\n", (unsigned)newRecords.size(), (unsigned)g_buffer->droppedCount());
+              Serial.printf("[MAIN]Number of Real Inverter Samples: %u\n", (unsigned)newRecords.size());
+
+              bool uploadSuccess = g_uploader->uploadBatch(newRecords);
+              if (!uploadSuccess)
+                {
+                  Serial.println("[MAIN]  Upload failed");
+                }
+              else
+                {
+                  Serial.println("[MAIN]  Real inverter data with timestamps uploaded successfully!");
+                }
+            }
+        }
+
+      if (config_changed)
+        {
+          ApplyConfig();
+        } 
+    }
 }
 
 void CloudConnect(void *pvParameters)
