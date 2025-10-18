@@ -93,6 +93,52 @@ def api_config():
 
     return jsonify({"ok": True, "sent": current_config})
 
+@app.route("/api/error-flag/add", methods=["POST"])
+def api_error_flag_add():
+    try:
+        body = request.get_json(force=True) or {}
+    except Exception:
+        return jsonify({"ok": False, "error": "bad_json"}), 400
+
+    t = (body.get("errorType") or "").upper()
+    allowed = {"EXCEPTION", "CRC_ERROR", "CORRUPT", "PACKET_DROP", "DELAY"}
+    if t not in allowed:
+        return jsonify({"ok": False, "error": "invalid_errorType"}), 400
+
+    if t == "EXCEPTION" and "exceptionCode" not in body:
+        return jsonify({"ok": False, "error": "exceptionCode_required"}), 400
+    if t == "DELAY" and "delayMs" not in body:
+        return jsonify({"ok": False, "error": "delayMs_required"}), 400
+
+    import requests
+    from config import ERROR_FLAG_API_URL, ERROR_FLAG_API_KEY
+    headers = {
+        "accept": "*/*",
+        "Authorization": ERROR_FLAG_API_KEY,
+        "Content-Type": "application/json",
+    }
+
+    try:
+        resp = requests.post(ERROR_FLAG_API_URL, headers=headers, json=body, timeout=10)
+    except requests.RequestException as e:
+        return jsonify({"ok": False, "error": f"upstream_error: {e}"}), 502
+
+    if resp.status_code != 200:
+        return jsonify({
+            "ok": False,
+            "upstream_status": resp.status_code,
+            "upstream_text": resp.text[:500]
+        }), 502
+
+    # optional: log to your existing log bucket
+    try:
+        from state import push_log
+        push_log("device", {"topic": "error-flag/add", "dir": "tx", "forwarded": body})
+    except Exception:
+        pass
+
+    return jsonify({"ok": True, "forwarded": body})
+
 
 if __name__ == "__main__":
     start_mqtt()

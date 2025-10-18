@@ -16,6 +16,8 @@
       <button class="tab-btn" data-tab="config">Config</button>
       <button class="tab-btn" data-tab="write">Write</button>
       <button class="tab-btn" data-tab="logs">Logs</button>
+      <button class="tab-btn" data-tab="errorFlag">Error Flag</button>
+
     </nav>
   </header>
 
@@ -137,6 +139,55 @@
         <div id="dataTopLog" class="log-container"></div>
       </div>
     </section>
+
+    <!-- ERROR FLAG -->
+    <section id="errorFlag" class="tab-section">
+      <div class="card">
+        <h2>Error Simulator (applies to the next device request)</h2>
+
+        <form id="errFlagForm" class="form-grid">
+          <!-- Error type -->
+          <div class="form-group">
+            <label for="ef_errorType">Mode</label>
+            <select id="ef_errorType" required>
+              <option value="EXCEPTION">EXCEPTION</option>
+              <option value="CRC_ERROR">CRC_ERROR</option>
+              <option value="CORRUPT">CORRUPT</option>
+              <option value="PACKET_DROP">PACKET_DROP</option>
+              <option value="DELAY">DELAY</option>
+            </select>
+            <small class="hint" id="ef_hint">Sends an exception frame with a selected exception code.</small>
+          </div>
+
+          <!-- Exception code (shown only when EXCEPTION) -->
+          <div class="form-group" id="ef_exceptionWrap">
+            <label for="ef_exceptionCodeSel">Exception Code</label>
+            <select id="ef_exceptionCodeSel">
+              <!-- options injected by JS -->
+            </select>
+            <div id="ef_customCodeWrap" style="display:none; margin-top:0.5rem">
+              <input type="number" id="ef_exceptionCodeCustom" placeholder="Enter custom code" min="0" step="1" />
+            </div>
+            <small class="hint" id="ef_excDesc"></small>
+          </div>
+
+          <!-- Delay (shown only when DELAY) -->
+          <div class="form-group" id="ef_delayWrap" style="display:none">
+            <label for="ef_delayMs">Delay (ms)</label>
+            <input type="number" id="ef_delayMs" value="1000" min="0" step="100" />
+            <small class="hint">Applies artificial latency to the next response.</small>
+          </div>
+
+          <div class="actions-row">
+            <button type="submit" class="btn-primary">Queue Error</button>
+            <button type="button" id="ef_clearBtn" class="btn-secondary">Reset</button>
+          </div>
+        </form>
+
+        <div id="errFlagLog" class="log-container" style="margin-top:1rem"></div>
+      </div>
+    </section> 
+    
   </main>
 
   <footer class="footer">

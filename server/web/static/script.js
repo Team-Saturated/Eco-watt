@@ -248,5 +248,139 @@ document.getElementById('writeLoadBtn')
 {
   
 }
+// ================= Error Flag Tab =================
+const errFlagLog = document.getElementById('errFlagLog');
+function ef_log(msg){ logLine(errFlagLog, msg); }
 
-// Device Status log
+// Elements
+const efTypeSel   = document.getElementById('ef_errorType');
+const efHint      = document.getElementById('ef_hint');
+
+const efExcWrap   = document.getElementById('ef_exceptionWrap');
+const efExcSel    = document.getElementById('ef_exceptionCodeSel');
+const efExcCustomWrap = document.getElementById('ef_customCodeWrap');
+const efExcCustom = document.getElementById('ef_exceptionCodeCustom');
+const efExcDesc   = document.getElementById('ef_excDesc');
+
+const efDelayWrap = document.getElementById('ef_delayWrap');
+const efDelayInp  = document.getElementById('ef_delayMs');
+
+const efForm      = document.getElementById('errFlagForm');
+const efClearBtn  = document.getElementById('ef_clearBtn');
+
+// Common Modbus-style exceptions (extend if your Section 5 differs)
+const EXCEPTIONS = [
+  { code: 1,  name: 'Illegal Function' },
+  { code: 2,  name: 'Illegal Data Address' },
+  { code: 3,  name: 'Illegal Data Value' },
+  { code: 4,  name: 'Slave Device Failure' },
+  { code: 5,  name: 'Acknowledge' },
+  { code: 6,  name: 'Slave Device Busy' },
+  { code: 8,  name: 'Memory Parity Error' },
+  { code: 10, name: 'Gateway Path Unavailable' },
+  { code: 11, name: 'Gateway Target Failed to Respond' },
+  { code: 'CUSTOM', name: 'Custom…' },
+];
+
+function populateExceptionDropdown() {
+  efExcSel.innerHTML = '';
+  EXCEPTIONS.forEach(x => {
+    const opt = document.createElement('option');
+    opt.value = String(x.code);
+    opt.textContent = (x.code === 'CUSTOM') ? x.name : `${x.code} — ${x.name}`;
+    efExcSel.appendChild(opt);
+  });
+  efExcSel.value = '1';
+  efExcDesc.textContent = '1 — Illegal Function';
+}
+populateExceptionDropdown();
+
+function refreshEFVisibility(){
+  const t = efTypeSel.value;
+  const map = {
+    'EXCEPTION': 'Sends an exception frame with a selected exception code.',
+    'CRC_ERROR': 'Returns a response with an invalid CRC.',
+    'CORRUPT': 'Returns a corrupted/garbled response payload.',
+    'PACKET_DROP': 'Drops the next response (no reply).',
+    'DELAY': 'Delays the next response by the configured milliseconds.',
+  };
+  efHint.textContent = map[t] || '';
+
+  // toggle blocks
+  efExcWrap.style.display   = (t === 'EXCEPTION') ? '' : 'none';
+  efDelayWrap.style.display = (t === 'DELAY') ? '' : 'none';
+}
+efTypeSel.addEventListener('change', refreshEFVisibility);
+refreshEFVisibility();
+
+efExcSel.addEventListener('change', () => {
+  const v = efExcSel.value;
+  const found = EXCEPTIONS.find(x => String(x.code) === v);
+  if (v === 'CUSTOM') {
+    efExcCustomWrap.style.display = '';
+    efExcDesc.textContent = 'Enter a custom exception code.';
+    efExcCustom.focus();
+  } else {
+    efExcCustomWrap.style.display = 'none';
+    efExcCustom.value = '';
+    efExcDesc.textContent = found ? `${found.code} — ${found.name}` : '';
+  }
+});
+
+efClearBtn.onclick = () => {
+  efTypeSel.value = 'EXCEPTION';
+  efExcSel.value = '1';
+  efExcCustom.value = '';
+  efDelayInp.value = 1000;
+  errFlagLog.innerHTML = '';
+  efExcDesc.textContent = '1 — Illegal Function';
+  refreshEFVisibility();
+};
+
+// Submit -> proxy to backend route that holds your API key
+efForm.onsubmit = async (e) => {
+  e.preventDefault();
+  const errorType = efTypeSel.value;
+
+  // Build body per rules
+  const body = { errorType, exceptionCode: 0, delayMs: 0 };
+
+  if (errorType === 'EXCEPTION') {
+    if (efExcSel.value === 'CUSTOM') {
+      const v = Number(efExcCustom.value);
+      if (!Number.isInteger(v)) {
+        ef_log('⚠ Please enter a valid integer custom exception code.');
+        return;
+      }
+      body.exceptionCode = v;
+    } else {
+      body.exceptionCode = Number(efExcSel.value);
+    }
+  }
+
+  if (errorType === 'DELAY') {
+    const ms = Number(efDelayInp.value);
+    if (!Number.isInteger(ms) || ms < 0) {
+      ef_log('⚠ Please enter a valid non-negative delay in ms.');
+      return;
+    }
+    body.delayMs = ms;
+  }
+
+  ef_log('… sending …');
+  try {
+    const r = await fetch('/api/error-flag/add', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    const j = await r.json().catch(()=> ({}));
+    if (!r.ok) {
+      ef_log(`✗ ${r.status} ${j.error || j.upstream_text || 'bad_request'}`);
+      return;
+    }
+    ef_log(`✓ Queued ${JSON.stringify(j.forwarded || body)}`);
+  } catch (err) {
+    ef_log(`✗ Request failed: ${err}`);
+  }
+};
