@@ -45,51 +45,58 @@ void Poller::clearBackoff() {
   _backoffMs = 0;
 }
 
-void Poller::read(uint8_t slave, uint16_t addr, uint16_t qty) {
+void Poller::read(uint8_t slave, uint16_t addr, uint16_t qty) 
+{
   const uint32_t now = millis();
+
   if (now < _next) return;
 
+  //reading the register values
   auto res = _c.readHolding(slave, addr, qty);
 
-  if (res.ok) {
-    _consecOk++;
-    if (_consecOk >= ERR_RESET_AFTER) {
-      clearBackoff();
-      _consecOk = 0;
-    }
 
-    // --- buffer the successful sample as a Record ---
+  if (res.ok) 
+  {
+    _consecOk++;
+    if (_consecOk >= ERR_RESET_AFTER) 
+      {
+        clearBackoff();
+        _consecOk = 0;
+      }
+
+    //record the timestamp
     time_t hello;
     time(&hello); 
     uint32_t ts = (uint32_t)hello;
+    
     Record rec;
-    if (rec.buildFromRTU_Select_NoCRC(ts, addr, res.bytes,REG_REQ_ID_1)) {
-      bool kept = _buf.push(rec);   // record contains NO CRC; only [ts][qty][addr/data...]
-      if (!kept) {
-        Serial.println("[BUF] Warning: buffer full, oldest record dropped");
+    if (rec.buildFromRTU_Select_NoCRC(ts, addr, res.bytes,REG_REQ_ID_1)) 
+      {
+        bool kept = _buf.push(rec);   // record contains NO CRC; only [ts][qty][addr/data...]
+        if (!kept) 
+          {
+            Serial.println("[BUF] Warning: buffer full, oldest record dropped");
+          }
       }
-
-    }
      
     
 
-#if SIMULATE
-    // concise immediate feedback (unchanged)
-    if (!res.regs.empty()) {
-      Serial.printf("[OK] %u regs from %u..%u\n",
-                    (unsigned)res.regs.size(), addr, addr + qty - 1);
-    } else if (!res.body.isEmpty()) {
-      Serial.printf("[CLOUD OK] %s\n", res.body.c_str());
-    } else if (!res.bytes.empty()) {
-      Serial.print("[OK] ");
-      for (auto b : res.bytes) Serial.printf("%02X", b);
-      Serial.println();
-    }
-#else
+    #if SIMULATE
+    
+    if (!res.regs.empty()) 
+      {
+        Serial.printf("[POLLER] %u regs from %u..%u\n", (unsigned)res.regs.size(), addr, addr + qty - 1);
+      } 
+    if (!res.body.isEmpty()) 
+      {
+        Serial.printf("[CLOUD OK] %s\n", res.body.c_str());
+      } 
+  
+    #else
     Serial.print("[RS485 OK] ");
     for (auto b: res.bytes) Serial.printf("%02X", b);
     Serial.println();
-#endif
+    #endif
 
     _next = now + _period;
     return;
@@ -99,18 +106,21 @@ void Poller::read(uint8_t slave, uint16_t addr, uint16_t qty) {
   _consecOk = 0;
   _consecErr++;
 
-  Serial.printf("[ERR] type=%d status=%d msg=%s\n",
-                (int)res.type, res.status, res.error.c_str());
+  Serial.printf("[ERR] type=%d status=%d msg=%s\n",(int)res.type, res.status, res.error.c_str());
 
-  switch (res.type) {
+  switch (res.type) 
+  {
     case ErrType::MODBUS_EXC:
-      if (res.exc_code == 0x05 || res.exc_code == 0x06) {
-        Serial.println("[ACT] Transient Modbus exception -> short backoff");
-        applyBackoff();
-      } else {
-        Serial.println("[ACT] Hard Modbus exception -> regular backoff");
-        applyBackoff();
-      }
+      if (res.exc_code == 0x05 || res.exc_code == 0x06) 
+        {
+          Serial.println("[ACT] Transient Modbus exception -> short backoff");
+          applyBackoff();
+        } 
+      else 
+        {
+          Serial.println("[ACT] Hard Modbus exception -> regular backoff");
+          applyBackoff();
+        }
       break;
 
     case ErrType::TIMEOUT:
