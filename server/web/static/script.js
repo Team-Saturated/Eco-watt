@@ -570,3 +570,38 @@ efForm.onsubmit = async (e) => {
     }
   };
 })();
+// Pause/Resume/Abort
+document.getElementById('pauseBtn').onclick = async () => {
+  const r = await fetch('/api/fota/pause', {method:'POST'});
+  const j = await r.json(); logLine(fotaLog, '⏸ Paused: ' + JSON.stringify(j));
+};
+document.getElementById('resumeBtn').onclick = async () => {
+  const r = await fetch('/api/fota/resume', {method:'POST'});
+  const j = await r.json(); logLine(fotaLog, '▶️ Resumed: ' + JSON.stringify(j));
+};
+document.getElementById('abortBtn').onclick = async () => {
+  const r = await fetch('/api/fota/abort', {method:'POST'});
+  const j = await r.json(); logLine(fotaLog, '🛑 Aborted: ' + JSON.stringify(j));
+};
+
+// Malicious chunk injection
+document.getElementById('mal_btn').onclick = async () => {
+  const mode = document.getElementById('mal_mode').value;
+  const lenEl = document.getElementById('mal_len');
+  const once = document.getElementById('mal_once').checked;
+  const body = { mode, once };
+  if (mode === 'short' && lenEl.value) body.short_len = Number(lenEl.value);
+
+  try {
+    const r = await fetch('/api/fota/inject', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const j = await r.json();
+    if (!r.ok) { logLine(fotaLog, `✗ Inject failed: ${j.error||'bad_request'}`); return; }
+    logLine(fotaLog, '🔧 Fault armed: ' + JSON.stringify(j.armed || body));
+  } catch (e) {
+    logLine(fotaLog, '✗ Inject error: ' + e);
+  }
+};

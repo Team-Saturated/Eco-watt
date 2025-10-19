@@ -197,6 +197,48 @@ def api_error_flag_add():
     return jsonify({"ok": True, "forwarded": body})
 
 
+# --- FOTA controls ---
+@app.route("/api/fota/pause", methods=["POST"])
+def api_fota_pause():
+    from fota_manager import set_fota_active
+    set_fota_active(False)
+    push_log("fota", {"info": "paused"})
+    return jsonify({"ok": True, "active": False})
+
+@app.route("/api/fota/resume", methods=["POST"])
+def api_fota_resume():
+    from fota_manager import set_fota_active
+    set_fota_active(True)
+    push_log("fota", {"info": "resumed"})
+    return jsonify({"ok": True, "active": True})
+
+@app.route("/api/fota/abort", methods=["POST"])
+def api_fota_abort():
+    from fota_manager import abort_fota
+    abort_fota()
+    return jsonify({"ok": True, "aborted": True})
+
+@app.route("/api/fota/inject", methods=["POST"])
+def api_fota_inject():
+    body = request.get_json(force=True) or {}
+    mode = (body.get("mode") or "").lower()
+    once = bool(body.get("once", True))
+    short_len = body.get("short_len")
+    if mode not in {"short", "bad_sha", "bad_enc"}:
+        return jsonify({"ok": False, "error": "mode must be one of short|bad_sha|bad_enc"}), 400
+    try:
+        if short_len is not None:
+            short_len = int(short_len)
+            if short_len < 1:
+                raise ValueError
+    except Exception:
+        return jsonify({"ok": False, "error": "short_len must be positive int"}), 400
+
+    from fota_manager import arm_fault
+    arm_fault(mode, once=once, short_len=short_len)
+    return jsonify({"ok": True, "armed": {"mode": mode, "once": once, "short_len": short_len}})
+
+
 if __name__ == "__main__":
     start_mqtt()
     app.run(host="0.0.0.0", port=8080)

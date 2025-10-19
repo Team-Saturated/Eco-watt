@@ -327,6 +327,46 @@ void fotaReceived(std::vector<uint8_t> &plain)
     }
     buf.resize(outLen);
 
+    const char *sha_b64 = doc["sha256_b64"] | "";
+    size_t sha_need = 0;
+    rc = mbedtls_base64_decode(nullptr, 0, &sha_need, (const unsigned char *)sha_b64, strlen(sha_b64));
+    if (rc != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL && rc != 0) {
+      publishFotaJsonACK("{\"ev\":\"error\",\"reason\":\"sha_b64_invalid\"}");
+      
+      return;
+    }
+
+    if (sha_need != 32) {
+      publishFotaJsonACK("{\"ev\":\"error\",\"reason\":\"sha_len\"}");
+      Serial.println("[FOTA] SHA256 length mismatch");
+      return;
+    }
+
+    std::vector<uint8_t> sha_field(sha_need);
+    size_t sha_out = 0;
+    if (mbedtls_base64_decode(sha_field.data(), sha_field.size(), &sha_out,
+                              (const unsigned char *)sha_b64, strlen(sha_b64)) != 0 || sha_out != 32) {
+      publishFotaJsonACK("{\"ev\":\"error\",\"reason\":\"sha_b64_decode\"}");
+      Serial.println("[FOTA] SHA256 base64 decode failed");
+      return;
+    }
+
+    // --- Recompute SHA-256 over payload and compare ---
+    uint8_t calc[32];
+    if (mbedtls_sha256_ret(buf.data(), buf.size(), calc, /*is224=*/0) != 0) {
+      publishFotaJsonACK("{\"ev\":\"error\",\"reason\":\"sha_calc\"}");
+      Serial.println("[FOTA] SHA256 calculation failed");
+      return;
+    }
+    if (memcmp(calc, sha_field.data(), 32) != 0) {
+      // Data was altered vs declared hash → reject & ask server to resend from expected offset
+      String st = String("{\"ev\":\"error\",\"reason\":\"chunk_sha_mismatch\",\"expect\":") +
+                  u64dec((uint64_t)fota.nextOffset()) + "}";
+      publishFotaJsonACK(st);
+      Serial.println("[FOTA] chunk SHA256 mismatch");
+      return;
+    }
+
     if (!fota.handleChunk(offset, buf.data(), buf.size()))
     {
       String st = String("{\"ev\":\"error\",\"reason\":\"chunk_apply\",\"expect\":") +
