@@ -1,27 +1,4 @@
 #pragma once
-//
-// FotaManager (Direct-to-OTA, resumable, version-aware) — ESP32 (Arduino core)
-// - Writes firmware DIRECTLY into the selected OTA partition (no filesystem).
-// - Resumes exactly from the last saved offset after power loss (no erase on resume).
-// - Version-aware: a different (version,size,sha) manifest resets state & starts from 0.
-// - Integrity: running SHA-256 while pending; on resume, re-hash existing partition prefix.
-// - Authenticity: compare to expected SHA (add your signature check at manifest time if needed).
-// - Rollback-safe: sets boot partition, keeps pending=1; new image must call
-//   bootSelfTestFinalize(pass) to mark valid or auto-rollback.
-//
-// Usage (in your sketch):
-//   LittleFS/SPIFFS NOT REQUIRED for this direct-OTA version.
-//   In setup(): fota.begin(); fota.bootSelfTestFinalize(/*pass=*/true or false);
-//   On manifest: fota.handleManifest(ver, size, chunk, sha32, nonceOrNull);
-//   On chunks:   fota.handleChunk(offset, buf, len);  // strictly sequential offsets
-//   On finish:   bool ok, shaOk; uint8_t dig[32];
-//                ok = fota.finishAndVerify(shaOk, dig); if (ok && shaOk) fota.requestReboot();
-//
-// Notes:
-//   - Requires a partition table with at least two OTA slots (ota_0/ota_1) and rollback enabled.
-//   - Make sure your Arduino-ESP32 core/IDF exposes esp_partition_* and esp_ota_* APIs.
-//   - This implementation uses sector-aligned ERASE ONLY on fresh manifest; never on resume.
-//
 
 #include <Arduino.h>
 #include <Preferences.h>
@@ -30,6 +7,7 @@
 #include <esp_ota_ops.h>
 
 // ------------- NVS keys / config -------------
+/// @brief NVS namespace for FOTA operations
 #define FOTA_NS              "fota"
 #define FOTA_OFF_KEY         "off"       // uint64: next offset to write
 #define FOTA_SIZE_KEY        "size"      // uint32: expected total size
@@ -43,11 +21,30 @@
 #define SPI_FLASH_SEC_SIZE   4096
 #endif
 
+/// @brief Helper template for minimum value comparison
+/// @tparam T Type of values to compare
+/// @param a First value
+/// @param b Second value
+/// @return Minimum of a and b
 template<typename T>
 static inline T fota_min(T a, T b) { return a < b ? a : b; }
 
+/**
+ * @class FotaManager
+ * @brief Manages Firmware Over-The-Air (FOTA) updates with resume capability
+ * 
+ * This class handles chunked OTA updates with SHA-256 verification, persistent
+ * state storage in NVS, and automatic resume after power loss or reboot.
+ */
 class FotaManager {
  public:
+  /**
+   * @brief Initialize the FOTA manager and restore any pending update state
+   * @return true if initialization successful, false otherwise
+   * 
+   * Loads persistent state from NVS and attempts to resume any pending update.
+   * If the partition or SHA state cannot be recovered, clears the state.
+   */
   bool begin() {
     _prefsReady = prefs.begin(FOTA_NS, /*readOnly=*/false);
     if (!_prefsReady) { Serial.println("[FOTA] prefs.begin failed!"); return false; }
@@ -94,6 +91,11 @@ class FotaManager {
     return true;
   }
 
+  /**
+   * @brief Clear all FOTA state from NVS and reset internal variables
+   * 
+   * Removes all stored keys related to the current update session.
+   */
   void clearState() {
     prefs.remove(FOTA_OFF_KEY);
     prefs.remove(FOTA_SIZE_KEY);
@@ -111,8 +113,19 @@ class FotaManager {
     _ota_part   = nullptr;
   }
 
-  // -------- Manifest: choose partition, maybe erase, init SHA --------
-  // sha256: expected 32-byte digest; nonce may be nullptr if unused
+  /**
+   * @brief Handle the manifest/metadata for a new or resumed FOTA update
+   * @param version Version string for the update
+   * @param size Total expected size of the firmware in bytes
+   * @param chunkSize Size of individual chunks (for informational purposes)
+   * @param sha256 Expected SHA-256 digest (32 bytes)
+   * @param nonce Optional nonce for additional security (16 bytes, can be nullptr)
+   * @return true if manifest accepted and partition prepared, false otherwise
+   * 
+   * Determines if this is a new update or a resume of the same job. For new updates,
+   * selects the next OTA partition, erases it, and initializes the SHA context.
+   * For resumed updates, recovers the partition and rehashes existing data.
+   */
   bool handleManifest(const String& version, uint32_t size, uint32_t chunkSize,
                       const uint8_t sha256[32], const uint8_t* nonce) {
     // Decide if this is SAME job (resume) or NEW job (start from 0)
@@ -187,7 +200,16 @@ class FotaManager {
     return true;
   }
 
-  // -------- Chunk write (sequential) --------
+  /**
+   * @brief Write a chunk of firmware data at the specified offset
+   * @param offset Byte offset where this chunk should be written
+   * @param data Pointer to chunk data
+   * @param len Length of the chunk in bytes
+   * @return true if chunk written and hashed successfully, false otherwise
+   * 
+   * Chunks must be written sequentially. The offset must match the expected
+   * next offset. Updates the running SHA-256 hash and persists progress.
+   */
   bool handleChunk(uint64_t offset, const uint8_t* data, size_t len) {
     if (!_pending) { Serial.println("[FOTA] handleChunk: not pending"); return false; }
     if (offset != _next_off) {
@@ -212,8 +234,16 @@ class FotaManager {
     return true;
   }
 
-  // -------- Finish: finalize SHA, compare, select boot partition --------
-  // Returns true if boot partition set successfully; shaOk indicates digest match.
+  /**
+   * @brief Finalize the update, verify SHA-256, and set boot partition
+   * @param[out] shaOk Set to true if SHA-256 matches expected value
+   * @param[out] outDigest The computed SHA-256 digest (32 bytes)
+   * @return true if boot partition set successfully, false otherwise
+   * 
+   * Finalizes the SHA-256 computation, compares against expected digest,
+   * and if valid, sets the new partition as the boot partition. Clears
+   * state on failure. Resets the offset to 0 while keeping pending flag.
+   */
   bool finishAndVerify(bool& shaOk, uint8_t outDigest[32]) {
     if (!_pending) { Serial.println("[FOTA] finishAndVerify: not pending"); return false; }
     if (_next_off != _total) {
@@ -263,13 +293,26 @@ class FotaManager {
     return true;
   }
 
+  /**
+   * @brief Request an ESP32 restart after a short delay
+   * 
+   * Prints a message and waits 1500ms before calling esp_restart().
+   */
   void requestReboot() {
     Serial.println("[FOTA] Rebooting in 1500 ms…");
     delay(1500);
     esp_restart();
   }
 
-  // Call early at boot of ANY app. If new image is pending verify, mark valid or rollback.
+  /**
+   * @brief Boot-time self-test finalization and rollback handling
+   * @param pass Whether the new firmware passed self-tests
+   * 
+   * Should be called early in the boot sequence. If the running partition
+   * is in PENDING_VERIFY state, marks it as valid (if pass=true) or triggers
+   * a rollback to the previous firmware (if pass=false). Clears FOTA state
+   * after successful validation.
+   */
   void bootSelfTestFinalize(bool pass) {
     const esp_partition_t* running = esp_ota_get_running_partition();
     esp_ota_img_states_t st = ESP_OTA_IMG_UNDEFINED;
@@ -304,7 +347,14 @@ class FotaManager {
   const char* targetPartitionLabel() const { return _ota_part && _ota_part->label ? _ota_part->label : ""; }
 
  private:
-  // Rebuild SHA by hashing the first `upto` bytes already written to the OTA partition
+  /**
+   * @brief Rebuild SHA-256 context by hashing partition data up to a given offset
+   * @param upto Number of bytes to hash from the start of the partition
+   * @return true if rehashing successful, false otherwise
+   * 
+   * Used during resume to reconstruct the SHA state from already-written data.
+   * Reads the partition in 4KB chunks and updates the SHA context.
+   */
   bool rehashPartitionPrefix(uint64_t upto) {
     mbedtls_sha256_init(&_sha);
     mbedtls_sha256_starts_ret(&_sha, 0);
@@ -325,6 +375,12 @@ class FotaManager {
     return true;
   }
 
+  /**
+   * @brief Ensure SHA context is active and synchronized with current offset
+   * 
+   * If SHA context is not active, attempts to rebuild it by rehashing
+   * the partition data up to the current offset.
+   */
   void ensureShaActive() {
     if (!_sha_active) {
       // Rebuild from partition to current offset if needed (should be rare)

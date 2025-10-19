@@ -14,3 +14,13 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .mypy_cache/
+
+/docs/docs/html/
+/docs/docs/latex/
+/docs/docs/xml/
+/docs/docs/rtf/
+/docs/docs/man/
+/docs/docs/docbook/
+/docs/docs/sqlite3/
+/docs/docs/searchdata.xml
+/docs/warn.log

@@ -9,7 +9,6 @@
 #include "WiFiConn.h"
 #include "Mqtt.h"
 #include "SecureLink.h"
-#include "Acquisition.h"
 #include "Buffer.h"
 #include "Uploader.h"
 #include "Compression.h" 

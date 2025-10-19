@@ -1,20 +1,35 @@
 #pragma once
 #include <Arduino.h>
 #include <vector>
-#include "Transport.h"   // for DecodedReg
+#include "Transport.h"   
 
-// Stored layout: [ts:u64][qty:u16] and then raw = [(addr:u16)(data:u16)] * qty
+/**
+ * @brief Record structure for storing Modbus register data with timestamp
+ * 
+ * Storage layout: [timestamp:uint64][quantity:uint16][raw_data]
+ * Raw data format: [(address:uint16)(data:uint16)] * quantity (little-endian)
+ */
 struct Record {
-  uint64_t ts_ms{0};
-  uint16_t qty{0};
-  std::vector<uint8_t> raw; // [(addr LE)(data LE)] * qty
+  uint64_t ts_ms{0};              ///< Timestamp in milliseconds
+  uint16_t qty{0};                ///< Number of register pairs stored
+  std::vector<uint8_t> raw;       ///< Raw data buffer: [(addr LE)(data LE)] * qty
 
-  // helpers (LE out, BE in)
+  /**
+   * @brief Write a 16-bit value to vector in little-endian format (BE->LE)
+   * @param v Target vector to append bytes
+   * @param x 16-bit value to write
+   */
   static inline void put16(std::vector<uint8_t>& v, uint16_t x) {
     v.push_back(uint8_t(x & 0xFF));
     v.push_back(uint8_t(x >> 8));
   }
-  static inline uint16_t be16(const uint8_t* p) { // Modbus data is BE
+
+  /**
+   * @brief Read a 16-bit value from buffer in big-endian format (Modbus)
+   * @param p Pointer to 2-byte buffer
+   * @return 16-bit value
+   */
+  static inline uint16_t be16(const uint8_t* p) {
     return (uint16_t(p[0]) << 8) | p[1];
   }
 
@@ -69,32 +84,75 @@ struct Record {
   }
 };
 
-// Fixed-size ring buffer for Record
+/**
+ * @brief Fixed-size circular buffer for storing Record objects
+ * 
+ * Ring buffer that overwrites oldest entries when full.
+ * Tracks the number of dropped records due to capacity constraints.
+ */
 class RingBuffer {
 public:
+  /**
+   * @brief Construct a ring buffer with specified capacity
+   * @param capacity Maximum number of Record objects to store
+   */
   explicit RingBuffer(size_t capacity);
+
   ~RingBuffer() = default;
 
-  // Push a record (returns false if an old item was dropped to make room)
+  /**
+   * @brief Add a record to the buffer
+   * 
+   * If buffer is full, the oldest record is overwritten and drop counter is incremented.
+   * 
+   * @param r Record to store
+   * @return false if an old item was dropped to make room, true otherwise
+   */
   bool push(const Record& r);
 
-  // Move all items into 'out' (out is appended). Buffer becomes empty.
+  /**
+   * @brief Move all stored records to output vector and clear buffer
+   * 
+   * Records are appended to the output vector. Buffer becomes empty after this call.
+   * 
+   * @param out Destination vector (records are appended)
+   */
   void drainTo(std::vector<Record>& out);
 
-  // Clear everything
+  /**
+   * @brief Remove all records from the buffer
+   */
   void clear();
 
-  // Stats / introspection
+  /**
+   * @brief Get the current number of records stored
+   * @return Number of records in buffer
+   */
   size_t size() const { return _size; }
+
+  /**
+   * @brief Get the maximum capacity of the buffer
+   * @return Maximum number of records
+   */
   size_t capacity() const { return _cap; }
+
+  /**
+   * @brief Check if buffer is empty
+   * @return true if no records are stored
+   */
   bool   empty() const { return _size == 0; }
+
+  /**
+   * @brief Get the total count of dropped records since creation
+   * @return Number of records overwritten due to capacity limits
+   */
   uint32_t droppedCount() const { return _dropped; }
 
 private:
-  size_t _cap;
-  size_t _head;       // next write index
-  size_t _tail;       // next read index
-  size_t _size;       // current number of items
-  uint32_t _dropped;  // number of overwritten/dropped items
-  std::vector<Record> _buf;
+  size_t _cap;                    ///< Maximum buffer capacity
+  size_t _head;                   ///< Next write index
+  size_t _tail;                   ///< Next read index
+  size_t _size;                   ///< Current number of items in buffer
+  uint32_t _dropped;              ///< Count of overwritten/dropped items
+  std::vector<Record> _buf;       ///< Internal storage
 };
