@@ -12,3 +12,9 @@ private:
   String _auth;
   uint32_t _timeout;
 };
+
+extern bool writeemulationreceived;
+extern uint8_t FUNCTION_CODE;
+extern const char*  ERROR_TYPE;
+extern uint8_t EXCEPTION_CODE;
+extern uint16_t DELAY_MS;

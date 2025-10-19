@@ -26,7 +26,7 @@ enum ErrorCode {
 
 extern bool config_changed;
 extern bool writecommandreceived;
-
+extern bool writeemulationreceived;
 //static void updateConfig(uint16_t poll_period_ms, uint16_t upload_period_ms, uint16_t buffer_capacity, uint16_t reg_req_id_1);
 
 uint8_t retrieveConfig(uint8_t addr);

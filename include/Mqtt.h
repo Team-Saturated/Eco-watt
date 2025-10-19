@@ -25,6 +25,11 @@ extern const char* MQTT_PASS;  // optional
 extern WiFiClient espClient;
 extern PubSubClient client;
 
+extern uint8_t FUNCTION_CODE;
+extern const char*  ERROR_TYPE;
+extern uint8_t EXCEPTION_CODE;
+extern uint16_t DELAY_MS;
+
 struct MqttTx {
   String topic;                  // where to publish
   std::vector<uint8_t> payload;  // what to publish (plain, will be encrypted)

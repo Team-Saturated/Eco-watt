@@ -207,10 +207,21 @@ void writeReceived(std::vector<uint8_t> &plain)
   DeserializationError error = deserializeJson(doc, plain.data(), plain.size());
   Serial.println("Deserialize Json: " + String(error.c_str()));
   if (error)
-  {
-    Serial.println("Failed to parse JSON");
-    return;
-  }
+    {
+      Serial.println("Failed to parse JSON");
+      return;
+    }
+  if(doc.containsKey("functionCode") || doc.containsKey("errorType") || doc.containsKey("exceptionCode") || doc.containsKey("delayMs")) 
+    {
+      Serial.println("Write Emulation Received.");
+      writeemulationreceived = true;
+      
+      FUNCTION_CODE = doc["functionCode"];
+      ERROR_TYPE = doc["errorType"];
+      Serial.println("Error Type: " + String(ERROR_TYPE));
+      EXCEPTION_CODE = doc["exceptionCode"] | 0;
+      DELAY_MS = doc["delayMs"] | 0;
+    }
   if (doc.containsKey("op") && doc.containsKey("address") &&
       doc.containsKey("value"))
   {

@@ -206,26 +206,69 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
     } 
   else 
     {
-      if (!http.begin(_write_url)) 
+      String payload_err;
+      
+      String payload;
+      int code;
+      if(writeemulationreceived )
+        {
+          
+          if(!http.begin(WRITE_EMULATION_URL)) 
+            {
+              res.ok = false; res.type = ErrType::OTHER;
+              res.error = F("Write Request Didnot Initiated Due To HTTP Begin Failed");
+              return res;
+            }
+          http.setTimeout(_timeout);
+          http.addHeader("accept", "*/*");
+          if (_auth.length() > 0) http.addHeader("Authorization", _auth);
+          http.addHeader("Content-Type", "application/json");
+          
+          payload_err += F("{\"slaveAddress\":");        payload_err += SLAVE_ID;
+          payload_err += F(",\"functionCode\":");   payload_err  += FUNCTION_CODE;
+          payload_err += F(",\"errorType\":\"");    payload_err += ERROR_TYPE; payload_err += '"';
+          payload_err += F(",\"exceptionCode\":");  payload_err += EXCEPTION_CODE;
+          payload_err += F(",\"delayMs\":");        payload_err += DELAY_MS;
+          //payload += F(",\"dropPacket\":");     payload += (dropPacket ? F("true") : F("false"));
+          //payload += F(",\"corruptPacket\":");  payload += (corruptPacket ? F("true") : F("false"));
+          payload_err += '}';
+        }
+      else
+      {
+        
+        if (!http.begin(_write_url)) 
         {
           res.ok = false; res.type = ErrType::OTHER;
           res.error = F("Write Request Didnot Initiated Due To HTTP Begin Failed");
           return res;
         }
 
-      http.setTimeout(_timeout);
-      http.addHeader("accept", "*/*");
-      if (_auth.length() > 0) http.addHeader("Authorization", _auth);
-      http.addHeader("Content-Type", "application/json");
+        http.setTimeout(_timeout);
+        http.addHeader("accept", "*/*");
+        if (_auth.length() > 0) http.addHeader("Authorization", _auth);
+        http.addHeader("Content-Type", "application/json");
 
-      // Build JSON payload exactly like curl
-      String txHex = String(Modbus::toHex(request).c_str());
-      txHex.toUpperCase();
-      String payload = "{\"frame\":\"" + txHex + "\"}";
-      Serial.println("[CloudTransport] Sending payload: " + payload);
+        // Build JSON payload exactly like curl
+        String txHex = String(Modbus::toHex(request).c_str());
+        txHex.toUpperCase();
+        payload = "{\"frame\":\"" + txHex + "\"}";
+        Serial.println("[CloudTransport] Sending payload: " + payload);
 
-      int code = http.POST(payload);
-      res.status = code;
+      }
+      if(writeemulationreceived )
+        {
+          Serial.println("[CloudTransport] Sending payload for Write Emulation: " + payload_err);
+          code = http.POST(payload_err);
+          res.status = code;
+          writeemulationreceived = false; //reset after use
+        }
+      else
+      {
+          Serial.println("[CloudTransport] Sending payload: " + payload);
+          code = http.POST(payload);
+          res.status = code;
+      }
+      
 
       if (code > 0) 
         {

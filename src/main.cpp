@@ -65,7 +65,12 @@ const char *MQTT_PASS = ""; // optional
 
 bool config_changed = true;
 bool writecommandreceived = false;
+bool writeemulationreceived = false;
 
+uint8_t FUNCTION_CODE;
+const char*  ERROR_TYPE;
+uint8_t EXCEPTION_CODE;
+uint16_t DELAY_MS;
 
 
 const char* ntpServer = "pool.ntp.org";

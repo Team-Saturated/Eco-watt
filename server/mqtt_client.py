@@ -113,6 +113,7 @@ def publish_config(obj: dict):
     print(f"[MQTT] Sent CONFIG: {obj}")
 
 def publish_write(topic: str, obj: dict, bucket: str):
+    print(f"[MQTT] Sending WRITE: {obj}")
     payload = seal_downlink(obj)
     mqttc.publish(topic, payload, qos=1)
     push_log(bucket, {"dir": "sending from server","operation": obj.get('op')})
