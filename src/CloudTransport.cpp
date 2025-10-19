@@ -46,11 +46,9 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
       if (!http.begin(_read_url)) 
         {
           res.ok = false; res.type = ErrType::OTHER;
-          res.error = F("begin failed");
+          res.error = ErrorCodes::HTTP_BEGIN_FAILED;
           return res;
         }
-
-
       http.setTimeout(_timeout);
       http.addHeader("accept", "*/*");
       if (_auth.length() > 0) http.addHeader("Authorization", _auth);
@@ -71,7 +69,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
           if (!res.ok) 
             {
               res.type = ErrType::HTTP;
-              res.error = "HTTP " + String(code);
+              res.error = ErrorCodes::HTTP_ERROR_CODE;
               Serial.println("[CloudTransport] HTTP code: " + String(code));
               Serial.println("[CloudTransport] Raw response: " + res.body);
               http.end();
@@ -85,7 +83,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
           if (jerr || !doc.containsKey("frame")) 
             {
               res.ok = false; res.type = ErrType::JSON;
-              res.error = F("json parse/missing 'frame'");
+              res.error = ErrorCodes::JSON_PARSE_FRAME_MISSING;
               Serial.println("[CloudTransport] JSON parse error or missing 'frame'");
               http.end();
               return res;
@@ -98,7 +96,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
           if (!Modbus::fromHex(rxHex.c_str(), rx) || rx.size() < 5) 
             {
               res.ok = false; res.type = ErrType::OTHER;
-              res.error = F("bad hex or short frame");
+              res.error = ErrorCodes::BAD_HEX_OR_SHORT_FRAME;
               Serial.println("[CloudTransport] Bad hex or too short frame");
               http.end();
               return res;
@@ -118,7 +116,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
           if (crcCalc != crcRecv) 
             {
               res.ok = false; res.type = ErrType::CRC;
-              res.error = "crc mismatch calc=" + String(crcCalc, HEX) + " recv=" + String(crcRecv, HEX);
+              res.error = ErrorCodes::CRC_ERROR;
               Serial.printf("[CloudTransport] CRC FAIL (calc=%04X recv=%04X)\n", crcCalc, crcRecv);
               http.end();
               return res;
@@ -130,7 +128,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
           uint16_t startAddr = (uint16_t(request[2]) << 8) | request[3];
           uint16_t qty       = (uint16_t(request[4]) << 8) | request[5];
 
-          uint8_t slave = rx[0];
+          //uint8_t slave = rx[0];
           uint8_t func  = rx[1];
 
           if (func == 0x03) 
@@ -138,7 +136,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
               if (rx.size() < 5) 
                 {
                   res.ok = false; res.type = ErrType::OTHER;
-                  res.error = F("short 0x03 frame");
+                  res.error = ErrorCodes::BAD_HEX_OR_SHORT_FRAME;
                   Serial.println("[CloudTransport] Short 0x03 frame");
                   http.end(); return res;
                 }
@@ -146,7 +144,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
               if (rx.size() < 3 + byteCount + 2) 
                 {
                   res.ok = false; res.type = ErrType::OTHER;
-                  res.error = F("bytecount mismatch");
+                  res.error = ErrorCodes::BYTE_COUNT_MISMATCH;
                   Serial.println("[CloudTransport] ByteCount mismatch");
                   http.end(); return res;
                 }
@@ -174,17 +172,17 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
             {
               // Exception response
               uint8_t ex = rx.size() > 2 ? rx[2] : 0xFF;
-              const char* meaning = reinterpret_cast<const char*>(ModbusError::meaning(ex));
+              const char* meaning = reinterpret_cast<const char*>(ErrorCodes::meaning(ex));
               Serial.printf("[CloudTransport] Exception func=0x%02X code=0x%02X (%s)\n", func, ex, meaning);
               res.ok = false;
               res.type = ErrType::MODBUS_EXC;
               res.exc_code = ex;
-              res.error = String("modbus exception 0x") + String(ex, HEX) + " (" + meaning + ")";
+              res.error = Modbus::getModbusErrorMessage(rx);
             }
           else 
             {
               res.ok = false; res.type = ErrType::OTHER;
-              res.error = String("unsupported func=0x") + String(func, HEX);
+              res.error = ErrorCodes::OTHER;
               Serial.printf("[CloudTransport] Unsupported func=0x%02X\n", func);
             }
         } 
@@ -192,7 +190,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
         {
           // POST failed at transport level (negative codes mean client errors)
           res.ok = false;
-          res.error = http.errorToString(code);
+          res.error = ErrorCodes::HTTP_NEG_ERROR_CODE;
 
 
           #ifdef HTTPC_ERROR_READ_TIMEOUT
@@ -207,16 +205,16 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
   else 
     {
       String payload_err;
-      
       String payload;
       int code;
+
       if(writeemulationreceived )
         {
           
           if(!http.begin(WRITE_EMULATION_URL)) 
             {
               res.ok = false; res.type = ErrType::OTHER;
-              res.error = F("Write Request Didnot Initiated Due To HTTP Begin Failed");
+              res.error = ErrorCodes::HTTP_BEGIN_FAILED;
               return res;
             }
           http.setTimeout(_timeout);
@@ -239,7 +237,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
         if (!http.begin(_write_url)) 
         {
           res.ok = false; res.type = ErrType::OTHER;
-          res.error = F("Write Request Didnot Initiated Due To HTTP Begin Failed");
+          res.error = ErrorCodes::HTTP_BEGIN_FAILED;
           return res;
         }
 
@@ -277,7 +275,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
           if (!res.ok) 
             {
               res.type = ErrType::HTTP;
-              res.error = "Write Request Sent. Received HTTP " + String(code);
+              res.error = ErrorCodes::HTTP_ERROR_CODE;
               Serial.println("[CloudTransport] HTTP code: " + String(code));
               Serial.println("[CloudTransport] Raw response: " + res.body);
               http.end();
@@ -293,7 +291,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
           if (jerr || !doc.containsKey("frame")) 
             {
               res.ok = false; res.type = ErrType::JSON;
-              res.error = F("Write Request Sent. Received Response JSON parse/missing 'frame'");
+              res.error = ErrorCodes::JSON_PARSE_FRAME_MISSING;
               Serial.println("[CloudTransport] JSON parse error or missing 'frame'");
               http.end();
               return res;
@@ -307,7 +305,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
           if (!Modbus::fromHex(rxHex.c_str(), rx) || rx.size() < 5) 
             {
               res.ok = false; res.type = ErrType::OTHER;
-              res.error = F("Write Request Sent. Received Response bad hex or short frame");
+              res.error = ErrorCodes::BAD_HEX_OR_SHORT_FRAME;
               Serial.println("[CloudTransport] Bad hex or too short frame");
               http.end();
               return res;
@@ -327,7 +325,7 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
           if (crcCalc != crcRecv) 
             {
               res.ok = false; res.type = ErrType::CRC;
-              res.error = "crc mismatch calc=" + String(crcCalc, HEX) + " recv=" + String(crcRecv, HEX);
+              res.error = ErrorCodes::CRC_ERROR;
               Serial.printf("[CloudTransport] CRC FAIL (calc=%04X recv=%04X)\n", crcCalc, crcRecv);
               http.end();
               return res;
@@ -343,11 +341,11 @@ TransportResult CloudTransport::exchange(const std::vector<uint8_t>& request, co
               http.end();
               return res;
             }
-
-
-
+          else
+            {
+              res.error = ErrorCodes::SUCCESS;
+            }
         }
-
     }
   http.end();
   return res;

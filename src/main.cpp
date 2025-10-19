@@ -68,7 +68,7 @@ bool writecommandreceived = false;
 bool writeemulationreceived = false;
 
 uint8_t FUNCTION_CODE;
-const char*  ERROR_TYPE;
+String  ERROR_TYPE;
 uint8_t EXCEPTION_CODE;
 uint16_t DELAY_MS;
 
@@ -95,10 +95,11 @@ void main_task(void *pvParameters)
       
       g_poller->read(SLAVE_ID, START_ADDR, QTY_REGS);
 
-      if (writecommandreceived)
+      if (writecommandreceived || writeemulationreceived)
         {
           g_poller->write(SLAVE_ID, WRITE_ADDR, WRITE_VALUE); 
           writecommandreceived = false;
+          writeemulationreceived = false;
         }
 
       static uint32_t last = 0;

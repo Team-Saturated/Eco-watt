@@ -217,12 +217,14 @@ void writeReceived(std::vector<uint8_t> &plain)
       writeemulationreceived = true;
       
       FUNCTION_CODE = doc["functionCode"];
-      ERROR_TYPE = doc["errorType"];
-      Serial.println("Error Type: " + String(ERROR_TYPE));
+      ERROR_TYPE = (doc["errorType"] | ""); 
+      Serial.println("Error Type: " + ERROR_TYPE);
       EXCEPTION_CODE = doc["exceptionCode"] | 0;
       DELAY_MS = doc["delayMs"] | 0;
+      WRITE_ADDR = doc["address"];
+      WRITE_VALUE = doc["value"];
     }
-  if (doc.containsKey("op") && doc.containsKey("address") &&
+  else if (doc.containsKey("op") && doc.containsKey("address") &&
       doc.containsKey("value"))
   {
     const char* op = doc["op"];

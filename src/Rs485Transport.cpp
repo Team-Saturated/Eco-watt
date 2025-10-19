@@ -33,6 +33,6 @@ TransportResult Rs485Transport::exchange(const std::vector<uint8_t>& req, bool i
     delay(2);
   }
   r.ok = false;
-  r.error = "RS485 timeout";
+  //r.error = "RS485 timeout";
   return r;
 }

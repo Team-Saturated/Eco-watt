@@ -2,10 +2,11 @@
 #include <Arduino.h>
 
 // Simple helper to map Modbus exception codes to human-readable text
-namespace ModbusError {
+namespace ErrorCodes {
 
   // Exception codes from the Modbus spec / inverter manual
   enum Code : uint8_t {
+    SUCCESS            = 0x00,
     ILLEGAL_FUNCTION        = 0x01,
     ILLEGAL_DATA_ADDRESS    = 0x02,
     ILLEGAL_DATA_VALUE      = 0x03,
@@ -15,6 +16,16 @@ namespace ModbusError {
     MEMORY_PARITY_ERROR     = 0x08,
     GATEWAY_PATH_UNAVAILABLE= 0x0A,
     GATEWAY_TARGET_FAILED   = 0x0B,
+    INVALID_FRAME_LENGTH    = 0x0C,
+    HTTP_BEGIN_FAILED        = 0x0D,
+    HTTP_ERROR_CODE          = 0x0E,
+    JSON_PARSE_FRAME_MISSING  = 0x0F,
+    BAD_HEX_OR_SHORT_FRAME   = 0x10,
+    CRC_ERROR              = 0x11,
+    HTTP_NEG_ERROR_CODE    = 0x12,
+    BYTE_COUNT_MISMATCH    = 0x13,
+    NO_EXCEPTION          = 0xFE,
+    OTHER                 = 0xFF,
   };
 
   // Translate an exception code into a descriptive string

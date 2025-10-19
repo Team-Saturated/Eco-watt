@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <vector>
 #include "config.h"
+#include "ErrorCodes.h"
 // ---- Error classification for actionable handling ----
 enum class ErrType : uint8_t {
   NONE = 0,
@@ -31,7 +32,7 @@ struct TransportResult {
   ErrType type  = ErrType::NONE;
 
   // Optional details
-  String  error;              // human-readable error if !ok
+  ErrorCodes::Code  error;              // human-readable error if !ok
   String  body;               // CloudTransport: raw response (e.g., JSON)
 
   // Data

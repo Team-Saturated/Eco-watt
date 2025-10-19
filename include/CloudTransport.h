@@ -15,6 +15,6 @@ private:
 
 extern bool writeemulationreceived;
 extern uint8_t FUNCTION_CODE;
-extern const char*  ERROR_TYPE;
+extern String  ERROR_TYPE;
 extern uint8_t EXCEPTION_CODE;
 extern uint16_t DELAY_MS;

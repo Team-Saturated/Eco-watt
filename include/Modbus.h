@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <vector>
 #include <string>
+#include "ErrorCodes.h"
 
 namespace Modbus {
   // Calculate Modbus CRC16
@@ -27,6 +28,6 @@ namespace Modbus {
 
 
 
-  String getModbusErrorMessage(const std::vector<uint8_t>& rx);
+  ErrorCodes::Code getModbusErrorMessage(const std::vector<uint8_t>& rx);
 
 }

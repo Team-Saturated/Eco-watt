@@ -1,6 +1,6 @@
 #include "Modbus.h"
 #include <cstring>  // for strlen
-
+#include "ErrorCodes.h"
 namespace {
 uint16_t crc16_modbus(const uint8_t* data, size_t len) {
   uint16_t crc = 0xFFFF;
@@ -88,43 +88,40 @@ bool fromHex(const char* hex, std::vector<uint8_t>& out) {
   return true;
 }
 
-String getModbusErrorMessage(const std::vector<uint8_t>& rx) {
+ErrorCodes::Code getModbusErrorMessage(const std::vector<uint8_t>& rx) 
+{
       // Minimum valid Modbus exception response length (address + func + code + CRC)
-      if (rx.size() < 5) {
-          return "Invalid frame length";
+      if (rx.size() < 5) 
+      {
+          return ErrorCodes::INVALID_FRAME_LENGTH;
       }
 
       // Function code: bit7 set means exception (error)
       uint8_t funcCode = rx[1];
       bool isException = funcCode & 0x80;
 
-      if (!isException) {
-          return "No exception - normal response";
+      if (!isException) 
+      {
+          return ErrorCodes::NO_EXCEPTION;
       }
 
       // Extract exception code
       uint8_t exCode = rx[2];
-      String msg = "Exception Code " + String(exCode) + ": ";
-
-      switch (exCode) {
-          case 0x01: msg += "Illegal Function (function not supported)"; break;
-          case 0x02: msg += "Illegal Data Address (address not valid)"; break;
-          case 0x03: msg += "Illegal Data Value (value out of range)"; break;
-          case 0x04: msg += "Slave Device Failure"; break;
-          case 0x05: msg += "Acknowledge (processing delayed)"; break;
-          case 0x06: msg += "Slave Device Busy"; break;
-          case 0x08: msg += "Memory Parity Error"; break;
-          case 0x0A: msg += "Gateway Path Unavailable"; break;
-          case 0x0B: msg += "Gateway Target Device Failed to Respond"; break;
-          default:   msg += "Unknown Exception Code"; break;
+      
+      switch (exCode) 
+      {
+          case 0x01: return ErrorCodes::ILLEGAL_FUNCTION;
+          case 0x02: return ErrorCodes::ILLEGAL_DATA_ADDRESS;
+          case 0x03: return ErrorCodes::ILLEGAL_DATA_VALUE;
+          case 0x04: return ErrorCodes::SLAVE_DEVICE_FAILURE;
+          case 0x05: return ErrorCodes::ACKNOWLEDGE;
+          case 0x06: return ErrorCodes::SLAVE_DEVICE_BUSY;
+          case 0x08: return ErrorCodes::MEMORY_PARITY_ERROR;
+          case 0x0A: return ErrorCodes::GATEWAY_PATH_UNAVAILABLE;
+          case 0x0B: return ErrorCodes::GATEWAY_TARGET_FAILED;
+          default:   return ErrorCodes::NO_EXCEPTION;
       }
-
-      // Optionally include slave address and CRC info
-      msg += " | Slave Addr: " + String(rx[0], HEX);
-      msg += " | CRC: " + String(rx[3], HEX) + String(rx[4], HEX);
-
-      return msg;
-  }
+}
 
 
 } // namespace Modbus

@@ -4,7 +4,7 @@
 #include "Modbus.h"      
 #include <vector>
 #include "Mqtt.h"
-
+#include "ErrorCodes.h"
 static String toBase64_P(const uint8_t* data, size_t len) {
   size_t outLen = 0;
   (void) mbedtls_base64_encode(nullptr, 0, &outLen, data, len); // get size
@@ -14,23 +14,24 @@ static String toBase64_P(const uint8_t* data, size_t len) {
   return String((char*)out.get());
 }
 
-static String jsonEscape(const String& s) {
-  String out; out.reserve(s.length() + 8);
-  for (size_t i = 0; i < s.length(); ++i) {
-    char c = s[i];
-    switch (c) {
-      case '\"': out += "\\\""; break;
-      case '\\': out += "\\\\"; break;
-      case '\n': out += "\\n"; break;
-      case '\r': out += "\\r"; break;
-      case '\t': out += "\\t"; break;
-      default:
-        if ((uint8_t)c < 0x20) { char b[7]; snprintf(b, sizeof(b), "\\u%04X", (unsigned)c); out += b; }
-        else out += c;
-    }
-  }
-  return out;
-}
+//static String jsonEscape(const String& s) {
+//  String out; out.reserve(s.length() + 8);
+//  for (size_t i = 0; i < s.length(); ++i) {
+//    char c = s[i];
+//    switch (c) {
+//      case '\"': out += "\\\""; break;
+//      case '\\': out += "\\\\"; break;
+//      case '\n': out += "\\n"; break;
+//      case '\r': out += "\\r"; break;
+//      case '\t': out += "\\t"; break;
+//      default:
+//        if ((uint8_t)c < 0x20) { char b[7]; snprintf(b, sizeof(b), "\\u%04X", (unsigned)c); out += b; }
+//        else out += c;
+//    }
+//  }
+//  return out;
+//}
+
 void Poller::applyBackoff() {
   if (_backoffMs == 0) _backoffMs = BACKOFF_MIN_MS;
   else {
@@ -106,7 +107,7 @@ void Poller::read(uint8_t slave, uint16_t addr, uint16_t qty)
   _consecOk = 0;
   _consecErr++;
 
-  Serial.printf("[ERR] type=%d status=%d msg=%s\n",(int)res.type, res.status, res.error.c_str());
+  Serial.printf("[ERR] type=%d status=%d msg=%d\n",(int)res.type, res.status, res.error);
 
   switch (res.type) 
   {
@@ -136,41 +137,52 @@ void Poller::read(uint8_t slave, uint16_t addr, uint16_t qty)
   }
 }
 
-void Poller::write(uint8_t slave, uint16_t addr, uint16_t value) {
-  
-  auto res = _c.writeSingle(slave, addr, value);
-  
-  String ack;
-  ack.reserve(96 + res.error.length());
-  ack += "{\"ev\":\"write_ack\",\"ok\":";
-  ack += (res.ok ? "true" : "false");
-  ack += ",\"address\":"; ack += String(addr);
-  ack += ",\"value\":";   ack += String(value);
-  if (res.error.length()) {
-    ack += ",\"error\":\""; ack += jsonEscape(res.error); ack += "\"";
-  }
-  ack += "}";
-  std::vector<uint8_t> sealed;
-  if (!sec.seal(/*type*/1, (const uint8_t*)ack.c_str(),
-                ack.length(), sealed)) {
-    Serial.println("[SEC] seal failed");
+void Poller::write(uint8_t slave, uint16_t addr, uint16_t value) 
+{
+  TransportResult res;
+  uint8_t attempt = 3;
+  do {
+    res = _c.writeSingle(slave, addr, value);
     
-  }
-  String b64 = toBase64_P(sealed.data(), sealed.size());
-  if (res.ok) {
-    Serial.print("Write works");
-    Serial.println(res.error.c_str());
-    mqttEnqueue(t_write_ack, (const uint8_t*)b64.c_str(), b64.length(), false);
     
-    }
-  else {
-    Serial.println(res.error.c_str());
-    mqttEnqueue(t_write_ack, (const uint8_t*)b64.c_str(), b64.length(), false);
-    mqttEnqueue(t_data, (const uint8_t*)b64.c_str(), b64.length(), false);
-  }
+    String ack;
+    //ack.reserve(96 + String(res.error).length());
+    ack += "{\"ev\":\"write_ack\",\"ok\":";
+    ack += (res.ok ? "true" : "false");
+    ack += ",\"address\":"; ack += String(addr);
+    ack += ",\"value\":";   ack += String(value);
+    if (res.error != ErrorCodes::SUCCESS)
+      {
+        ack += ",\"error\":\""; ack += String(res.error); ack += "\"";
+      }
+    ack += "}";
+    std::vector<uint8_t> sealed;
+    if (!sec.seal(/*type*/1, (const uint8_t*)ack.c_str(), ack.length(), sealed)) 
+      {
+        Serial.println("[SEC] seal failed");  
+      }
+      
+    String b64 = toBase64_P(sealed.data(), sealed.size());
+    if (res.ok) 
+      {
+        Serial.print("Write works");
+        Serial.println(res.error);
+        mqttEnqueue(t_write_ack, (const uint8_t*)b64.c_str(), b64.length(), false);
+        
+      }
+    else 
+      {
+        Serial.println(res.error);
+        mqttEnqueue(t_write_ack, (const uint8_t*)b64.c_str(), b64.length(), false);
+        mqttEnqueue(t_data, (const uint8_t*)b64.c_str(), b64.length(), false);
+      }
+          
+    Serial.printf("[ERR] type=%d status=%d msg=%d\n",(int)res.type, res.status, res.error);
+  }while(!res.ok && --attempt > 0 && !(res.error == ErrorCodes::ILLEGAL_DATA_ADDRESS || res.error == ErrorCodes::ILLEGAL_DATA_VALUE));
 }
 
-void Poller::changePeriod(uint32_t newPeriod) {
+void Poller::changePeriod(uint32_t newPeriod) 
+{
   if (newPeriod == 0) return; // ignore invalid
   _period = newPeriod;
   Serial.printf("[POLL] Changed polling period to %u ms\n", (unsigned)_period);
