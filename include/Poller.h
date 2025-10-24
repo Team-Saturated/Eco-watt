@@ -14,7 +14,7 @@
  * CRITICAL CHANGES FOR LIGHT SLEEP:
  * - Added WiFi connection monitoring before/after sleep
  * - Implemented safe light sleep with timer wakeup
- * - Added power monitoring integration for benchmarking
+
  * - Enhanced error recovery for connection issues
  */
 class Poller {
@@ -81,14 +81,7 @@ public:
    */
   void setMinSleepDuration(uint32_t ms) { _minSleepMs = ms; }
   
-  /**
-   * @brief Runs a comprehensive power consumption benchmark.
-   * 
-   * CRITICAL: Use this to measure actual power savings on your ESP32 DevKit V1.
-   * Tests both normal operation and light sleep mode for accurate comparison.
-   * Results are output to Serial for analysis.
-   */
-  void runPowerBenchmark();
+
   
   /**
    * @brief Gets current light sleep status.

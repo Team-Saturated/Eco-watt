@@ -2,8 +2,8 @@
 #include <Arduino.h>
 
 // ---------- WiFi ----------
-#define WIFI_SSID     "LasithWifi"     // Replace with your WiFi name
-#define WIFI_PASSWORD "12345678"       // Replace with your WiFi password
+#define WIFI_SSID     "Yasirupixel"     // Replace with your WiFi name
+#define WIFI_PASSWORD "onnj7859"       // Replace with your WiFi password
 
 // ---------- Polling & request ----------
 extern uint16_t POLL_PERIOD_MS;           // how often we poll the inverter
