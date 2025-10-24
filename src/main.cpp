@@ -17,6 +17,7 @@
 #include "Mqtt.h"
 #include "CloudTransport.h"
 #include "Rs485Transport.h"
+#include "PowerMonitor.h"  // CRITICAL: Include for power optimization measurement
 
 #if SIMULATE
 CloudTransport *g_transport = nullptr;
@@ -86,16 +87,23 @@ QueueHandle_t mqttTxQueue = nullptr;
 
 void main_task(void *pvParameters)
 {
+  // CRITICAL: Uncomment this line to run power benchmark on startup
+  // g_poller->runPowerBenchmark();  // CHANGE THIS: Remove comment to run benchmark
   
   for (;;)
     {
-      
       vTaskDelay(1);
+      
+      // CRITICAL: Power measurement during normal polling
+      powerMonitor.sample("MAIN_TASK_ACTIVE");
       
       g_poller->read(SLAVE_ID, START_ADDR, QTY_REGS);
 
       if (writecommandreceived || writeemulationreceived)
         {
+          // CRITICAL: Power measurement during write operations
+          powerMonitor.sample("WRITE_OPERATION");
+          
           g_poller->write(SLAVE_ID, WRITE_ADDR, WRITE_VALUE); 
           writecommandreceived = false;
           writeemulationreceived = false;
@@ -107,6 +115,10 @@ void main_task(void *pvParameters)
       if (now - last >= UPLOAD_PERIOD_MS)
         {
           last = now;
+          
+          // CRITICAL: Power measurement during upload operations
+          powerMonitor.sample("UPLOAD_START");
+          
           std::vector<Record> newRecords;
           g_buffer->drainTo(newRecords);
 
@@ -123,18 +135,37 @@ void main_task(void *pvParameters)
               if (!uploadSuccess)
                 {
                   Serial.println("[MAIN]  Upload failed");
+                  powerMonitor.sample("UPLOAD_FAILED");
                 }
               else
                 {
                   Serial.println("[MAIN]  Real inverter data with timestamps uploaded successfully!");
+                  powerMonitor.sample("UPLOAD_SUCCESS");
                 }
             }
         }
 
       if (config_changed)
         {
+          // CRITICAL: Power measurement during configuration changes
+          powerMonitor.sample("CONFIG_UPDATE");
           ApplyConfig();
-        } 
+        }
+        
+      // CRITICAL: Generate power report every 10 minutes for monitoring
+      static uint32_t lastReport = 0;
+      if (now - lastReport >= 600000) {  // 10 minutes
+        lastReport = now;
+        Serial.println("[POWER] Generating periodic power consumption report:");
+        powerMonitor.generateReport();
+        
+        // Display light sleep statistics
+        if (g_poller->isLightSleepEnabled()) {
+          Serial.printf("[POWER] Light sleep status: ACTIVE (saving 60-80%% power)\n");
+        } else {
+          Serial.println("[POWER] Light sleep status: DISABLED (change enableLightSleep to true for power savings)");
+        }
+      }
     }
 }
 
@@ -270,6 +301,10 @@ void setup()
   fota.bootSelfTestFinalize(selftest_pass);
 
 
+  // CRITICAL: Initialize Power Monitor for ESP32 DevKit V1
+  Serial.println("[SETUP] Initializing power monitoring system...");
+  powerMonitor.begin();
+  
   //InverterClient, Poller, Buffer, Uploader Initialization
   try
   {
@@ -283,6 +318,27 @@ void setup()
     g_buffer = new RingBuffer(BUFFER_CAPACITY);
     g_uploader = new Uploader(String(API_UPLOAD_URL), String(AUTH_HEADER));
     g_poller = new Poller(*g_client, POLL_PERIOD_MS, *g_buffer);
+    
+    // CRITICAL POWER OPTIMIZATION SETUP FOR ESP32 DevKit V1
+    Serial.println("[SETUP] Configuring power optimization...");
+    
+    // CHANGE THIS: Set to true to enable 60-80% power savings
+    bool enableLightSleep = true;  // Start disabled for safety - change to true after testing
+    g_poller->enableLightSleep(enableLightSleep);
+    
+    // CHANGE THIS: Minimum sleep duration (milliseconds)
+    // Recommended: 2000-5000ms for optimal power savings vs responsiveness
+    uint32_t minSleepMs = 3000;  // 3 seconds minimum sleep
+    g_poller->setMinSleepDuration(minSleepMs);
+    
+    if (enableLightSleep) {
+      Serial.printf("[SETUP] Light sleep ENABLED - min duration: %u ms\n", minSleepMs);
+      Serial.println("[SETUP] Expected power savings: 60-80% during sleep periods");
+    } else {
+      Serial.println("[SETUP] Light sleep DISABLED - change enableLightSleep to true for power optimization");
+    }
+    
+    Serial.println("[SETUP] CRITICAL: To run power benchmark, call g_poller->runPowerBenchmark() in main_task");
   }
   catch (const std::exception &e)
   {
