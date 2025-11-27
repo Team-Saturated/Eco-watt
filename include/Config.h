@@ -18,7 +18,11 @@ extern uint16_t POLL_PERIOD_MS;           // how often we poll the inverter
 #define QTY_REGS         10
 
 // ---------- Buffering & Upload schedule ----------
-extern uint16_t UPLOAD_PERIOD_MS;      // send buffered data every 14 sec (before Poller flush at 15s)
+#if SIMULATE
+  extern uint16_t UPLOAD_PERIOD_MS;      // Simulation: 20 seconds for fast testing
+#else
+  extern uint16_t UPLOAD_PERIOD_MS;      // Real Hardware: 900000 ms (15 minutes) for power optimization
+#endif
 extern uint16_t BUFFER_CAPACITY;
 extern uint16_t REG_REQ_ID_1;        // number of samples to keep in RAM
 #define MAX_BATCH_BYTES    8192        // cap payload size per upload (approx)
