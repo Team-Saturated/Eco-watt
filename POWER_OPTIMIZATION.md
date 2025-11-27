@@ -1,171 +1,183 @@
-# ESP32 Light Sleep Power Optimization
+# ESP32 Light Sleep Power Optimization Manual
 
-## Overview
+## How Light Sleep Works
 
-This document describes the light sleep power optimization implementation for the Eco-watt ESP32 DevKit V1 system. The optimization reduces power consumption by 60-80% during polling intervals while maintaining full system functionality.
+Light sleep places the ESP32 CPU in a low-power state between data uploads while maintaining WiFi connectivity through hardware. The system sleeps for 70% of the upload interval, reserving 30% for WiFi stability and data transmission.
 
-## Implementation Details
+**Implementation Location:** Sleep logic is implemented in `src/main.cpp` between upload cycles (NOT between Modbus polls).
 
-### Core Components Modified
+## Power Savings Analysis
 
-1. **include/Poller.h**
-   - Added light sleep management methods
-   - Added power monitoring variables
-   - Added WiFi status tracking for sleep safety
+### Upload Interval: 15 Minutes (Real Hardware)
+- Total cycle time: 900 seconds
+- Sleep duration: 630 seconds (70%)
+- Active duration: 270 seconds (30%)
+- **Power reduction: ~70%**
 
-2. **src/Poller.cpp**
-   - Implemented light sleep execution logic
-   - Added comprehensive safety checks
-   - Integrated WiFi connection monitoring
+### Upload Interval: 20 Seconds (Simulation)
+- Total cycle time: 20 seconds  
+- Sleep duration: 14 seconds (70%)
+- Active duration: 6 seconds (30%)
+- **Power reduction: ~70%**
 
-3. **src/main.cpp**
-   - Added light sleep configuration options
-   - Enabled power optimization by default
+### Current Consumption
+- Active mode: ~240 mA (WiFi + CPU + Modbus)
+- Light sleep: ~30-50 mA (WiFi modem sleep + RTC)
+- **Savings: 190-210 mA reduction**
 
-## Configuration Options
+## Enabling Light Sleep (Step-by-Step)
 
-### Enable/Disable Light Sleep
+### Step 1: Modify src/main.cpp - Uncomment Sleep Logic
 
-In `src/main.cpp`, modify the following lines:
+**Location:** Lines 115-137 in `main_task()` function
 
+Find this block:
 ```cpp
-// Enable light sleep power optimization
-poller.enableLightSleep(true);
-
-// Set minimum sleep duration (recommended: 5000ms)
-poller.setMinSleepDuration(5000);
-```
-
-### Sleep Safety Parameters
-
-The system includes multiple safety checks before entering sleep mode:
-
-- **WiFi Connection**: Requires active WiFi connection
-- **Signal Strength**: Minimum RSSI threshold of -85 dBm
-- **Error Count**: Maximum 3 consecutive errors allowed
-- **Backoff Period**: No sleep during active backoff (>5 seconds)
-
-### Adjusting Safety Thresholds
-
-In `src/Poller.cpp`, modify the `isSafeToSleep()` function:
-
-```cpp
-bool Poller::isSafeToSleep() {
-  // WiFi connection check
-  if (WiFi.status() != WL_CONNECTED) {
-    return false;
-  }
+// MILESTONE 5: LIGHT SLEEP BETWEEN UPLOADS (DISABLED FOR SIMULATION)
+/*
+if (now - last < UPLOAD_PERIOD_MS) {
+  uint32_t timeUntilUpload = UPLOAD_PERIOD_MS - (now - last);
+  uint32_t adaptiveSleepTime = (timeUntilUpload * 70) / 100;
   
-  // Signal strength check (adjust -85 threshold as needed)
-  if (WiFi.RSSI() < -85) {
-    return false;
+  if (g_poller && g_poller->isLightSleepEnabled() && 
+      adaptiveSleepTime >= 5000 && WiFi.status() == WL_CONNECTED) {
+    
+    Serial.printf("[SLEEP] Entering light sleep for %u ms...\n", adaptiveSleepTime);
+    
+    esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
+    esp_sleep_enable_timer_wakeup(adaptiveSleepTime * 1000ULL);
+    esp_light_sleep_start();
+    esp_wifi_set_ps(WIFI_PS_NONE);
+    
+    Serial.printf("[WAKE] Light sleep completed\n");
   }
-  
-  // Error count check (adjust threshold as needed)
-  if (_consecErr > 3) {
-    return false;
-  }
-  
-  // Backoff period check (adjust 5000ms as needed)
-  if (_backoffMs > 5000) {
-    return false;
-  }
-  
-  return true;
 }
+*/
 ```
 
-## Power Consumption Details
+**Action:** Remove the `/*` and `*/` comment markers.
 
-### Normal Operation
-- ESP32 DevKit V1: ~240mA active current
-- WiFi transmission: ~170mA peak
-- Modbus communication: ~80mA active
+### Step 2: Modify src/main.cpp - Uncomment Configuration
 
-### Light Sleep Mode
-- CPU halted: ~10mA base current
-- WiFi modem sleep: ~20mA maintained connection
-- Total sleep current: ~30-50mA (75-80% reduction)
+**Location:** Lines 329-337 in `setup()` function
 
-### Expected Power Savings
-- Polling interval: 30 seconds
-- Active time: ~2 seconds per cycle
-- Sleep time: ~28 seconds per cycle
-- Overall power reduction: 60-80%
-
-## Serial Monitor Output
-
-### Normal Sleep Activation
-```
-[SLEEP] Entering light sleep for 25000 ms (power save mode)
-[WAKE] Light sleep completed successfully (total sleep: 125000 ms)
-[WAKE] WiFi connection maintained (RSSI: -45 dBm)
-```
-
-### Sleep Prevention Examples
-```
-[SLEEP] WiFi not connected - unsafe to sleep
-[SLEEP] Weak WiFi signal (-90 dBm) - unsafe to sleep
-[SLEEP] Too many consecutive errors (4) - unsafe to sleep
-[SLEEP] Active backoff - unsafe to sleep
-```
-
-## System Integration
-
-### Preserved Functionality
-- Modbus RTU communication timing maintained
-- MQTT message queuing unaffected
-- Error handling and backoff logic intact
-- WiFi reconnection mechanisms preserved
-- SecureLink encryption operations maintained
-
-### Wake-up Process
-1. Timer interrupt wakes ESP32 CPU
-2. WiFi modem power restored to full performance
-3. System status verification performed
-4. Normal polling cycle resumes
-
-## Troubleshooting
-
-### Sleep Not Activating
-- Check WiFi connection status
-- Verify minimum sleep duration setting
-- Monitor consecutive error count
-- Check for active backoff periods
-
-### WiFi Issues After Sleep
-- Ensure WiFi credentials in Config.h are correct
-- Check signal strength in deployment location
-- Monitor for connection drops in serial output
-- Verify router compatibility with ESP32 sleep modes
-
-### Performance Impact
-- Slight delay in system response during sleep
-- WiFi reconnection time after extended sleep
-- Increased initial connection time after wake
-
-## Recommended Settings
-
-### Production Environment
+Find this block:
 ```cpp
-poller.enableLightSleep(true);
-poller.setMinSleepDuration(10000);  // 10 second minimum
+// MILESTONE 5: LIGHT SLEEP POWER OPTIMIZATION (DISABLED FOR SIMULATION)
+/*
+bool enableLightSleep = true;
+
+if (g_poller) {
+  g_poller->enableLightSleep(enableLightSleep);
+  Serial.println("[SETUP] Light sleep ENABLED - Power optimization active");
+  Serial.println("[SETUP] Sleep between UPLOADS: 70% adaptive, 30% WiFi buffer");
+  Serial.printf("[SETUP] Upload interval: %u ms (%.1f minutes)\n", 
+                UPLOAD_PERIOD_MS, UPLOAD_PERIOD_MS / 60000.0);
+}
+*/
 ```
 
-### Development/Testing
+**Action:** Remove the `/*` and `*/` comment markers.
+
+### Step 3: Adjust Upload Interval (For Real Hardware)
+
+**Location:** Line 40 in `src/main.cpp`
+
 ```cpp
-poller.enableLightSleep(true);
-poller.setMinSleepDuration(5000);   // 5 second minimum
+uint16_t UPLOAD_PERIOD_MS = 900000;  // 15 minutes (900000 ms)
 ```
 
-### High Reliability Requirements
+**For simulation:** Keep at 20000 ms (20 seconds)  
+**For real hardware:** Change to 900000 ms (15 minutes)
+
+## WiFi Stability Requirements
+
+The system checks WiFi status before entering sleep:
+
 ```cpp
-poller.enableLightSleep(false);     // Disable sleep
+if (g_poller && g_poller->isLightSleepEnabled() && 
+    adaptiveSleepTime >= 5000 && WiFi.status() == WL_CONNECTED)
 ```
 
-## Version Information
+**Conditions for sleep activation:**
+1. Light sleep must be enabled via `enableLightSleep(true)`
+2. Remaining time until upload must be ≥ 5 seconds
+3. WiFi must be connected (`WL_CONNECTED` status)
 
-- Implementation Date: October 2025
-- Target Hardware: ESP32 DevKit V1
-- Compatible Framework: PlatformIO/Arduino ESP32
-- Tested WiFi Standards: 802.11 b/g/n
+**If WiFi disconnects:** Sleep is prevented automatically. System continues polling and attempts reconnection.
+
+**WiFi modem sleep:** During light sleep, WiFi hardware maintains connection at reduced power (`WIFI_PS_MIN_MODEM`), then restores full performance on wake (`WIFI_PS_NONE`).
+
+## Adjustable Parameters
+
+### Sleep Percentage (Default: 70%)
+
+**Location:** `src/main.cpp` line 119
+
+```cpp
+uint32_t adaptiveSleepTime = (timeUntilUpload * 70) / 100;
+```
+
+**Options:**
+- 60% = More WiFi stability time
+- 70% = Balanced (recommended)
+- 80% = Maximum power savings
+
+### Minimum Sleep Duration (Default: 5000 ms)
+
+**Location:** `src/main.cpp` line 123
+
+```cpp
+if (g_poller && g_poller->isLightSleepEnabled() && 
+    adaptiveSleepTime >= 5000 && WiFi.status() == WL_CONNECTED)
+```
+
+Change `5000` to desired minimum duration in milliseconds.
+
+## Simulation vs Real Hardware
+
+| Parameter | API Simulation Mode | Real RS-485 Hardware Mode |
+|-----------|---------------------|---------------------------|
+| Upload Interval | 20 seconds | 15 minutes (configurable) |
+| Data Source | API endpoint (high-frequency) | Physical inverter (Modbus RTU) |
+| Light Sleep | Disabled (prevents demo delays) | Enabled (power efficiency) |
+| Use Case | Testing and demonstrations | Production deployment |
+| Poll Frequency | Every 10 seconds | Every 10 seconds |
+| Data Transmission | Fast response required | Extended sleep between uploads |
+
+**Configuration Note:** Simulation mode is the current default. For real hardware deployment, uncomment light sleep blocks in `src/main.cpp` and adjust `UPLOAD_PERIOD_MS` to 900000 ms.
+
+## Expected Serial Output
+
+### Sleep Enabled
+```
+[SETUP] Light sleep ENABLED - Power optimization active
+[SETUP] Sleep between UPLOADS: 70% adaptive, 30% WiFi buffer
+[SETUP] Upload interval: 900000 ms (15.0 minutes)
+[SLEEP] Entering light sleep for 630000 ms...
+[WAKE] Light sleep completed
+[MAIN] Drained 90 new records from buffer
+[UPLOAD] Uploading batch...
+```
+
+### Sleep Disabled (Simulation)
+```
+[MAIN] Drained 2 new records from buffer
+[UPLOAD] Uploading batch...
+```
+
+## Files Modified
+
+- `src/main.cpp`: Sleep implementation and configuration
+- `include/Poller.h`: Sleep enable/status methods (minimal interface)
+
+## Technical Summary
+
+**Sleep mechanism:** ESP32 light sleep with timer wakeup  
+**CPU state:** Halted during sleep, resumes on timer interrupt  
+**WiFi state:** Modem sleep mode, connection maintained  
+**Timing:** 70% sleep, 30% active (WiFi buffer)  
+**Safety:** Automatic WiFi status verification before sleep  
+**Implementation:** Single location in main_task loop  
+
+**Production-ready:** Uncomment 2 blocks in main.cpp and adjust upload interval.

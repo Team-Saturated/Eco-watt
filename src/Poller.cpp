@@ -5,9 +5,6 @@
 #include <vector>
 #include "Mqtt.h"
 #include "ErrorCodes.h"
-#include "esp_sleep.h"     // ESP32 sleep functions
-#include "esp_wifi.h"      // WiFi power management
-#include <WiFi.h>          // WiFi status monitoring
 
 static String toBase64_P(const uint8_t* data, size_t len) {
   size_t outLen = 0;
@@ -54,33 +51,8 @@ void Poller::read(uint8_t slave, uint16_t addr, uint16_t qty)
 {
   const uint32_t now = millis();
 
-  // CRITICAL CHANGE: LIGHT SLEEP POWER OPTIMIZATION
-  // Check if we should sleep between polls to save 60-80% power consumption
+  // Sleep happens in main_task between UPLOADS (not between polls)
   if (now < _next) {
-    uint32_t sleepTime = _next - now;
-    
-    // Only sleep if enabled, duration is sufficient, and system is safe
-    if (_sleepEnabled && sleepTime >= _minSleepMs && isSafeToSleep()) {
-      Serial.printf("[SLEEP] Entering light sleep for %u ms (power save mode)\n", sleepTime);
-      
-      // Execute safe light sleep with full error handling
-      bool sleepSuccess = executeLightSleep(sleepTime);
-      
-      if (sleepSuccess) {
-        _totalSleepTime += sleepTime;
-        _lastSleepSuccessful = true;
-        Serial.printf("[WAKE] Light sleep completed successfully (total sleep: %u ms)\n", _totalSleepTime);
-        
-        // Verify system integrity after sleep
-        checkWiFiAfterSleep();
-      } else {
-        _lastSleepSuccessful = false;
-        Serial.println("[WAKE] Light sleep failed - continuing with normal operation");
-      }
-      
-      _sleepAttempts++;
-    }
-    
     return; // Still not time for next poll
   }
 
@@ -215,85 +187,3 @@ void Poller::changePeriod(uint32_t newPeriod)
   Serial.printf("[POLL] Changed polling period to %u ms\n", (unsigned)_period);
 }
 
-// =============================================================================
-// POWER OPTIMIZATION METHODS - CRITICAL FOR ESP32 DevKit V1 POWER SAVINGS
-// =============================================================================
-
-bool Poller::isSafeToSleep() {
-  // Reduce WiFi check message frequency to prevent spam
-  static uint32_t lastWiFiMessage = 0;
-  static uint32_t lastSignalMessage = 0;
-  uint32_t now = millis();
-  
-  // Check WiFi connection status
-  if (WiFi.status() != WL_CONNECTED) {
-    // Only print message every 10 seconds to reduce spam
-    if (now - lastWiFiMessage >= 10000) {
-      Serial.println("[SLEEP] WiFi not connected - unsafe to sleep");
-      lastWiFiMessage = now;
-    }
-    return false;
-  }
-  
-  // Check WiFi signal strength
-  if (WiFi.RSSI() < -85) {
-    // Only print signal message every 30 seconds
-    if (now - lastSignalMessage >= 30000) {
-      Serial.printf("[SLEEP] Weak WiFi signal (%d dBm) - unsafe to sleep\n", WiFi.RSSI());
-      lastSignalMessage = now;
-    }
-    return false;
-  }
-  
-  // Check consecutive errors (always report these as they're critical)
-  if (_consecErr > 3) {
-    Serial.printf("[SLEEP] Too many consecutive errors (%d) - unsafe to sleep\n", _consecErr);
-    return false;
-  }
-  
-  // Check backoff period (always report these as they're temporary)
-  if (_backoffMs > 5000) {
-    Serial.println("[SLEEP] Active backoff - unsafe to sleep");
-    return false;
-  }
-  
-  return true;
-}
-
-void Poller::checkWiFiAfterSleep() {
-  // Verify WiFi connection after waking from light sleep
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("[WAKE] WiFi not connected after sleep - system will handle reconnection");
-  } else {
-    Serial.printf("[WAKE] WiFi connection maintained (RSSI: %d dBm)\n", WiFi.RSSI());
-  }
-}
-
-bool Poller::executeLightSleep(uint32_t sleepDurationMs) {
-  // Store WiFi status before sleep
-  _wifiConnectedBeforeSleep = (WiFi.status() == WL_CONNECTED);
-  
-  try {
-    // Configure WiFi power save mode (keeps connection but reduces power)
-    esp_wifi_set_ps(WIFI_PS_MIN_MODEM);  // Modem sleep - saves ~80% WiFi power
-    
-    // Configure light sleep timer wakeup
-    esp_sleep_enable_timer_wakeup(sleepDurationMs * 1000ULL); // Convert ms to microseconds
-    
-    // Enter light sleep (CPU stops, WiFi maintained via hardware)
-    esp_light_sleep_start();
-    
-    // Restore WiFi to full performance after wake
-    esp_wifi_set_ps(WIFI_PS_NONE);  // Disable power save for performance
-    
-    return true;
-    
-  } catch (...) {
-    Serial.println("[SLEEP] Exception during light sleep - aborting");
-    
-    // Ensure WiFi is restored to normal operation
-    esp_wifi_set_ps(WIFI_PS_NONE);
-    
-    return false;
-  }
-}

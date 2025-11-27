@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include "time.h"
+#include "esp_sleep.h"   // For light sleep functions
+#include "esp_wifi.h"    // For WiFi power management
 
 #include "Config.h"
 #include "InverterClient.h"
@@ -103,6 +105,39 @@ void main_task(void *pvParameters)
 
       static uint32_t last = 0;
       uint32_t now = millis();
+
+      // ========================================================================
+      // MILESTONE 5: LIGHT SLEEP BETWEEN UPLOADS (DISABLED FOR SIMULATION)
+      // Sleep happens BETWEEN uploads, not between polls
+      // Adaptive sleep: Uses 70% of upload interval for better WiFi stability
+      // ========================================================================
+      /*
+      if (now - last < UPLOAD_PERIOD_MS) {
+        uint32_t timeUntilUpload = UPLOAD_PERIOD_MS - (now - last);
+        
+        // Use 70% of time for sleep, reserve 30% for WiFi reconnection
+        uint32_t adaptiveSleepTime = (timeUntilUpload * 70) / 100;
+        
+        // Only sleep if enabled, duration sufficient, and WiFi stable
+        if (g_poller && g_poller->isLightSleepEnabled() && 
+            adaptiveSleepTime >= 5000 && WiFi.status() == WL_CONNECTED) {
+          
+          Serial.printf("[SLEEP] Entering light sleep for %u ms (70%% of %u ms until upload)\n", 
+                        adaptiveSleepTime, timeUntilUpload);
+          
+          // Execute light sleep
+          esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
+          esp_sleep_enable_timer_wakeup(adaptiveSleepTime * 1000ULL);
+          esp_light_sleep_start();
+          esp_wifi_set_ps(WIFI_PS_NONE);
+          
+          Serial.printf("[WAKE] Light sleep completed, time until upload: ~%u ms\n", 
+                        UPLOAD_PERIOD_MS - (millis() - last));
+        }
+      }
+      */
+      // END MILESTONE 5 SLEEP LOGIC
+      // ========================================================================
 
       if (now - last >= UPLOAD_PERIOD_MS)
         {
@@ -284,20 +319,25 @@ void setup()
     g_uploader = new Uploader(String(API_UPLOAD_URL), String(AUTH_HEADER));
     g_poller = new Poller(*g_client, POLL_PERIOD_MS, *g_buffer);
     
-    // Light sleep configuration for power optimization
-    bool enableLightSleep = true;  // ENABLED for 60-80% power savings
+    // ========================================================================
+    // MILESTONE 5: LIGHT SLEEP POWER OPTIMIZATION (DISABLED FOR SIMULATION)
+    // IMPORTANT: Only enable for REAL RS-485 hardware deployment
+    // Sleep happens BETWEEN UPLOADS (not polls) - centered around WiFi stability
+    // Uses 70% of UPLOAD_PERIOD_MS for sleep, reserves 30% for WiFi/MQTT operations
+    // ========================================================================
+    /*
+    bool enableLightSleep = true;  // Enable for real hardware only
     
     if (g_poller) {
       g_poller->enableLightSleep(enableLightSleep);
-      g_poller->setMinSleepDuration(5000);  // 5 seconds minimum sleep
-      
-      if (enableLightSleep) {
-        Serial.println("[SETUP] Light sleep ENABLED - Power optimization active");
-        Serial.println("[SETUP] Expected power savings: 60-80% during polling intervals");
-      } else {
-        Serial.println("[SETUP] Light sleep DISABLED");
-      }
+      Serial.println("[SETUP] Light sleep ENABLED - Power optimization active");
+      Serial.println("[SETUP] Sleep between UPLOADS: 70% adaptive, 30% WiFi buffer");
+      Serial.printf("[SETUP] Upload interval: %u ms (%.1f minutes)\n", 
+                    UPLOAD_PERIOD_MS, UPLOAD_PERIOD_MS / 60000.0);
     }
+    */
+    // END MILESTONE 5 CONFIGURATION
+    // ========================================================================
   }
   catch (const std::exception &e)
   {
