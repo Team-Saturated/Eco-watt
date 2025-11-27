@@ -67,7 +67,18 @@ uint32_t g_batchStartTime = 0;
 TaskHandle_t Task1;
 TaskHandle_t Task2;
 
-// ============================================================================\n// TIMING CONFIGURATION: Simulation vs Real Hardware\n// ============================================================================\nuint16_t POLL_PERIOD_MS = 10000;    // Poll every 10 seconds (both modes)\n\n#if SIMULATE\n  uint16_t UPLOAD_PERIOD_MS = 20000;   // Simulation: 20 seconds (fast testing)\n#else\n  uint16_t UPLOAD_PERIOD_MS = 900000;  // Real Hardware: 15 minutes (power optimization)\n#endif\n\nuint16_t BUFFER_CAPACITY = 128;
+// ============================================================================
+// TIMING CONFIGURATION: Simulation vs Real Hardware
+// ============================================================================
+uint16_t POLL_PERIOD_MS = 10000;    // Poll every 10 seconds (both modes)
+
+#if SIMULATE
+  uint16_t UPLOAD_PERIOD_MS = 20000;   // Simulation: 20 seconds (fast testing)
+#else
+  uint16_t UPLOAD_PERIOD_MS = 900000;  // Real Hardware: 15 minutes (power optimization)
+#endif
+
+uint16_t BUFFER_CAPACITY = 128;
 uint16_t REG_REQ_ID_1 = 0b0000001111111111;
 
 uint8_t status_reg = 0b00000000;//.......|Poller|Security|FOTA|TIME|MQTT|WIFI|
