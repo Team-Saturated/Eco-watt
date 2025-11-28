@@ -4,7 +4,7 @@ A comprehensive IoT platform for real-time solar inverter monitoring and managem
 
 ## Project Overview
 
-EcoWatt is a production-ready IoT system that monitors solar inverters through Modbus RTU communication, compresses telemetry data with 40% compression, encrypts all communications with AES-256, and provides real-time visualization through a web dashboard. The system supports firmware over-the-air updates, dynamic configuration management, and remote register control.
+EcoWatt is a production-ready IoT system that monitors solar inverters through Modbus RTU communication, compresses telemetry data with 40% compression, encrypts all communications with AES-256, and provides real-time visualization through a web dashboard. The system features automatic light sleep power optimization for extended battery life in field deployments,  firmware over-the-air updates, dynamic configuration management, and remote register control.
 
 ## Project Structure
 
@@ -146,6 +146,64 @@ Eco-watt/
 - **Validation Framework**: Pre-deployment integrity checks
 - **Recovery Mechanisms**: Failsafe boot and emergency recovery
 
+### Power Optimization (Real Hardware)
+- **Auto Light Sleep**: ESP-IDF Power Management with FreeRTOS Tickless IDLE
+- **Estimated Power Reduction**: 60-80% average consumption decrease
+- **WiFi Preservation**: Connection maintained through sleep cycles
+- **Dual-Mode Support**: Simulation (fast response) and Production (power optimized)
+- **Documentation**: See `POWER_OPTIMIZATION_GUIDE.md` for complete details
+
+#### How Power Optimization Works
+
+**Automatic Sleep Flow:**
+```
+Upload Cycle (15 minutes)
+    ↓
+FreeRTOS Scheduler
+    ↓
+All tasks blocked? → YES
+    ↓
+Tickless IDLE activates
+    ↓
+Power Management Component
+    ↓
+Auto Light Sleep (630s)
+    ↓
+RTC Timer Wakeup
+    ↓
+Resume Operations
+```
+
+**Sleep Window Strategy:**
+```
+|<--- 135s --->|<------- 630s ------->|<--- 135s --->|
+| Start Buffer |   Sleep Window       | End Buffer   |
+|   (15%)      |      (70%)           |   (15%)      |
+|              |                      |              |
+| WiFi Stable  | CPU OFF, WiFi Sleep  | Data Upload  |
+0s           135s                   765s          900s
+```
+
+**Power Optimization Method:**
+
+| Component | Implementation | Benefit |
+|-----------|---------------|---------|
+| **Sleep Trigger** | FreeRTOS Tickless IDLE | Automatic, no manual calls |
+| **Sleep Type** | ESP32 Light Sleep | CPU halted, RAM retained |
+| **WiFi Mode** | Modem Sleep (WIFI_PS_MIN_MODEM) | Connection maintained |
+| **Timing** | Centered 70-15-15 split | Balance power & stability |
+| **Clock Source** | External 32kHz crystal | Accurate sleep timing |
+| **Configuration** | ESP-IDF PM API | One-time setup, system managed |
+
+**Mode Comparison:**
+
+| Aspect | Simulation Mode | Real Hardware Mode |
+|--------|----------------|-------------------|
+| Upload Interval | 20 seconds | 15 minutes |
+| Light Sleep |  Disabled |  Enabled |
+| Expected Current | ~150 mA | ~30-50 mA |
+| Use Case | Testing/Demos | Production/Field |
+
 ###  Web Dashboard and API (`server.py`)
 - **Real-time Visualization**: Interactive charts for all 10 solar parameters
 - **Device Management**: Comprehensive configuration and control interface
@@ -235,23 +293,36 @@ pip install flask paho-mqtt cryptography
 - **ESP32**: Arduino framework with PlatformIO
 - **Documentation**: Doxygen for API reference
 
-###  Build Process
-
+#### Build Environments
+- **`esp32dev_sim`**: Simulation mode (20s cycles, no power optimization)
 #### ESP32 Firmware Development
 ```bash
 # Navigate to project root
 cd Eco-watt/
 
-# Build firmware for ESP32
-pio run -e esp32dev
+# Build firmware (simulation mode - default)
+pio run -e esp32dev_sim
+
+# Build firmware (real hardware with power optimization)
+pio run -e esp32dev_hw
 
 # Upload to device
-pio run -e esp32dev --target upload
+pio run -e esp32dev_sim --target upload
 
 # Monitor serial output
 pio device monitor --port COM3 --baud 115200
 
 # Clean build artifacts
+pio run --target clean
+```
+
+**Power Optimization Notes:**
+- `esp32dev_sim`: Fast testing, no sleep (20s upload cycles)
+- `esp32dev_hw`: Production deployment with auto light sleep (15min cycles)
+- Requires external 32.768kHz crystal on GPIO32/33 for accurate sleep timing
+- See `POWER_OPTIMIZATION_GUIDE.md` for configuration details
+
+#### Cloud Server Development
 pio run --target clean
 ```
 

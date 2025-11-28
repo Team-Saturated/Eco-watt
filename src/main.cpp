@@ -5,22 +5,11 @@
 // ============================================================================
 // POWER MANAGEMENT: Auto Light Sleep for Real Hardware
 // ============================================================================
-// Auto light sleep uses ESP-IDF Power Management + FreeRTOS Tickless IDLE
-// to automatically enter light sleep when all tasks are blocked/suspended.
-// This is enabled ONLY for real RS-485 hardware to save ~70% power.
-// For simulation mode, light sleep is disabled to maintain fast response.
-//
 // Requirements (configured in platformio.ini for real hardware build):
 // - CONFIG_PM_ENABLE=y (Power Management)
 // - CONFIG_FREERTOS_USE_TICKLESS_IDLE=y (Tickless IDLE)
 // - CONFIG_ESP32_RTC_CLK_SRC_EXT_CRYS=y (External 32kHz crystal for accuracy)
-//
-// Sleep Strategy:
-// - Sleep centered in upload interval: 70% sleep, 15% start buffer, 15% end buffer
-// - Start buffer: Allows WiFi stability and initial polling after wake
-// - End buffer: Ensures data transmission completes before next cycle
-// - Example (15min uploads): 135s start + 630s sleep + 135s end = 900s total
-// ============================================================================
+
 #if !SIMULATE
   #include "esp_pm.h"
   #include "esp_wifi.h"
@@ -392,11 +381,10 @@ void setup()
   // 3. CONFIG_FREERTOS_IDLE_TIME_BEFORE_SLEEP=3 - Min ticks before sleep (30ms @ 100Hz)
   // 4. CONFIG_ESP32_RTC_CLK_SRC_EXT_CRYS=y - External 32kHz crystal for BLE SCA accuracy
   //
-  // Power Savings:
+  // Power Savings (Expected Estimates):
   // - Active mode: ~240 mA (WiFi + CPU + Modbus)
   // - Light sleep: ~30-50 mA (WiFi modem sleep + RTC)
   // - Average (70% duty cycle): ~100-105 mA
-  // - Battery life improvement: 2.3x
   // ============================================================================
   #if !SIMULATE
     Serial.println("\n[POWER] Configuring auto light sleep for real hardware...");
