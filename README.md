@@ -151,7 +151,12 @@ Eco-watt/
 - **Estimated Power Reduction**: 60-80% average consumption decrease
 - **WiFi Preservation**: Connection maintained through sleep cycles
 - **Dual-Mode Support**: Simulation (fast response) and Production (power optimized)
-- **Documentation**: See `POWER_OPTIMIZATION_GUIDE.md` for complete details
+
+**Documentations**
+Power Optimization Complete Explanation - Auto Light Sleep Mode  (For the Real Hardware): https://drive.google.com/file/d/1C2zzyY9uqoM2SWg5507X6_RIy-A4Gy0z/view?usp=sharing
+
+Power Optimization Quick Guide – Auto Sleep Mode ( HW Implementation): https://drive.google.com/file/d/1R_ltQUcMEJhlEXrQH1qiKok_8bxrV7oR/view?usp=sharing
+
 
 #### How Power Optimization Works
 
