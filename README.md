@@ -326,7 +326,7 @@ pio run --target clean
 - `esp32dev_sim`: Fast testing, no sleep (20s upload cycles)
 - `esp32dev_hw`: Production deployment with auto light sleep (15min cycles)
 - Requires external 32.768kHz crystal on GPIO32/33 for accurate sleep timing
-- See `POWER_OPTIMIZATION_GUIDE.md` for configuration details
+
 
 #### Cloud Server Development
 pio run --target clean
