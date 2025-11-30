@@ -210,9 +210,9 @@ Resume Operations
 | Expected Current | ~150 mA | ~30-50 mA |
 | Use Case | Testing/Demos | Production/Field |
 
-**Note:** This power optimization design targets the separate PlatformIO environment for real hardware, not the simulation environment. Tickless IDLE and Auto Light Sleep are system-level FreeRTOS/ESP-IDF features that may not be fully supported under the Arduino core / simulated builds. We are currently working on ESP-IDF–included, environment-based power-management code integrated with the existing hardware code, with this mode serving as a backup in case any issues arise during full power-optimization. Light sleep is disabled in simulation because the simulator uses high-frequency polling. Documentation contains predicted power savings; these must be validated on real hardware, especially where RS485/Modbus polling interacts with the 15-minute upload interval.
+📌 **Note:** This power optimization design targets the separate PlatformIO environment for real hardware, not the simulation environment. Tickless IDLE and Auto Light Sleep are system-level FreeRTOS/ESP-IDF features that may not be fully supported under the Arduino core / simulated builds. We are currently working on ESP-IDF–included, environment-based power-management code integrated with the existing hardware code, with this mode serving as a backup in case any issues arise during full power-optimization  (**Source:** [`src/main_pm_backup.cpp`](src/main_pm_backup.cpp)). Light sleep is disabled in simulation because the simulator uses high-frequency polling. Documentation contains predicted power savings; these must be validated on real hardware, especially where RS485/Modbus polling interacts with the 15-minute upload interval.
 
-📄 **Source:** [`src/main_pm_backup.cpp`](src/main_pm_backup.cpp)
+
 
 ###  Web Dashboard and API (`server.py`)
 - **Real-time Visualization**: Interactive charts for all 10 solar parameters
