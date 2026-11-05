@@ -129,6 +129,7 @@ void ensureMqtt()
   while (!client.connected())
   {
     String cid = String("esp32-") + String((uint32_t)ESP.getEfuseMac(), HEX);
+    Serial.println("[MQTT] Connecting as " + cid);
     // LWT
     if (client.connect(cid.c_str(), MQTT_USER, MQTT_PASS, t_config_ack.c_str(), 1, true, "offline"))
     {

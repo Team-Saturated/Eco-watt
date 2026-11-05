@@ -88,8 +88,8 @@ const String t_fota_cmd = String("devices/") + DEV_ID + "/fota/cmd";
 const String t_fota_status = String("devices/") + DEV_ID + "/fota/status";
 const String t_device_status = String("devices/") + DEV_ID + "/status";
 
-const char *MQTT_USER = ""; // optional
-const char *MQTT_PASS = ""; // optional
+const char *MQTT_USER = ""; 
+const char *MQTT_PASS = ""; 
 
 bool config_changed = true;
 bool writecommandreceived = false;
@@ -326,7 +326,7 @@ void setup()
     }
 
   //PSK Provisioning for SecureLink 
-  //first_time_provision();
+  // first_time_provision();
   
   //FOTA Initialization
   if (!fota.begin()) 
